@@ -53,15 +53,15 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Flyway (secao 9/72): aponta para src/main/resources/db/migration,
-             que contem as migrations V001-V015 do baseline da Fase 0/1.
+        <!-- Flyway (seção 9/72) — aponta para src/main/resources/db/migration,
+             que contém as migrations V001-V015 do baseline da Fase 0/1.
 
-             No Spring Boot 4, a auto-configuration do Flyway foi extraida do
-             "spring-boot-autoconfigure" monolitico para um modulo proprio
-             ("spring-boot-flyway"), so ativado pelo starter abaixo. Ter
+             No Spring Boot 4, a auto-configuration do Flyway foi extraída do
+             "spring-boot-autoconfigure" monolítico para um módulo próprio
+             ("spring-boot-flyway"), só ativado pelo starter abaixo. Ter
              apenas "flyway-core" no classpath (jeito do Boot 3) compila
-             normalmente, mas o Flyway nunca roda: sem log, sem erro,
-             silenciosamente (confirmado no guia oficial de migracao do
+             normalmente, mas o Flyway nunca roda — sem log, sem erro,
+             silenciosamente (confirmado no guia oficial de migração do
              Spring Boot 4.0: "you now need to replace that with
              spring-boot-starter-flyway"). -->
         <dependency>
@@ -78,6 +78,40 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Autenticação própria (Fase 5, seção 32/105). O starter traz o
+             Spring Security na versão que o BOM do Spring Boot 4.1.1
+             gerencia (linha 7.x, par da Spring Framework 7) — não fixamos
+             versão própria aqui, mesma prática já usada para os demais
+             starters do projeto. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- JWT (seção 33). O Spring Boot não gerencia versão para o JJWT
+             (não é um projeto Spring) — versão 0.13.0 pesquisada e
+             confirmada como a mais recente disponível em 21/09/2026.
+             jjwt-impl e jjwt-jackson só são necessários em runtime (a API
+             pública de assinatura/parsing usada no código-fonte vem só de
+             jjwt-api). -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.13.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.13.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.13.0</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- Actuator: /actuator/health (seção 66) -->
@@ -100,17 +134,22 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- Testcontainers 2.x renomeou os artefatos com prefixo "testcontainers-"
              (ex.: "postgresql" -> "testcontainers-postgresql"). O BOM que o
-             Spring Boot 4.1.x importa so gerencia versao para os nomes NOVOS;
+             Spring Boot 4.1.x importa só gerencia versão para os nomes NOVOS;
              usar os nomes antigos ("junit-jupiter"/"postgresql" sem prefixo)
-             falha o build com "version ... is missing", pois o Maven nao acha
-             gerenciamento de versao para eles. Pacotes Java (import) nao
-             mudaram, continuam em org.testcontainers.containers.* e
+             falha o build com "version ... is missing", pois o Maven não acha
+             gerenciamento de versão para eles. Pacotes Java (import) não
+             mudaram — continuam em org.testcontainers.containers.* e
              org.testcontainers.junit.jupiter.*. -->
         <dependency>
             <groupId>org.testcontainers</groupId>

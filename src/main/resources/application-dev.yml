@@ -17,6 +17,19 @@ management:
     health:
       show-details: always
 
+# Segredo de JWT SÓ para desenvolvimento local — nunca usar em produção
+# (application-prod.yml exige JWT_SECRET via variável de ambiente, sem
+# valor padrão). Gerado uma vez para este projeto, não é sensível fora de
+# um ambiente de dev descartável.
+servire:
+  security:
+    jwt:
+      secret: grvXECHecIkvKki3iJaO/Usa1NVGCk9Hz7xGsk8EutY=
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  frontend:
+    base-url: ${FRONTEND_BASE_URL:http://localhost:4200}
+
 logging:
   level:
     br.com.servire: DEBUG

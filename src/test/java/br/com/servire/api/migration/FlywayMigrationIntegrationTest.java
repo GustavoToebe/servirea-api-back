@@ -15,8 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * (Fase 0/1). Aqui o objetivo é diferente: confirmar que é o PRÓPRIO
  * Spring Boot (via {@code spring-boot-starter-flyway} embutido no starter
  * de dados), rodando a partir de {@code classpath:db/migration}, que
- * aplica corretamente as 15 migrations do baseline — não só o runner bash
- * ad hoc usado na validação inicial.
+ * aplica corretamente as migrations do baseline (V001-V015) e das Fases
+ * 3/4 (V016-V021, seção 103/104) — não só o runner bash ad hoc usado na
+ * validação inicial.
  *
  * <p>Não repete TODAS as asserções do compare-schema.sql (seria
  * redundante); cobre os pontos mais críticos de segurança/integridade:
@@ -25,6 +26,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * para {@code service_role} estão corretos (esse é o achado mais
  * importante do levantamento da seção 20 do documento técnico — vale ter
  * um teste automatizado que quebra o build se algum dia regredir).</p>
+ *
+ * <p>Total atualizado de 21 para 22 em 21/09/2026: V022 (Fase 5, seção
+ * 105/32) somou a tabela {@code password_reset_token}, necessária para o
+ * fluxo de "esqueci minha senha".</p>
  */
 class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
 
@@ -32,10 +37,12 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void deveTerAplicadoTodasAs15MigrationsDoBaselineComSucesso() {
+    void deveTerAplicadoTodasAsMigrationsDoBaselineComSucesso() {
         // Não fixamos o formato exato da string de versão que o Flyway grava
         // (ex.: se normaliza "001" para "1" ou mantém os zeros à esquerda) —
-        // o que importa é que as 15 migrations rodaram e nenhuma falhou.
+        // o que importa é que as migrations rodaram e nenhuma falhou.
+        // Total atualizado de 21 para 22 em 21/09/2026: V022 (Fase 5, seção
+        // 105/32) somou a tabela password_reset_token ao baseline V001-V021.
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -44,10 +51,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(15);
-        assertThat(sucesso).isEqualTo(15);
+        assertThat(total).isEqualTo(22);
+        assertThat(sucesso).isEqualTo(22);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("storage bucket");
+        assertThat(descricoes.getLast()).isEqualTo("table password reset token");
     }
 
     @Test

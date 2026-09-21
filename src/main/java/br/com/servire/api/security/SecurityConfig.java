@@ -1,0 +1,105 @@
+package br.com.servire.api.security;
+
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
+
+/**
+ * Configuração de segurança da Fase 5 (seção 32/105 do plano mestre).
+ * Substitui por completo a segurança padrão que o
+ * {@code spring-boot-starter-security} ativaria sozinho (login gerado com
+ * senha aleatória no log) — definir um bean {@link SecurityFilterChain}
+ * próprio desliga esse auto-configure padrão do Spring Boot.
+ *
+ * <p><b>CSRF (seção 91):</b> {@code csrf.spa()} é o método de conveniência
+ * do Spring Security (confirmado contra a documentação oficial em
+ * 21/09/2026) pensado exatamente para SPA - cuida sozinho do
+ * armazenamento do token CSRF em cookie legível por JavaScript
+ * ({@code XSRF-TOKEN}, convenção que o Angular já lê nativamente),
+ * proteção contra BREACH, e renovação do token após login/logout.
+ * {@code /auth/login}, {@code /auth/select-tenant},
+ * {@code /auth/forgot-password} e {@code /auth/reset-password} são
+ * isentos de CSRF porque nenhum deles depende de uma credencial ambiente
+ * do navegador (o corpo da requisição é autossuficiente). Já
+ * {@code /auth/refresh} e {@code /auth/logout} dependem do cookie
+ * HttpOnly do refresh token (seção 92) e por isso continuam protegidos —
+ * ver a javadoc de {@code AuthController}.</p>
+ *
+ * <p><b>CORS:</b> só libera as origens vindas de
+ * {@code servire.security.cors.allowed-origins} (nunca {@code *} — seção
+ * 91), com credenciais habilitadas (necessário para o navegador enviar o
+ * cookie do refresh token em requisições cross-site ao domínio da API).</p>
+ *
+ * <p><b>Sessão stateless:</b> nenhuma sessão HTTP é criada ou usada -
+ * toda autenticação é resolvida a cada requisição por
+ * {@link JwtAuthenticationFilter}, a partir do access token.</p>
+ */
+@Configuration
+@EnableWebSecurity
+@EnableConfigurationProperties(SecurityProperties.class)
+public class SecurityConfig {
+
+    private static final String[] ROTAS_PUBLICAS = {"/auth/**", "/public/**", "/actuator/health"};
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        // DelegatingPasswordEncoder com BCrypt como algoritmo padrão de
+        // codificação (o prefixo "{bcrypt}" gravado junto do hash permite
+        // trocar de algoritmo no futuro sem invalidar senhas já
+        // cadastradas) - confirmado como o padrão oficialmente recomendado
+        // pela documentação do Spring Security em 21/09/2026.
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(SecurityProperties properties) {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(properties.cors().allowedOrigins());
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("X-Request-Id"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                     JwtAuthenticationFilter jwtAuthenticationFilter,
+                                                     CorsConfigurationSource corsConfigurationSource,
+                                                     RestAuthenticationEntryPoint authenticationEntryPoint,
+                                                     RestAccessDeniedHandler accessDeniedHandler) throws Exception {
+        http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .csrf(csrf -> csrf
+                        .spa()
+                        .ignoringRequestMatchers(
+                                "/auth/login", "/auth/select-tenant",
+                                "/auth/forgot-password", "/auth/reset-password",
+                                "/public/**"))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(ROTAS_PUBLICAS).permitAll()
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+}

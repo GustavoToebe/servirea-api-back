@@ -26,6 +26,26 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
 
+# Autenticação própria (Fase 5, seção 32/105). "jwt.secret" propositalmente
+# NÃO tem valor padrão aqui — só em application-dev.yml/application-test.yml
+# (segredo fixo, só para desenvolvimento/teste) e via variável de ambiente
+# JWT_SECRET em produção (application-prod.yml, sem valor padrão, mesma
+# regra já usada para DB_URL/DB_USER/DB_PASSWORD — seção 90).
+servire:
+  security:
+    jwt:
+      access-token-ttl: PT15M
+      tenant-selection-token-ttl: PT5M
+    refresh-token-ttl: P30D
+    password-reset-token-ttl: PT1H
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+  # URL do Angular, usada só para montar o link de "esqueci minha senha"
+  # (seção 32). Domínio oficial (servirea.com.br, seção 131.8) ainda não
+  # registrado — valor de dev/test em application-dev.yml/application-test.yml;
+  # em produção vem de FRONTEND_BASE_URL sem valor padrão (application-prod.yml,
+  # mesma regra de DB_URL/JWT_SECRET, seção 90).
+
 server:
   port: ${PORT:8080}
 

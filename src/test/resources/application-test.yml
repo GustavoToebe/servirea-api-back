@@ -12,6 +12,18 @@ management:
     health:
       show-details: always
 
+# Segredo de JWT fixo só para os testes (nunca usar em dev/produção de
+# verdade) — precisa decodificar para pelo menos 32 bytes (JwtService
+# valida isso na inicialização).
+servire:
+  security:
+    jwt:
+      secret: dGVzdGUtc2VydmlyZS1qd3Qtc2VjcmV0LTMyLWJ5dGVzIQ==
+    cors:
+      allowed-origins: http://localhost:4200
+  frontend:
+    base-url: http://localhost:4200
+
 logging:
   level:
     br.com.servire: DEBUG
