@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: servire-api
+
+  # Virtual Threads (seção 15/68 do plano mestre) — a aplicação continua
+  # síncrona (não há justificativa para WebFlux), só o pool de threads do
+  # Tomcat passa a usar Virtual Threads.
+  threads:
+    virtual:
+      enabled: true
+
+  jpa:
+    # O Flyway é o dono do schema (migrations em db/migration). O Hibernate
+    # nunca cria/altera tabela sozinho — só valida que as entidades batem
+    # com o schema já migrado. Ver seção 8 do plano mestre ("Proibido
+    # alterar produção manualmente e deixar a alteração fora do repositório").
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      # Padrão conservador: não expor detalhe de componentes (ex.: se o
+      # banco está de pé) sem autenticação. Ainda não existe Spring
+      # Security nesta fase (chega na Fase 5, seção 105) — por isso o
+      # padrão fica fechado, e só o profile "dev" abre (ver
+      # application-dev.yml). Reavaliar quando a autenticação existir.
+      show-details: never
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: Servire API
+    description: API multi-tenant de gestão paroquial (Servire)

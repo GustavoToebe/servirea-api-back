@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!--
+        Logs estruturados em JSON (seção 65 do plano mestre). Campos hoje:
+        timestamp, level, logger, thread, message, requestId (via MDC,
+        preenchido pelo RequestIdFilter), stack_trace quando houver exceção.
+
+        Campos AINDA AUSENTES de propósito, porque a infraestrutura deles
+        não existe nesta fase: tenantId (chega na Fase 4, TenantContext) e
+        userId (chega na Fase 5, autenticação própria). Quando essas fases
+        forem implementadas, adicionar ao MDC (como o RequestIdFilter já
+        faz com requestId) em vez de mudar este arquivo — os campos
+        aparecem automaticamente no JSON assim que estiverem no MDC.
+
+        Em desenvolvimento local (profile "dev"), usa um encoder de texto
+        simples, mais legível no terminal, em vez de JSON.
+    -->
+
+    <springProfile name="dev">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level [%X{requestId}] %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!dev">
+        <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <fieldNames>
+                    <timestamp>timestamp</timestamp>
+                    <version>[ignore]</version>
+                    <levelValue>[ignore]</levelValue>
+                </fieldNames>
+            </encoder>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </root>
+    </springProfile>
+</configuration>

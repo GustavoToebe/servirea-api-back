@@ -1,0 +1,22 @@
+# Profile de desenvolvimento local. Ativar com --spring.profiles.active=dev
+# (ou SPRING_PROFILES_ACTIVE=dev).
+#
+# Aponta por padrão para um Postgres local (ex.: o que já está instalado
+# neste ambiente de validação, ou um container Docker/Testcontainers
+# manual) — nunca para o Supabase de produção. Para desenvolver contra uma
+# cópia dos dados reais, sobrescreva DB_URL/DB_USER/DB_PASSWORD via
+# variável de ambiente ou --spring.datasource.* na linha de comando.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/servire_dev}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:}
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    br.com.servire: DEBUG

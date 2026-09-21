@@ -1,0 +1,18 @@
+# Profile usado pelos testes de integração (AbstractIntegrationTest). A
+# URL/usuário/senha do datasource são sobrescritos em tempo de execução via
+# @DynamicPropertySource, apontando para o container Testcontainers — os
+# valores abaixo são só um fallback caso algum teste rode sem o container.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    br.com.servire: DEBUG
+    org.testcontainers: INFO

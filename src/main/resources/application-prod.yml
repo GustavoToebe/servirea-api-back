@@ -1,0 +1,20 @@
+# Profile de produção (VPS, seção 1.2/11 do plano mestre). Todas as
+# credenciais vêm de variáveis de ambiente — nunca hardcoded aqui nem em
+# nenhum arquivo versionado (seção 90: "nunca versionar .env com segredo").
+#
+# DB_URL deve apontar para o Postgres do Supabase, incluindo sslmode=require,
+# ex.: jdbc:postgresql://db.<ref>.supabase.co:5432/postgres?sslmode=require
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: INFO
