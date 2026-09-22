@@ -36,6 +36,19 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code inscricoes.aprovado_por}/{@code inscricoes.rejeitado_por} de
  * {@code auth.users} para {@code public.usuario}, e somou
  * {@code escalas.version} para controle otimista (seção 47).</p>
+ *
+ * <p><b>Bug real #11 (22/09/2026, teste desatualizado — encontrado pelo
+ * `mvn clean verify` real da Fase 11):</b> total atualizado de 23 para 26
+ * — a Fase 11 (seção 31/59/122/131.5) somou três migrations novas
+ * (V024 {@code escala_vagas.presenca}, V025
+ * {@code disponibilidade_voluntario}, V026 {@code audit_log}), e este
+ * teste não tinha sido atualizado junto quando essas migrations foram
+ * escritas (mesma categoria de esquecimento já documentada em 21→22 e
+ * 22→23 acima — o contador fixo deste teste precisa ser revisado toda vez
+ * que uma migration nova é somada). {@code descricoes.getLast()} também
+ * mudou, de {@code "ajustes fases 7 8 9"} para {@code "table audit log"}
+ * (descrição que o Flyway deriva do nome do arquivo {@code V026__table_audit_log.sql}
+ * — substitui {@code _} por espaço).</p>
  */
 class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
 
@@ -47,8 +60,9 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // Não fixamos o formato exato da string de versão que o Flyway grava
         // (ex.: se normaliza "001" para "1" ou mantém os zeros à esquerda) —
         // o que importa é que as migrations rodaram e nenhuma falhou.
-        // Total atualizado de 22 para 23 em 22/09/2026: V023 (Fases 7/8/9)
-        // somou o ajuste de FKs + escalas.version ao baseline V001-V022.
+        // Total atualizado de 23 para 26 em 22/09/2026 (Bug real #11): a
+        // Fase 11 somou V024/V025/V026 ao baseline V001-V023 — ver javadoc
+        // da classe.
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -57,10 +71,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(23);
-        assertThat(sucesso).isEqualTo(23);
+        assertThat(total).isEqualTo(26);
+        assertThat(sucesso).isEqualTo(26);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("ajustes fases 7 8 9");
+        assertThat(descricoes.getLast()).isEqualTo("table audit log");
     }
 
     @Test

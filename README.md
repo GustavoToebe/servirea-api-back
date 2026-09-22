@@ -19,6 +19,23 @@ voluntário, tabela de auditoria e provedor de e-mail real, seção
 > funcionalidades" — o débito de testes desta fase fica para a próxima
 > rodada). Ver seção própria "Fase 11" abaixo para o detalhe de cada uma
 > e "Próximos passos" para o que falta confirmar.
+>
+> 🔴 **Primeira rodada de `mvn clean verify` real da Fase 11 (22/09/2026,
+> 14:05): `BUILD FAILURE`, `Tests run: 75, Failures: 1, Errors: 0`.**
+> Único problema encontrado — **Bug real #11 (teste desatualizado, não
+> produção):** `FlywayMigrationIntegrationTest.deveTerAplicadoTodasAsMigrationsDoBaselineComSucesso`
+> tinha o total de migrations fixado em `23`, e a Fase 11 somou três
+> migrations novas (V024/V025/V026) sem atualizar esse teste — mesma
+> categoria de esquecimento já registrada nas duas atualizações anteriores
+> desse mesmo contador (21→22, 22→23). Corrigido: total `23` → `26`, e
+> `descricoes.getLast()` de `"ajustes fases 7 8 9"` para
+> `"table audit log"` (descrição que o Flyway deriva do nome do arquivo
+> `V026__table_audit_log.sql`). **Nenhum código de produção foi tocado por
+> essa correção** — as cinco funcionalidades da Fase 11 continuam
+> integralmente sem confirmação de build, já que este era o único teste
+> que rodou contra elas (indiretamente, só contando migrations) antes de
+> falhar. Ainda **não confirmado** — aguardando o próximo `mvn clean
+> verify` do usuário.
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -1284,6 +1301,11 @@ rodada, mesmo padrão já usado nas Fases 6-9). **Nenhum item desta fase foi
 confirmado por um `mvn clean verify` real ainda** — tudo abaixo é revisão
 manual de código, sem acesso a `mvn` neste ambiente de pesquisa (Maven
 Central bloqueado).
+
+> 🔴→⏳ **Primeira rodada de build real: `BUILD FAILURE`** por
+> `FlywayMigrationIntegrationTest` desatualizado (**Bug real #11**, teste,
+> não produção) — corrigido, ver aviso no topo deste README. Ainda
+> aguardando reconfirmação.
 
 ### 1. Roles e permissões reais (seção 31)
 
