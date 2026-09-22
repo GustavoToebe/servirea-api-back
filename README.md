@@ -1862,18 +1862,40 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    Supabase Storage (Fase 7), a resposta do Cloudflare Turnstile (Fase 8)
    e agora também a API do Resend (Fase 11) — todos os três implementados
    a partir de documentação pública, nunca testados contra o serviço real
-   neste ambiente de pesquisa. **Turnstile (22/09/2026): widget "Servirea"
-   já criado no painel da Cloudflare**, hostnames `servirea.com.br` e
-   `localhost` já configurados (2 de 10 disponíveis), modo "Managed"
-   (recomendado). Falta: de fato submeter uma inscrição de teste (local,
-   contra `localhost`) para confirmar o formato real da resposta do
-   `siteverify` contra `TurnstileService`. **Nota de
-   segurança:** a secret key desse widget apareceu num print
+   neste ambiente de pesquisa.
+
+   ✅ **Turnstile — CONFIRMADO de verdade em 22/09/2026, primeira das três
+   integrações externas a ser validada ponta a ponta.** Widget "Servirea"
+   criado no painel da Cloudflare (hostnames `servirea.com.br` e
+   `localhost`, modo "Managed"); o usuário gerou um token real numa
+   página HTML avulsa local com o site key, e submeteu
+   `POST /public/{tenantSlug}/inscricoes` (rodando localmente via
+   `mvn spring-boot:run -Dspring-boot.run.profiles=dev`, contra um
+   Postgres Docker local com o stub de `auth`/`storage` aplicado — ver
+   "Como rodar localmente") com esse token via `curl.exe`. Resultado:
+   `TurnstileService` chamou o `siteverify` real da Cloudflare, recebeu
+   `success: true` e a inscrição foi criada normalmente (`status:
+   PENDENTE`, responsável gravado) — confirma que o formato da resposta
+   real do Cloudflare bate com o que o `Map<String,Object>`/campo
+   `success` do `TurnstileService` espera (mesma suposição que já era só
+   documentação até aqui). Numa tentativa anterior na mesma sessão, a
+   mesma chamada falhou com `RestClientException` (fail-closed correto:
+   400 "Não foi possível validar a verificação anti-robô agora") — não
+   foi possível confirmar a causa raiz exata (rede/proxy/antivírus da
+   máquina do usuário, provavelmente transitória) antes de funcionar
+   normalmente na tentativa seguinte; se esse erro voltar a acontecer de
+   forma recorrente, investigar o stack trace completo do `WARN` logado
+   por `TurnstileService.validar`. **Não confirmado ainda:** o caminho de
+   um token inválido/expirado contra a API real (o `TurnstileServiceTest`
+   unitário já cobre esse caminho, mas só contra um mock).
+   **Nota de segurança:** a secret key desse widget apareceu num print
    compartilhado nesta conversa antes de o widget ter hostname
    configurado — recomendado rotacionar a secret key pelo botão "Rotate
    Secret Key" do próprio painel (limite: uma rotação a cada 2h, chave
-   antiga continua válida durante a transição) antes de configurá-la de
-   verdade via variável de ambiente.
+   antiga continua válida durante a transição) antes de usar em produção.
+
+   ⏳ **Supabase Storage e Resend continuam SEM confirmação real** — só
+   testados contra mocks/documentação até aqui.
 4. ⏳ **Em andamento (22/09/2026):** domínio `servirea.com.br` adicionado
    na Cloudflare (nameservers ainda propagando) e os registros de DNS de
    verificação do Resend (DKIM TXT + duas SPF CNAME) já foram criados —
