@@ -19,12 +19,22 @@ e corrigidos ao longo do caminho — nenhum ficou sem confirmação final.
 
 Todo o código da Fase 5 (autenticação própria — ver seção dedicada logo
 abaixo) foi escrito e compõe este repositório. O usuário já rodou
-`mvn clean verify` uma primeira vez e encontrou um bug real de verdade
-(**bug real #4**, corrigido — ver detalhamento na seção da Fase 5
-abaixo), mas **ainda não há uma execução completa com `BUILD SUCCESS`
-confirmando que os testes anteriores continuam passando** com
-`spring-boot-starter-security` agora no classpath. Este aviso só sai
-daqui quando isso acontecer (mesma prática usada nos bugs reais #1/#2/#3).
+`mvn clean verify` duas vezes neste dia e encontrou dois bugs reais,
+ambos já corrigidos (**bug real #4** e **bug real #5** — ver detalhamento
+na seção da Fase 5 abaixo), mas **ainda não há uma execução completa com
+`BUILD SUCCESS`** confirmando que os 13 testes anteriores continuam
+passando e que os novos componentes de segurança sobem corretamente.
+Este aviso só sai daqui quando isso acontecer (mesma prática usada nos
+bugs reais #1/#2/#3).
+
+Histórico das duas tentativas até agora:
+1ª tentativa: falhou na **compilação** (bug real #4 — `jackson-databind`
+sumindo do classpath por mediação de dependências do Maven).
+2ª tentativa: compilação passou (48 arquivos-fonte), mas o **contexto do
+Spring falhou ao subir** em todo teste que carrega a aplicação inteira
+(8 erros) por causa do bug real #5 — `ObjectMapper` do Jackson 2 nunca
+foi registrado como bean pelo Spring Boot 4 (que usa Jackson 3 por
+padrão). Corrigido; aguardando a 3ª tentativa do usuário.
 
 ## Decisão de versão: Spring Boot 4.1.1 (não 3.x)
 
@@ -392,21 +402,28 @@ classes que montam a resposta 401/403 no formato `ApiError` manualmente
 (porque rodam dentro da cadeia de filtros do Spring Security, fora do
 alcance do `GlobalExceptionHandler`), usando `ObjectMapper` diretamente.
 
-**Causa raiz:** `jackson-databind` nunca tinha sido uma dependência
-DIRETA do projeto — chegava só transitivamente, bem fundo na árvore, via
-`spring-boot-starter-web` → `spring-boot-starter-json`. Nenhuma classe
-antes desta fase importava `ObjectMapper` no código-fonte (o
-`GlobalExceptionHandler` já existente desde a Fase 2 só devolve
-`ResponseEntity<ApiError>` e deixa o Spring MVC serializar via seus
-conversores de mensagem, sem precisar de import direto). Ao adicionar
-`spring-security-test` (escopo `test`) nesta mesma fase, o Maven passou
-a enxergar `jackson-databind` por um caminho bem mais RASO da árvore de
-dependências (via `spring-security-test`) do que o caminho antigo via
-`spring-boot-starter-web` — e a regra de mediação "nearest definition"
-do Maven usa a declaração mais próxima na árvore, mesmo que o escopo
-dela (`test`) seja mais restrito que o da declaração mais distante
-(`compile`). Resultado: `jackson-databind` ficou disponível só no
-classpath de teste, sumindo do classpath de compilação principal — um
+**Causa raiz:** `jackson-databind` (Jackson **2**, grupo
+`com.fasterxml.jackson.*`) nunca tinha sido uma dependência DIRETA do
+projeto — chegava só transitivamente, via `jjwt-jackson` (biblioteca de
+JWT, seção 33), que a usa como seu motor interno de
+serialização/desserialização de claims. **Correção feita depois, em
+21/09/2026:** a primeira versão deste texto dizia que o caminho antigo
+era `spring-boot-starter-web` → `spring-boot-starter-json` — isso estava
+ERRADO, e só percebi ao investigar o bug real #5 logo abaixo: a partir do
+Spring Boot 4, `spring-boot-starter-web` não traz Jackson 2 nenhum, e sim
+**Jackson 3** (grupo `tools.jackson.*`, pacote Java `tools.jackson.*`) —
+um jar completamente diferente, sem nenhuma relação de classpath com
+`com.fasterxml.jackson.databind`. O `jackson-databind` (Jackson 2) que
+sumiu neste bug só existia no projeto por causa do `jjwt-jackson`, nunca
+por causa do Spring Web. Ao adicionar `spring-security-test` (escopo
+`test`) nesta mesma fase, o Maven passou a enxergar `jackson-databind`
+por um caminho bem mais RASO da árvore de dependências (via
+`spring-security-test`, que também traz Jackson 2 transitivamente) do
+que o caminho antigo via `jjwt-jackson` — e a regra de mediação "nearest
+definition" do Maven usa a declaração mais próxima na árvore, mesmo que
+o escopo dela (`test`) seja mais restrito que o da declaração mais
+distante (`compile`). Resultado: `jackson-databind` ficou disponível só
+no classpath de teste, sumindo do classpath de compilação principal — um
 efeito colateral silencioso e nada óbvio de ter adicionado uma
 dependência de teste.
 
@@ -419,9 +436,72 @@ dependências também a trazem. Sem versão própria: gerenciada pelo BOM
 do Spring Boot 4.1.1, igual às demais dependências deste projeto sem
 `<version>` explícita.
 
-**⏳ Ainda não confirmado por um `mvn clean verify` completo** — o
-usuário aplicou a correção e vai rodar o build de novo; esta ressalva
-sai daqui quando o `BUILD SUCCESS` chegar.
+**✅ Confirmado pelo `mvn clean verify` seguinte do usuário**: o erro de
+compilação `package com.fasterxml.jackson.databind does not exist`
+desapareceu — os 48 arquivos-fonte compilaram sem erro. Esse mesmo build
+revelou o bug real #5, descrito a seguir.
+
+### 🐛 Bug real #5 (21/09/2026): `ObjectMapper` do Jackson 2 nunca existiu como bean no Spring Boot 4 — o app usa Jackson 3
+
+Segundo `mvn clean verify` real da Fase 5 (já com o bug #4 corrigido):
+compilação passou, mas a aplicação **falhou ao subir o contexto Spring**
+em todo teste que carrega o contexto inteiro (`ServireApiApplicationTests`,
+`FlywayMigrationIntegrationTest`, `TenantIsolationIntegrationTest` — 8
+erros no total), com:
+
+```
+Parameter 0 of constructor in br.com.servire.api.security.RestAccessDeniedHandler
+required a bean of type 'com.fasterxml.jackson.databind.ObjectMapper' that could
+not be found.
+```
+
+Só os dois testes que não sobem o contexto inteiro
+(`GlobalExceptionHandlerTest`, `RequestIdFilterTest`) passaram.
+
+**Causa raiz:** `RestAuthenticationEntryPoint` e `RestAccessDeniedHandler`
+(as duas classes que montam a resposta 401/403 manualmente, por rodarem
+dentro da cadeia de filtros do Spring Security, fora do alcance do
+`GlobalExceptionHandler`) foram escritas injetando
+`com.fasterxml.jackson.databind.ObjectMapper` — a classe do **Jackson 2**
+— presumindo (por hábito de projetos Spring Boot 3.x) que o Spring Boot
+registraria automaticamente um bean desse tipo. Isso **deixou de ser
+verdade a partir do Spring Boot 4**: o Boot 4 migrou o Jackson padrão da
+aplicação para a linha **3.x** (pesquisado e confirmado em 21/09/2026 via
+o blog oficial do Spring, "Introducing Jackson 3 support in Spring", e o
+guia de migração oficial do Spring Boot 4.0 no GitHub wiki). No Jackson
+3, os pacotes e o groupId Maven mudaram de `com.fasterxml.jackson.*` para
+`tools.jackson.*` (exceto `jackson-annotations`, que continua em
+`com.fasterxml.jackson.annotation`), e a auto-configuration do Spring
+Boot 4 registra um bean `tools.jackson.databind.json.JsonMapper` — não
+mais um `ObjectMapper` do Jackson 2. Como nenhum bean `ObjectMapper`
+(Jackson 2) é registrado pelo Spring Boot 4, a injeção por construtor
+falhava com `NoSuchBeanDefinitionException`.
+
+O detalhe que tornou esse bug enganoso: a classe
+`com.fasterxml.jackson.databind.ObjectMapper` REALMENTE está no
+classpath do projeto (por isso a compilação passa sem erro) — só que só
+por causa do `jjwt-jackson` (que ainda não suporta Jackson 3, ver
+https://github.com/jwtk/jjwt/issues/1029), não por causa do Spring Web.
+Ou seja: o projeto tem, de propósito, **dois Jacksons coexistindo**: o
+Jackson 3 (`tools.jackson.*`), usado pelo Spring para serializar as
+respostas HTTP da própria API; e o Jackson 2 (`com.fasterxml.jackson.*`),
+usado só internamente pelo `jjwt-jackson` para (de)serializar claims de
+JWT — os dois nunca deveriam se misturar no código da aplicação.
+
+**Correção:** trocar a injeção, em `RestAuthenticationEntryPoint` e
+`RestAccessDeniedHandler`, de `com.fasterxml.jackson.databind.ObjectMapper`
+(Jackson 2) para `tools.jackson.databind.json.JsonMapper` (Jackson 3) —
+o mesmo bean que o Spring Boot 4 já registra e usa internamente para
+serializar todas as outras respostas da API (inclusive as do
+`GlobalExceptionHandler`, que nunca precisou de import direto). Nenhuma
+outra mudança de código foi necessária: `JsonMapper.writeValue(Writer,
+Object)` tem a mesma assinatura de conveniência que `ObjectMapper` já
+tinha no Jackson 2.
+
+**⏳ Ainda não confirmado por um `mvn clean verify` completo** — a
+correção foi escrita e sincronizada, mas ainda não existe uma nova
+execução do usuário confirmando `BUILD SUCCESS`; esta ressalva sai daqui
+quando isso acontecer.
 
 ## Como rodar localmente
 

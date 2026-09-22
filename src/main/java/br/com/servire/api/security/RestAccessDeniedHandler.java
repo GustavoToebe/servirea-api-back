@@ -3,7 +3,6 @@ package br.com.servire.api.security;
 import br.com.servire.api.web.ApiError;
 import br.com.servire.api.web.ForbiddenException;
 import br.com.servire.api.web.RequestIdFilter;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
@@ -12,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -22,15 +22,18 @@ import java.time.Instant;
  * Security nega o acesso antes de chegar a um controller (ex.: uma
  * restrição por role em {@code authorizeHttpRequests}, hoje não usada mas
  * prevista para módulos de negócio futuros). Mesmo raciocínio de formato
- * de {@link RestAuthenticationEntryPoint} - ver a javadoc de lá.
+ * de {@link RestAuthenticationEntryPoint} - ver a javadoc de lá, inclusive
+ * sobre o Bug real #5 (injeção de {@link JsonMapper} do Jackson 3 no lugar
+ * do {@code ObjectMapper} do Jackson 2, que o Spring Boot 4 não registra
+ * mais como bean).
  */
 @Component
 public class RestAccessDeniedHandler implements AccessDeniedHandler {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
-    public RestAccessDeniedHandler(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public RestAccessDeniedHandler(JsonMapper jsonMapper) {
+        this.jsonMapper = jsonMapper;
     }
 
     @Override
@@ -46,6 +49,6 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
                 null);
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        objectMapper.writeValue(response.getWriter(), body);
+        jsonMapper.writeValue(response.getWriter(), body);
     }
 }

@@ -114,26 +114,41 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Jackson databind (seção 105, Fase 5) — bug real encontrado em
-             21/09/2026, ver README.md: RestAuthenticationEntryPoint/
-             RestAccessDeniedHandler usam com.fasterxml.jackson.databind.ObjectMapper
-             diretamente no código-fonte, mas essa classe nunca tinha sido
-             uma dependência DIRETA do projeto — só chegava transitivamente
-             via spring-boot-starter-web -> spring-boot-starter-json (bem
-             fundo na árvore). Ao adicionar spring-security-test (escopo
-             test) nesta mesma fase, o Maven passou a resolver
+        <!-- Jackson databind — Jackson 2 (com.fasterxml.*), seção 105, Fase 5.
+
+             IMPORTANTE (corrigido em 21/09/2026 após o Bug real #5, ver
+             README.md): esta dependência NÃO é usada pelo código da
+             aplicação. A partir do Spring Boot 4, o Jackson padrão da
+             aplicação (usado por spring-boot-starter-web para
+             serializar/desserializar JSON dos endpoints, e injetado nos
+             próprios beans via `tools.jackson.databind.json.JsonMapper`)
+             é o Jackson 3 (grupo Maven "tools.jackson.*", pacote Java
+             "tools.jackson.*") — um jar completamente separado do Jackson
+             2. `jackson-databind` (Jackson 2) só está aqui porque
+             jjwt-jackson 0.13.0 (biblioteca de JWT, seção 33) depende
+             transitivamente dela como seu motor interno de
+             serialização/desserialização de claims — o jjwt-jackson ainda
+             não tem suporte ao Jackson 3 (ver
+             https://github.com/jwtk/jjwt/issues/1029, consultado em
+             21/09/2026). Nenhuma classe do projeto importa
+             com.fasterxml.jackson.*.
+
+             Bug real #4 (21/09/2026): ao adicionar spring-security-test
+             (escopo test) nesta mesma fase, o Maven passou a resolver
              jackson-databind pelo caminho mais RASO da árvore (via
              spring-security-test), que tem escopo test — a regra de
              mediação "nearest definition" do Maven despreza o caminho mais
-             profundo com escopo compile em favor do mais raso com escopo
-             test, escondendo a classe do classpath de compilação principal
-             (`mvn clean verify` falhou com "package ... does not exist").
-             Declarar a dependência aqui, direta e sem escopo (= compile),
-             garante que ela vença qualquer mediação por profundidade,
-             independente de quais outras dependências a trazem
-             transitivamente. Sem versão própria: gerenciada pelo BOM do
-             Spring Boot 4.1.1, igual às demais dependências deste arquivo
-             sem <version>. -->
+             profundo com escopo compile (via jjwt-jackson) em favor do
+             mais raso com escopo test, escondendo a classe do classpath de
+             compilação principal (`mvn clean verify` falhou com "package
+             ... does not exist" em RestAuthenticationEntryPoint/
+             RestAccessDeniedHandler, que na época ainda injetavam o
+             ObjectMapper do Jackson 2 por engano — ver Bug #5). Declarar a
+             dependência aqui, direta e sem escopo (= compile), garante que
+             ela vença qualquer mediação por profundidade, independente de
+             quais outras dependências a trazem transitivamente. Sem
+             versão própria: gerenciada pelo BOM do Spring Boot 4.1.1,
+             igual às demais dependências deste arquivo sem <version>. -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
