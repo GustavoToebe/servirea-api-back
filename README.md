@@ -143,8 +143,21 @@ voluntário, tabela de auditoria e provedor de e-mail real, seção
 > (`MethodSecurityIntegrationTest` e
 > `DisponibilidadeVoluntarioServiceIntegrationTest`) foram os PRIMEIROS a
 > exercitar, respectivamente, uma negação real de `@PreAuthorize` e uma
-> segunda chamada duplicada a `criar`. Corrigidos; ainda **não
-> confirmados** — aguardando o próximo `mvn clean verify` do usuário.
+> segunda chamada duplicada a `criar`.
+>
+> ✅ **Quinta rodada de `mvn clean verify` real da Fase 11 (22/09/2026),
+> depois dos fixes dos Bugs reais #13 e #14: `BUILD SUCCESS`, `Tests run:
+> 104, Failures: 0, Errors: 0`.** Confirma de verdade os dois fixes: em
+> especial, que `@PreAuthorize` negado agora devolve o 403 correto (não
+> mais 500) e que a duplicata de disponibilidade agora devolve o 409
+> `ConflictException` documentado (não mais um `DataIntegrityViolationException`
+> cru). Com isso, **as cinco funcionalidades da Fase 11 e as quatro
+> lacunas de teste identificadas na rodada anterior estão todas
+> confirmadas de verdade contra um Postgres real** — nenhuma ressalva de
+> build pendente nesta fase. Ver "Próximos passos" para os itens que
+> continuam fora do alcance de qualquer `mvn clean verify` (comportamento
+> real de Supabase Storage/Turnstile/Resend contra os serviços de
+> verdade, não só contra mocks/documentação).
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -1747,13 +1760,18 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
 > (novo, pacote `security/`), quatro testes novos em
 > `EscalaServiceIntegrationTest` para `registrarPresenca`,
 > `DisponibilidadeVoluntarioServiceIntegrationTest` (novo) e
-> `ResendEmailSenderTest` (novo). **Nenhum `mvn clean verify` real rodou
-> ainda sobre este código de teste novo** (revisão manual só, mesma
-> limitação de sempre: sem `mvn`/rede neste ambiente de pesquisa) — trate
-> como ⏳ até o usuário confirmar. Ver o detalhe de cada um logo abaixo.
+> `ResendEmailSenderTest` (novo). Essa rodada revelou (e uma rodada
+> seguinte corrigiu) os Bugs reais #12, #13 e #14 — ver seção "Fase 11"
+> acima.
+>
+> ✅ **Atualização (22/09/2026): item 1 abaixo está CONFIRMADO.** Quinta
+> rodada de `mvn clean verify` real: `BUILD SUCCESS`, `Tests run: 104,
+> Failures: 0, Errors: 0`. Os quatro débitos de teste da Fase 11 e os
+> fixes dos Bugs reais #12/#13/#14 estão todos confirmados de verdade.
 
-1. **Testes escritos nesta rodada (22/09/2026, à tarde) — ⏳ ainda sem
-   confirmação de `mvn clean verify` real:**
+1. ✅ **Testes escritos em 22/09/2026 — CONFIRMADOS pela quinta rodada de
+   `mvn clean verify` real (`BUILD SUCCESS`, 104 testes, 0 falhas, 0
+   erros):**
    - `security/MethodSecurityIntegrationTest` (novo) — confirma
      `@PreAuthorize`/`@EnableMethodSecurity` via `MockMvc` de verdade: 401
      sem autenticação, 403 autenticado mas sem a `PERM_*`/role certa, 200
