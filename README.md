@@ -7,34 +7,39 @@ própria, seção 105/32-36) do `plano_mestre_servire_v2_mvp_baixo_custo.md`,
 antes de migrar qualquer módulo de negócio completo (voluntário, escala,
 inscrição — isso é Fase 6 em diante).
 
-## ✅ Fases 2, 3 e 4 com build verificado de verdade (21/09/2026)
+## ✅ Fases 2, 3, 4 e 5 com build verificado de verdade (21/09/2026)
 
 `mvn clean verify` rodado pelo usuário no ambiente real (Windows, Docker
-Desktop): `BUILD SUCCESS`, **13 testes, 0 falhas, 0 erros**. Repositório
-sincronizado em `https://github.com/GustavoToebe/servire-api`. Ver as
-seções abaixo para o detalhamento de cada fase e os bugs reais encontrados
-e corrigidos ao longo do caminho — nenhum ficou sem confirmação final.
+Desktop): `BUILD SUCCESS`, **13 testes, 0 falhas, 0 erros** (confirmado às
+23:37 de 21/09/2026). Repositório sincronizado em
+`https://github.com/GustavoToebe/servire-api`. Ver as seções abaixo para
+o detalhamento de cada fase e os bugs reais encontrados e corrigidos ao
+longo do caminho — nenhum ficou sem confirmação final.
 
-## ⏳ Fase 5 implementada, ainda NÃO confirmada por build real (21/09/2026)
-
-Todo o código da Fase 5 (autenticação própria — ver seção dedicada logo
-abaixo) foi escrito e compõe este repositório. O usuário já rodou
-`mvn clean verify` duas vezes neste dia e encontrou dois bugs reais,
-ambos já corrigidos (**bug real #4** e **bug real #5** — ver detalhamento
-na seção da Fase 5 abaixo), mas **ainda não há uma execução completa com
-`BUILD SUCCESS`** confirmando que os 13 testes anteriores continuam
-passando e que os novos componentes de segurança sobem corretamente.
-Este aviso só sai daqui quando isso acontecer (mesma prática usada nos
-bugs reais #1/#2/#3).
-
-Histórico das duas tentativas até agora:
+Histórico das tentativas de build da Fase 5 até chegar no `BUILD SUCCESS`:
 1ª tentativa: falhou na **compilação** (bug real #4 — `jackson-databind`
 sumindo do classpath por mediação de dependências do Maven).
 2ª tentativa: compilação passou (48 arquivos-fonte), mas o **contexto do
 Spring falhou ao subir** em todo teste que carrega a aplicação inteira
 (8 erros) por causa do bug real #5 — `ObjectMapper` do Jackson 2 nunca
 foi registrado como bean pelo Spring Boot 4 (que usa Jackson 3 por
-padrão). Corrigido; aguardando a 3ª tentativa do usuário.
+padrão).
+3ª tentativa (21/09/2026, 23:37): **`BUILD SUCCESS`, 13 testes, 0 falhas,
+0 erros** — os dois bugs reais estavam mesmo corrigidos. Fase 5 encerrada
+sem ressalva de compilação/contexto pendente (os testes de integração do
+próprio fluxo de autenticação — login, refresh, etc. — ainda não foram
+escritos, ver "Próximos passos").
+
+> **Nota sobre uma tentativa seguinte, sem Docker Desktop rodando
+> (22/09/2026):** o usuário rodou `mvn clean verify` de novo depois do
+> `BUILD SUCCESS` acima e viu `BUILD FAILURE` com
+> `Could not find a valid Docker environment`. Isso **não é um bug real**
+> — é só o Docker Desktop não estar aberto naquele momento; os três testes
+> que sobem o contexto Spring completo (`ServireApiApplicationTests`,
+> `FlywayMigrationIntegrationTest`, `TenantIsolationIntegrationTest`)
+> dependem de um Postgres via Testcontainers, que exige o Docker rodando.
+> Solução: abrir o Docker Desktop, esperar ele terminar de subir, e rodar
+> `mvn clean verify` de novo. Não precisa de nenhuma mudança de código.
 
 ## Decisão de versão: Spring Boot 4.1.1 (não 3.x)
 
@@ -498,10 +503,10 @@ outra mudança de código foi necessária: `JsonMapper.writeValue(Writer,
 Object)` tem a mesma assinatura de conveniência que `ObjectMapper` já
 tinha no Jackson 2.
 
-**⏳ Ainda não confirmado por um `mvn clean verify` completo** — a
-correção foi escrita e sincronizada, mas ainda não existe uma nova
-execução do usuário confirmando `BUILD SUCCESS`; esta ressalva sai daqui
-quando isso acontecer.
+**✅ Confirmado pelo `mvn clean verify` seguinte do usuário (21/09/2026,
+23:37): `BUILD SUCCESS`, 13 testes, 0 falhas, 0 erros.** Os dois bugs reais
+da Fase 5 (#4 e #5) estão corrigidos e confirmados — nenhuma ressalva de
+compilação/contexto pendente nesta fase.
 
 ## Como rodar localmente
 
@@ -582,11 +587,13 @@ progressivamente a partir da Fase 6.
 
 ## Próximos passos
 
-1. **Confirmar a Fase 5 com um `mvn clean verify` real** (ver aviso ⏳
-   acima) — ainda falta escrever os testes de integração do fluxo de
-   autenticação completo (login single-tenant/multi-tenant, seleção de
-   paróquia, refresh com rotation, detecção de reuso, logout, Kill Switch
-   em cada um desses pontos, forgot/reset password).
+1. **Escrever os testes de integração do fluxo de autenticação completo**
+   (login single-tenant/multi-tenant, seleção de paróquia, refresh com
+   rotation, detecção de reuso, logout, Kill Switch em cada um desses
+   pontos, forgot/reset password) — a Fase 5 já tem `BUILD SUCCESS`
+   confirmado (ver seção acima), mas isso cobre só os 13 testes das Fases
+   2-4; o fluxo de autenticação em si ainda não tem nenhum teste
+   automatizado.
 2. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
    31) — hoje `authorizeHttpRequests` só distingue autenticado/não
    autenticado, sem checar a role do vínculo `usuario_tenant`.
