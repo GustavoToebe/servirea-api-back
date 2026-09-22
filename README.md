@@ -57,14 +57,23 @@ voluntário, tabela de auditoria e provedor de e-mail real, seção
 >   `SecurityContextHolder`, `MDC`, `RequestContextHolder.getRequestAttributes()`
 >   retornando `null` fora de uma requisição HTTP real) não lançam exceção
 >   quando chamados a partir de um teste de serviço puro.
-> - **Ainda NÃO confirmado:** a aplicação real do `@PreAuthorize` em nível
->   HTTP (nenhum teste `MockMvc`/`TestRestTemplate` chama os controllers
->   com roles diferentes para checar 200 vs 403); `EscalaService.registrarPresenca`
->   e todo o fluxo de `DisponibilidadeVoluntarioService`/
->   `DisponibilidadeVoluntarioController` (nenhum teste existente chama
->   nenhum dos dois); e `ResendEmailSender` (o profile de teste força
->   `servire.email.provider: log`, então o bean do Resend nunca é
->   instanciado nem exercitado).
+> - **Ainda NÃO confirmado nesta rodada de build:** a aplicação real do
+>   `@PreAuthorize` em nível HTTP (nenhum teste `MockMvc`/`TestRestTemplate`
+>   chama os controllers com roles diferentes para checar 200 vs 403);
+>   `EscalaService.registrarPresenca` e todo o fluxo de
+>   `DisponibilidadeVoluntarioService`/`DisponibilidadeVoluntarioController`
+>   (nenhum teste existente chama nenhum dos dois); e `ResendEmailSender`
+>   (o profile de teste força `servire.email.provider: log`, então o bean
+>   do Resend nunca é instanciado nem exercitado).
+>
+> **Atualização (22/09/2026, à tarde):** as quatro lacunas acima já têm
+> teste escrito (`security/MethodSecurityIntegrationTest`, os quatro
+> testes novos de `registrarPresenca` em `EscalaServiceIntegrationTest`,
+> `DisponibilidadeVoluntarioServiceIntegrationTest` e
+> `ResendEmailSenderTest`) — ver seção "Fase 11" e "Próximos passos" para
+> o detalhe de cada um. **Nenhum `mvn clean verify` real rodou ainda sobre
+> esse código de teste novo** — trate como ⏳ até a próxima confirmação do
+> usuário.
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -1635,22 +1644,53 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
 > dele: construir as 5 funcionalidades primeiro, testar depois, mesmo
 > padrão já usado nas Fases 6-9). A Fase 11 já tem um `mvn clean verify`
 > real com `BUILD SUCCESS` (75 testes, 0 falhas, 0 erros), mas isso só
-> confirma schema/contexto Spring/efeito colateral — a lógica de negócio
-> nova continua sem teste direto. Item 1 abaixo é o que resta.
+> confirmou schema/contexto Spring/efeito colateral.
+>
+> **Atualização (22/09/2026, à tarde):** os quatro débitos de teste do
+> item 1 abaixo foram pagos nesta rodada — `MethodSecurityIntegrationTest`
+> (novo, pacote `security/`), quatro testes novos em
+> `EscalaServiceIntegrationTest` para `registrarPresenca`,
+> `DisponibilidadeVoluntarioServiceIntegrationTest` (novo) e
+> `ResendEmailSenderTest` (novo). **Nenhum `mvn clean verify` real rodou
+> ainda sobre este código de teste novo** (revisão manual só, mesma
+> limitação de sempre: sem `mvn`/rede neste ambiente de pesquisa) — trate
+> como ⏳ até o usuário confirmar. Ver o detalhe de cada um logo abaixo.
 
-1. **Escrever testes automatizados que exercitem de fato a lógica nova da
-   Fase 11** — o `BUILD SUCCESS` de 22/09/2026 confirmou que o schema, o
-   contexto Spring e os efeitos colaterais (via `AuditLogService` chamado
-   pelos serviços já testados) funcionam, mas nenhum teste chama
-   diretamente: (a) os controllers via `MockMvc`/`TestRestTemplate` com
-   roles diferentes, para checar que `@PreAuthorize`/`@EnableMethodSecurity`
-   realmente barra quem não tem a `PERM_*` (hoje é só a configuração
-   declarada, nunca exercitada em uma requisição HTTP real); (b)
-   `EscalaService.registrarPresenca`; (c)
-   `DisponibilidadeVoluntarioService`/`DisponibilidadeVoluntarioController`
-   (nenhum teste chama nenhum dos dois, em nenhuma camada); (d)
-   `ResendEmailSender` (o profile de teste força `provider: log`, então
-   esse bean nunca é sequer instanciado nos testes atuais).
+1. **Testes escritos nesta rodada (22/09/2026, à tarde) — ⏳ ainda sem
+   confirmação de `mvn clean verify` real:**
+   - `security/MethodSecurityIntegrationTest` (novo) — confirma
+     `@PreAuthorize`/`@EnableMethodSecurity` via `MockMvc` de verdade: 401
+     sem autenticação, 403 autenticado mas sem a `PERM_*`/role certa, 200
+     quando a permissão bate, e a distinção `hasAuthority("PERM_...")` vs
+     `hasRole("ADMIN")` (`AuditLogController`). Os serviços por trás de
+     cada controller são substituídos por `@MockitoBean` — o teste isola a
+     checagem de autorização em si, não repete regra de negócio já testada
+     em outro lugar. Achado registrado no javadoc da classe (não um bug):
+     a validação `@Valid` do corpo roda ANTES do `@PreAuthorize` (resolução
+     de argumentos do método acontece antes do proxy de segurança), então
+     todo corpo JSON usado no teste precisa ser válido — um corpo inválido
+     mascararia o que o teste quer medir com um 400 em vez de um 403.
+   - `EscalaServiceIntegrationTest` — quatro testes novos para
+     `registrarPresenca` (Fase 11, seção 131.5 item 11): atualiza a
+     presença de verdade (com leitura de volta do repositório), rejeita
+     vaga sem voluntário alocado, rejeita escala `CANCELADA`, e vaga
+     inexistente vira 404.
+   - `voluntario/DisponibilidadeVoluntarioServiceIntegrationTest` (novo) —
+     cobre `criar` (recorrente por dia da semana, pontual por data, a
+     regra XOR nos dois sentidos, voluntário inexistente, e a duplicata que
+     o índice único parcial `ux_disponibilidade_recorrente`/V025 rejeita),
+     `listar` (isolado por voluntário) e `excluir` (incluindo o 404
+     deliberado ao tentar excluir a disponibilidade de OUTRO voluntário —
+     nunca revelar que ela existe).
+   - `auth/ResendEmailSenderTest` (novo) — mesmo padrão de
+     `TurnstileServiceTest`/`SupabaseStorageServiceTest`
+     (`MockRestServiceServer`, sem subir o Spring context): confirma o
+     formato exato do request (endpoint, header `Authorization: Bearer`,
+     corpo `{"from","to","subject","html"}`), o fail-closed de
+     `requireConfigurado` (`apiKey`/`from` ausentes) e que qualquer falha
+     HTTP (500, 401) vira `EmailException` — nunca engolida. Continua sem
+     confirmação contra a API real do Resend (nenhum acesso de rede a
+     serviços externos a partir deste ambiente de pesquisa).
 2. Confirmar o fix proativo em `InscricaoService.substituirResponsaveis`
    (mesmo padrão do Bug real #10, aplicado por analogia sem um teste que
    o exercite desde a Fase 8/10) — um teste que troque o responsável

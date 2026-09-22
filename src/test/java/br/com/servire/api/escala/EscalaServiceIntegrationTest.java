@@ -12,6 +12,7 @@ import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.voluntario.VoluntarioRepository;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
+import br.com.servire.api.web.ResourceNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Testes de regra de negócio de {@link EscalaService} (débito técnico da
  * Fase 9, seção 46/47/109 do plano mestre, adiado até esta rodada —
- * 22/09/2026, junto com a Fase 10). Não precisa de {@code @MockitoBean}
+ * 22/09/2026, junto com a Fase 10; e da Fase 11 — {@code registrarPresenca},
+ * seção 131.5 item 11, adicionado numa rodada posterior, 22/09/2026 à
+ * tarde). Não precisa de {@code @MockitoBean}
  * — {@code EscalaService} não depende de nenhum serviço externo
  * (Storage/Turnstile), diferente de voluntário/inscrição.
  *
@@ -43,6 +46,9 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private EscalaRepository escalaRepository;
+
+    @Autowired
+    private EscalaVagaRepository escalaVagaRepository;
 
     @Autowired
     private VoluntarioRepository voluntarioRepository;
@@ -177,8 +183,64 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
         assertThat(escalaRepository.findById(canceladaDeNovo.getId())).isEmpty();
     }
 
+    /**
+     * Controle de faltas (Fase 11, seção 131.5 item 11) — débito de teste
+     * pago nesta rodada (22/09/2026, junto com o restante da lacuna de
+     * confirmação da Fase 11 — ver README/plano mestre). Nenhum destes
+     * quatro testes existia quando o segundo {@code mvn clean verify} da
+     * Fase 11 confirmou {@code BUILD SUCCESS}; até então
+     * {@link EscalaService#registrarPresenca} nunca tinha sido chamado por
+     * nenhum teste automatizado.
+     */
+    @Test
+    void registrarPresencaAtualizaAPresencaDaVaga() {
+        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Presente"));
+        Escala criada = escalaService.criar(requestComUmEventoEVoluntario(voluntario.getId()), null);
+        UUID vagaId = criada.getEventos().get(0).getVagas().get(0).getId();
+
+        EscalaVaga atualizada = escalaService.registrarPresenca(vagaId, Presenca.PRESENTE);
+
+        assertThat(atualizada.getPresenca()).isEqualTo(Presenca.PRESENTE);
+        assertThat(escalaVagaRepository.findById(vagaId).orElseThrow().getPresenca()).isEqualTo(Presenca.PRESENTE);
+    }
+
+    @Test
+    void registrarPresencaSemVoluntarioAlocadoLancaBadRequestException() {
+        Escala criada = escalaService.criar(requestComUmEvento(null), null);
+        UUID vagaId = criada.getEventos().get(0).getVagas().get(0).getId();
+
+        assertThatThrownBy(() -> escalaService.registrarPresenca(vagaId, Presenca.FALTOU))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("não tem voluntário alocado");
+    }
+
+    @Test
+    void registrarPresencaEmEscalaCanceladaLancaConflictException() {
+        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário da Escala Cancelada"));
+        Escala criada = escalaService.criar(requestComUmEventoEVoluntario(voluntario.getId()), null);
+        UUID vagaId = criada.getEventos().get(0).getVagas().get(0).getId();
+        escalaService.cancelar(criada.getId());
+
+        assertThatThrownBy(() -> escalaService.registrarPresenca(vagaId, Presenca.PRESENTE))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("CANCELADA");
+    }
+
+    @Test
+    void registrarPresencaComVagaInexistenteLancaResourceNotFoundException() {
+        assertThatThrownBy(() -> escalaService.registrarPresenca(UUID.randomUUID(), Presenca.PRESENTE))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
     private EscalaRequest requestComUmEvento(Long version) {
         return new EscalaRequest("Escala de Teste", TipoEscala.SEMANAL, 2026, 10, null, version, List.of(eventoSimples()));
+    }
+
+    private EscalaRequest requestComUmEventoEVoluntario(UUID voluntarioId) {
+        EscalaEventoRequest evento = new EscalaEventoRequest(
+                LocalDate.of(2026, 10, 4), LocalTime.of(19, 0), "Missa",
+                List.of(new EscalaVagaRequest(FuncaoEscala.MISSAL, 1, voluntarioId)));
+        return new EscalaRequest("Escala de Teste", TipoEscala.SEMANAL, 2026, 10, null, null, List.of(evento));
     }
 
     private EscalaEventoRequest eventoSimples() {
