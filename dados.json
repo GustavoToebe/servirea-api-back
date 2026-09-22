@@ -1,0 +1,10 @@
+﻿{
+  "turnstileToken": "1.RyDG1-QyNGLsk6yWqBqZ64uZryK4KufNXV-Ghs0VZ03h6Wft5TsNiDGIB6v6hsD7xseHx9x1HpnvnZhxzK1hYc5cnI1baDfQkThaR8fYjDBu7UOvDz0LY3qYANGrOvVpz6CFVRuprkJN-VyzMMN1Q7utoEvu1FAJc8hubK_8yxZiffyyfSfO0dXzaotS3FvaX3_ksMCKsN9nyJrEvijKrmy2l6HBNoLvcV2wFdSN-fyvXKdZAkjXtv_1WJhOKwDqQdkfkmeXWPfY0EI4o776rbhgzo8ql_pYZCC4rzbvK79bV58MTkkMRQ3jJmzWfQ_OYH9LFM0AceS7cKoL0_UbFPt7t9dBLXoOewGQvHEQlzeP8Fb8Lsgqn5iqLTPxKr_c2CULxoOWTyOaffNYwaJ-VJH3APVTd7gRR8bWufK8R_MHkWJm34_Gj2oYsEg244hhSKncmT6_b7gxMhrBlLmfEGngeS7TszmtuJPOs-wWUW6vW3faMM4utgINoxsTUeKSrOf8O_54WHvDw3vJDvqJiX-MEW6zySnXRs5TV9sN6UmS4fIPcyE3WBoU-TYtsqel7_hqSCwCFHZrV-qICW62jrGAJq0FYz3Ck0mO1R_W-DPA6gCVNS-vLVa6avGh9TnCUaW3MMCuDwrPO4e9beNQyw.mIt87JwKQMfU4qw9wSRcjg.d45fff807f81a25f8d8f28c1b00aa7cdd778ed6f2da885d94cfe9b534982d68e",
+  "nomeCompleto": "Teste Real Turnstile",
+  "tipo": "COROINHA",
+  "autorizaWhatsapp": false,
+  "funcoesHabilitadas": [],
+  "responsaveis": [
+    { "parentesco": "Mae", "nome": "Responsavel Teste", "principal": true }
+  ]
+}
