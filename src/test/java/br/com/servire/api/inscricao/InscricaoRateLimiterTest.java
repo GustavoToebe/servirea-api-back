@@ -49,19 +49,26 @@ class InscricaoRateLimiterTest {
     }
 
     @Test
-    void tentativaForaDaJanelaDeslizanteNaoContaMaisParaOLimite() {
-        // Janela de 1 nanossegundo: qualquer intervalo real entre duas
-        // chamadas já é "fora da janela", simulando o descarte de
-        // tentativas antigas sem precisar de Thread.sleep/mock de relógio.
+    void tentativaForaDaJanelaDeslizanteNaoContaMaisParaOLimite() throws InterruptedException {
+        // Bug de teste encontrado no mvn clean verify real de 22/09/2026:
+        // a versão original usava Duration.ofNanos(1) apostando que
+        // qualquer intervalo real entre duas chamadas já excederia a
+        // janela — mas isso depende da resolução do relógio da máquina, e
+        // falhou na máquina Windows do usuário (duas chamadas de
+        // Instant.now() em sequência podem "empatar" dependendo da
+        // resolução do relógio do sistema operacional). Como
+        // InscricaoRateLimiter não tem um Clock injetável (e criar um só
+        // para este teste não se justifica), a correção é usar uma janela
+        // pequena, porém real, combinada com um Thread.sleep que garante
+        // determinística e explicitamente que ela já passou.
         InscricaoRateLimiter limiter = new InscricaoRateLimiter(
-                new RateLimitProperties(new RateLimitProperties.InscricaoPublica(1, Duration.ofNanos(1))));
+                new RateLimitProperties(new RateLimitProperties.InscricaoPublica(1, Duration.ofMillis(50))));
 
         String ip = "192.0.2.55";
         assertThatCode(() -> limiter.registrarTentativa(ip)).doesNotThrowAnyException();
-        // Mesmo já tendo usado a única "vaga" da janela, o tempo decorrido
-        // entre as duas chamadas (mesmo que só microssegundos) já excede a
-        // janela de 1ns configurada, então a tentativa anterior é
-        // descartada antes da checagem do limite.
+        Thread.sleep(60);
+        // Passados os 60ms (> janela de 50ms configurada), a tentativa
+        // anterior é descartada antes da checagem do limite.
         assertThatCode(() -> limiter.registrarTentativa(ip)).doesNotThrowAnyException();
     }
 

@@ -69,8 +69,14 @@ class VoluntarioServiceIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void definirTenant() {
+        // Bug de teste encontrado no mvn clean verify real de 22/09/2026:
+        // o "codigo" (coluna UNIQUE) ficava fixo enquanto o slug já era
+        // randomizado — só o primeiro dos 8 métodos de teste desta classe
+        // conseguia inserir o tenant; os demais quebravam com
+        // "duplicate key value violates unique constraint tenant_codigo_key".
+        String sufixo = UUID.randomUUID().toString();
         Tenant tenant = tenantRepository.saveAndFlush(new Tenant(
-                "TENANT-VOL-TESTE", "tenant-vol-teste-" + UUID.randomUUID(), "Paróquia de teste (voluntario)",
+                "TENANT-VOL-TESTE-" + sufixo, "tenant-vol-teste-" + sufixo, "Paróquia de teste (voluntario)",
                 Tenant.Status.ATIVO));
         TenantContext.set(tenant.getId());
     }

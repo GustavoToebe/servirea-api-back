@@ -19,6 +19,38 @@ própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 > **nada aqui deve ser tratado como "pronto" até o próximo build real do
 > usuário confirmar.**
 >
+> 🔴 **Primeira rodada real desse build (22/09/2026): `BUILD FAILURE`** —
+> `Tests run: 75, Failures: 2, Errors: 14`. Analisado o log completo
+> (`erros.md` enviado pelo usuário) e corrigidos os quatro problemas
+> encontrados — **dois bugs reais de produção (#8 e #9) e duas correções
+> de teste** — ver "Bug real #8" (seção da Fase 8) e "Bug real #9" (seção
+> da Fase 5) abaixo para os detalhes completos. **Ainda sem confirmação de
+> um novo `mvn clean verify` real** — só revisão manual das quatro
+> correções foi possível neste ambiente.
+>
+> Resumo dos quatro problemas (todos correspondem exatamente aos 14
+> erros + 2 falhas do log, confirmado por contagem):
+> 1. **Teste (12 erros):** `VoluntarioServiceIntegrationTest` (7 erros) e
+>    `EscalaServiceIntegrationTest` (5 erros) — `@BeforeEach definirTenant`
+>    randomizava o `slug` do tenant descartável mas não o `codigo` (coluna
+>    `UNIQUE`), então só o primeiro método de teste de cada classe
+>    conseguia inserir o tenant; os demais quebravam com
+>    `duplicate key value violates unique constraint "tenant_codigo_key"`.
+>    Corrigido randomizando o `codigo` também, com o mesmo sufixo UUID já
+>    usado no `slug`.
+> 2. **Bug real #8, produção (2 erros):** `InscricaoService.criarPublica`
+>    — detalhe completo na seção da Fase 8 abaixo.
+> 3. **Bug real #9, produção/segurança (1 falha):** detecção de reuso de
+>    refresh token não revogava as sessões de verdade — detalhe completo
+>    na seção da Fase 5 abaixo.
+> 4. **Teste (1 falha):** `InscricaoRateLimiterTest.tentativaForaDaJanelaDeslizanteNaoContaMaisParaOLimite`
+>    usava `Duration.ofNanos(1)` apostando que qualquer intervalo real de
+>    execução já excederia essa janela — não se confirmou na máquina
+>    Windows do usuário (resolução de relógio do sistema operacional).
+>    Corrigido trocando por uma janela real pequena (50ms) + um
+>    `Thread.sleep(60)` explícito entre as duas chamadas, tornando o teste
+>    determinístico independente da resolução do relógio.
+>
 > **O que entrou nesta rodada:**
 > - **Fase 10** (seção 110): suíte de isolamento multi-tenant ampliada em
 >   `TenantIsolationIntegrationTest` cobrindo `Responsavel` (cascata de 1
@@ -590,6 +622,43 @@ tinha no Jackson 2.
 da Fase 5 (#4 e #5) estão corrigidos e confirmados — nenhuma ressalva de
 compilação/contexto pendente nesta fase.
 
+### 🐛 Bug real #9 (22/09/2026, segurança): reuso de refresh token detectado não revogava as sessões de verdade
+
+Encontrado pelo `mvn clean verify` real da Fase 10 (débito de testes da
+Fase 5, pago só agora): `AuthServiceIntegrationTest.reusoDeRefreshTokenJaRevogadoRevogaTodasAsSessoesDoUsuario`
+falhou — depois de simular o reuso de um refresh token já revogado (o
+cenário de possível roubo de token, seção 36), a sessão de um SEGUNDO
+dispositivo do mesmo usuário continuava válida, quando deveria ter sido
+revogada junto.
+
+**Causa raiz:** `RefreshTokenService.rotacionar` chama
+`RefreshTokenRepository.revogarTodosAtivosDoUsuario` (um `UPDATE` em
+massa) e, na sequência, lança `UnauthorizedException` — uma
+`RuntimeException` (não verificada). Pela regra padrão do Spring, uma
+`RuntimeException` que escapa de um método `@Transactional` marca aquela
+transação como rollback-only; como `rotacionar` e o método que o chama
+participam da MESMA transação física (propagação padrão `REQUIRED`, o
+chamado entra na transação já aberta pelo chamador), o `UPDATE` de
+revogação — apesar de já ter sido enviado ao banco — era desfeito pelo
+rollback disparado pela exceção lançada logo depois, na mesma transação.
+Ou seja: a funcionalidade de segurança "reuso de token revoga todas as
+sessões" nunca funcionou de fato contra um banco real, só parecia
+funcionar em revisão de código porque o `UPDATE` roda antes do `throw` —
+o efeito só se perde no commit (ou na ausência dele).
+
+**Correção:** anotar `RefreshTokenRepository.revogarTodosAtivosDoUsuario`
+com `@Transactional(propagation = Propagation.REQUIRES_NEW)`, forçando
+esse `UPDATE` a rodar e COMMITAR numa transação própria e independente,
+imune ao rollback que a `UnauthorizedException` provoca depois na
+transação do chamador. Funciona porque a chamada passa pelo proxy AOP do
+próprio repositório (um bean diferente de `RefreshTokenService`),
+contornando a limitação de "self-invocation ignora o proxy" que
+inviabilizaria a mesma correção se tentada como um método privado dentro
+de `RefreshTokenService`.
+
+> ⏳ **Ainda não confirmado por um novo `mvn clean verify` real** — ver o
+> aviso no topo deste README.
+
 ## Fase 6 — voluntários e responsáveis (seção 37/38/39/106 do plano mestre)
 
 Primeiro módulo de negócio migrado do Angular/Supabase para o backend
@@ -853,6 +922,50 @@ para uma inscrição). Mesma regra "exatamente um responsável principal"
 dedicada para aprovação/rejeição (só um log, sem persistência própria —
 pacote `auditoria/` continua um item futuro do plano mestre, seção 16).
 
+### 🐛 Bug real #8 (22/09/2026): `InscricaoService.criarPublica` gravava tudo com o tenant sentinela `SEM_TENANT`
+
+Encontrado pelo `mvn clean verify` real da Fase 10: os testes de
+`InscricaoServiceIntegrationTest` que exercitam `criarPublica` falhavam
+com violação da foreign key `inscricoes_tenant_id_fkey` — a inscrição
+pública nunca conseguia ser gravada de fato num banco real, apesar de
+todo o código parecer correto em revisão manual.
+
+**Causa raiz:** o Hibernate resolve e FIXA o identificador de tenant de
+uma sessão no momento em que a sessão é aberta — e sob `@Transactional`
+declarativo do Spring, a sessão é aberta na ENTRADA do método (pelo proxy
+AOP), antes do corpo do método rodar. `criarPublica` tinha
+`@Transactional` no método inteiro, mas só chamava
+`TenantContext.set(tenant.getId())` DENTRO do corpo, depois de resolver o
+tenant pelo slug — ou seja, tarde demais: a sessão já tinha nascido presa
+ao tenant sentinela `SEM_TENANT` (`00000000-0000-0000-0000-000000000000`,
+usado pelo `ServireCurrentTenantIdentifierResolver` quando não há
+`TenantContext` definido). O `INSERT` em `inscricoes`, adiado até o
+commit da transação (que só acontece depois que o corpo do método —
+incluindo o `finally` que limpa o `TenantContext` — já terminou), sempre
+tentava gravar `tenant_id = SEM_TENANT`, violando a FK. **Isso significa
+que a funcionalidade carro-chefe da Fase 8 nunca funcionou de fato contra
+um banco real.**
+
+Esse é exatamente o mesmo mecanismo (sessão do Hibernate resolve o tenant
+uma única vez, na abertura) que já tinha sido identificado e corrigido
+proativamente em dois métodos de `TenantIsolationIntegrationTest` durante
+a revisão manual desta mesma rodada (removendo `@Transactional` deles,
+ver seção da Fase 10 abaixo) — a correção proativa nos testes já
+confirmava a teoria; faltava aplicá-la também no código de produção.
+
+**Correção:** remover `@Transactional` do método `criarPublica` em si.
+Um novo `TransactionTemplate` (construído a partir de um
+`PlatformTransactionManager` injetado no construtor) abre a transação
+manualmente, DEPOIS de `TenantContext.set(...)` já ter rodado — a lógica
+de persistência (criar a entidade, aplicar campos, salvar, subir a foto)
+foi extraída para um novo método privado `gravarInscricaoPublica`,
+chamado dentro de `transactionTemplate.execute(...)`. O `try/finally` que
+limpa `TenantContext`/MDC continua envolvendo tudo, exatamente como
+antes.
+
+> ⏳ **Ainda não confirmado por um novo `mvn clean verify` real** — ver o
+> aviso no topo deste README.
+
 ### ⚠️ Riscos residuais a verificar no próximo build real
 
 1. **`X-Forwarded-For` sem reverse proxy confirmado.** O rate limit lê esse
@@ -1047,6 +1160,16 @@ métodos, ver item 3 dos "Riscos residuais" da Fase 9 acima).
 > manual linha por linha, mais um script auxiliar para checar contagens de
 > argumento de construtores/records (que já pegou e ajudou a corrigir três
 > bugs reais de contagem de argumento antes mesmo de chegar num build).
+>
+> 🔴 **Atualização (22/09/2026): o primeiro `mvn clean verify` real desta
+> rodada rodou e voltou `BUILD FAILURE`** (compilação passou — os 14 erros
+> e 2 falhas foram todos em tempo de execução/asserção, não de compilação)
+> — `Tests run: 75, Failures: 2, Errors: 14`. Isso já confirma que o
+> contexto Spring sobe com todo o código novo da Fase 10 + débito de
+> testes. Os quatro problemas encontrados (2 bugs reais de produção — #8 e
+> #9 — e 2 correções de teste) estão detalhados no aviso do topo deste
+> README e nas seções de cada fase — todos corrigidos, **ainda sem
+> confirmação de um novo `mvn clean verify` real.**
 
 ## Como rodar localmente
 
@@ -1160,17 +1283,22 @@ não existem `config/`, `backoffice/`, `arquivo/`, `billing/`,
 > **Atualização (22/09/2026):** a decisão anterior de adiar testes em
 > favor de velocidade foi revertida por instrução explícita do usuário —
 > a Fase 10 e todo o débito de testes pendente (item 2 antigo desta lista)
-> foram pagos na mesma rodada (ver seção da Fase 10 acima). O item 1
-> abaixo continua sendo o próximo passo mais urgente, agora para um lote
-> bem maior de código novo.
+> foram pagos na mesma rodada (ver seção da Fase 10 acima). O primeiro
+> `mvn clean verify` real dessa rodada já rodou e voltou `BUILD FAILURE`
+> (`Tests run: 75, Failures: 2, Errors: 14`) — os quatro problemas
+> encontrados (2 bugs reais de produção, #8 e #9, e 2 correções de teste)
+> já foram corrigidos (ver aviso no topo do README). O item 1 abaixo
+> continua sendo o próximo passo mais urgente: confirmar essas correções
+> com um novo build real.
 
-1. **Confirmar a Fase 10 + todo o débito de testes pago junto com um
-   `mvn clean verify` real** — é o próximo passo imediato depois desta
-   rodada (ver o aviso ⏳ no topo deste README, a seção da Fase 10, e os
-   "Riscos residuais" de cada fase acima). Até essa confirmação chegar,
-   nada desta rodada deve ser tratado como "pronto" — nem sequer que o
-   código compila, já que `mvn` não está disponível neste ambiente de
-   pesquisa.
+1. **Confirmar as correções dos Bugs reais #8/#9 (e as duas correções de
+   teste) com um novo `mvn clean verify` real** — é o próximo passo
+   imediato depois desta rodada (ver o aviso ⏳ no topo deste README, a
+   seção da Fase 10, e as seções das Fases 5/8 para o detalhe de cada
+   bug). Até essa confirmação chegar, nenhuma das quatro correções desta
+   rodada deve ser tratada como "pronta" — só foi possível revisão manual
+   neste ambiente de pesquisa, já que `mvn` não está disponível aqui
+   (Maven Central bloqueado).
 2. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
    31) — hoje `authorizeHttpRequests` só distingue autenticado/não
    autenticado, sem checar a role do vínculo `usuario_tenant` (vale para

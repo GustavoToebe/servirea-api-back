@@ -52,8 +52,12 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void definirTenant() {
+        // Mesmo bug de teste do VoluntarioServiceIntegrationTest (mvn clean
+        // verify real de 22/09/2026): "codigo" (coluna UNIQUE) fixo enquanto
+        // só o slug era randomizado.
+        String sufixo = UUID.randomUUID().toString();
         Tenant tenant = tenantRepository.saveAndFlush(new Tenant(
-                "TENANT-ESCALA-SVC-TESTE", "tenant-escala-svc-teste-" + UUID.randomUUID(),
+                "TENANT-ESCALA-SVC-TESTE-" + sufixo, "tenant-escala-svc-teste-" + sufixo,
                 "Paróquia de teste (escala service)", Tenant.Status.ATIVO));
         TenantContext.set(tenant.getId());
     }

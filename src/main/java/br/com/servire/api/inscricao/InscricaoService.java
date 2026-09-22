@@ -15,7 +15,9 @@ import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -37,19 +39,26 @@ public class InscricaoService {
     private final StorageService storageService;
     private final TurnstileService turnstileService;
     private final InscricaoRateLimiter rateLimiter;
+    private final TransactionTemplate transactionTemplate;
 
     public InscricaoService(InscricaoRepository inscricaoRepository,
                              VoluntarioRepository voluntarioRepository,
                              TenantRepository tenantRepository,
                              StorageService storageService,
                              TurnstileService turnstileService,
-                             InscricaoRateLimiter rateLimiter) {
+                             InscricaoRateLimiter rateLimiter,
+                             PlatformTransactionManager transactionManager) {
         this.inscricaoRepository = inscricaoRepository;
         this.voluntarioRepository = voluntarioRepository;
         this.tenantRepository = tenantRepository;
         this.storageService = storageService;
         this.turnstileService = turnstileService;
         this.rateLimiter = rateLimiter;
+        // Ver javadoc de criarPublica: precisamos abrir a transação só
+        // DEPOIS de TenantContext.set(...), então não dá pra usar
+        // @Transactional (que abriria a sessão do Hibernate na entrada do
+        // método, antes do tenant ser resolvido) — Bug real #8, seção 108.
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
@@ -66,8 +75,20 @@ public class InscricaoService {
      * rede) → resolver tenant → gravar. Cada barreira só é cruzada se a
      * anterior passou, para não gastar uma chamada HTTP ao Cloudflare em
      * requisições que o rate limit já teria barrado.</p>
+     *
+     * <p><b>Bug real #8 (seção 108):</b> este método NÃO pode ser anotado
+     * com {@code @Transactional} — o Hibernate resolve e fixa o
+     * identificador de tenant da sessão no momento em que a sessão é
+     * aberta, o que sob {@code @Transactional} declarativo acontece na
+     * ENTRADA do método (antes do corpo rodar), e não no momento em que
+     * {@link TenantContext#set} é chamado dentro dele. Com
+     * {@code @Transactional} no método, a sessão nascia presa ao tenant
+     * sentinela {@code SEM_TENANT} e o INSERT (adiado até o commit)
+     * violava a FK {@code inscricoes_tenant_id_fkey} — a inscrição pública
+     * nunca funcionou de fato contra um banco real. A correção é abrir a
+     * transação manualmente, via {@link #transactionTemplate}, só DEPOIS
+     * de {@code TenantContext.set(...)} já ter rodado.</p>
      */
-    @Transactional
     public Inscricao criarPublica(String tenantSlug, InscricaoPublicaRequest request, MultipartFile foto, String ipRemetente) {
         rateLimiter.registrarTentativa(ipRemetente);
         turnstileService.validar(request.turnstileToken(), ipRemetente);
@@ -84,30 +105,39 @@ public class InscricaoService {
         TenantContext.set(tenant.getId());
         MDC.put(br.com.servire.api.security.JwtAuthenticationFilter.MDC_KEY, tenant.getId().toString());
         try {
-            Inscricao inscricao = new Inscricao(request.nomeCompleto());
-            aplicarCampos(inscricao, request.dataNascimento(), request.tipo(), request.etapaCatequese(),
-                    request.eucaristiaAno(), request.crismaAno(), request.rua(), request.numero(), request.bairro(),
-                    request.telefone(), request.celular(), request.email(), request.horarioEstudo(),
-                    request.observacoes(), request.autorizaWhatsapp(), request.funcoesHabilitadas());
-            substituirResponsaveis(inscricao, request.responsaveis());
-            inscricao = inscricaoRepository.save(inscricao);
-
-            if (foto != null && !foto.isEmpty()) {
-                String caminho = "inscricoes/" + inscricao.getId() + "/foto" + extensaoDe(foto);
-                byte[] conteudo;
-                try {
-                    conteudo = foto.getBytes();
-                } catch (IOException e) {
-                    throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
-                }
-                String caminhoSalvo = storageService.armazenar(caminho, conteudo, foto.getContentType());
-                inscricao.setFotoPath(caminhoSalvo);
-            }
-            return inscricao;
+            return transactionTemplate.execute(status -> gravarInscricaoPublica(request, foto));
         } finally {
             MDC.remove(br.com.servire.api.security.JwtAuthenticationFilter.MDC_KEY);
             TenantContext.clear();
         }
+    }
+
+    /**
+     * Parte da gravação de {@link #criarPublica} que precisa mesmo de uma
+     * transação — extraída para rodar dentro de {@link #transactionTemplate},
+     * já com {@link TenantContext#set} aplicado (ver Bug real #8 acima).
+     */
+    private Inscricao gravarInscricaoPublica(InscricaoPublicaRequest request, MultipartFile foto) {
+        Inscricao inscricao = new Inscricao(request.nomeCompleto());
+        aplicarCampos(inscricao, request.dataNascimento(), request.tipo(), request.etapaCatequese(),
+                request.eucaristiaAno(), request.crismaAno(), request.rua(), request.numero(), request.bairro(),
+                request.telefone(), request.celular(), request.email(), request.horarioEstudo(),
+                request.observacoes(), request.autorizaWhatsapp(), request.funcoesHabilitadas());
+        substituirResponsaveis(inscricao, request.responsaveis());
+        inscricao = inscricaoRepository.save(inscricao);
+
+        if (foto != null && !foto.isEmpty()) {
+            String caminho = "inscricoes/" + inscricao.getId() + "/foto" + extensaoDe(foto);
+            byte[] conteudo;
+            try {
+                conteudo = foto.getBytes();
+            } catch (IOException e) {
+                throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
+            }
+            String caminhoSalvo = storageService.armazenar(caminho, conteudo, foto.getContentType());
+            inscricao.setFotoPath(caminhoSalvo);
+        }
+        return inscricao;
     }
 
     @Transactional(readOnly = true)
