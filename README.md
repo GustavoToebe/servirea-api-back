@@ -18,18 +18,13 @@ e corrigidos ao longo do caminho — nenhum ficou sem confirmação final.
 ## ⏳ Fase 5 implementada, ainda NÃO confirmada por build real (21/09/2026)
 
 Todo o código da Fase 5 (autenticação própria — ver seção dedicada logo
-abaixo) foi escrito e compõe este repositório, mas **ainda não passou por
-nenhum `mvn clean verify` real** — nem sequer por uma tentativa de
-compilação (o sandbox usado para escrever este código não tem acesso ao
-Maven Central para baixar `spring-boot-starter-security`/JJWT pela
-primeira vez). A única verificação feita até aqui foi manual: conferir a
-assinatura exata de `CsrfConfigurer.spa()`/`ignoringRequestMatchers(...)`
-contra a documentação oficial do Spring Security 7.0.2, já que o projeto
-usa Spring Security 7.x (par do Spring Framework 7/Boot 4.1.1). Falta
-rodar `mvn clean verify` de verdade para confirmar que tudo compila e que
-os 13 testes anteriores continuam passando — este aviso só sai daqui
-quando isso acontecer (mesma prática usada nos bugs reais #1/#2/#3
-abaixo).
+abaixo) foi escrito e compõe este repositório. O usuário já rodou
+`mvn clean verify` uma primeira vez e encontrou um bug real de verdade
+(**bug real #4**, corrigido — ver detalhamento na seção da Fase 5
+abaixo), mas **ainda não há uma execução completa com `BUILD SUCCESS`
+confirmando que os testes anteriores continuam passando** com
+`spring-boot-starter-security` agora no classpath. Este aviso só sai
+daqui quando isso acontecer (mesma prática usada nos bugs reais #1/#2/#3).
 
 ## Decisão de versão: Spring Boot 4.1.1 (não 3.x)
 
@@ -387,6 +382,46 @@ previsto na sua própria javadoc e na seção 104 do plano mestre):
   distintos (`access` vs `tenant_selection`) para nunca aceitar um token
   de seleção de paróquia como se fosse um token de acesso normal, ou
   vice-versa.
+
+### 🐛 Bug real #4 (21/09/2026): `jackson-databind` sumia da compilação por mediação de dependências do Maven
+
+Primeiro `mvn clean verify` real da Fase 5 falhou na compilação, com
+`package com.fasterxml.jackson.databind does not exist` em
+`RestAuthenticationEntryPoint`/`RestAccessDeniedHandler` — as duas
+classes que montam a resposta 401/403 no formato `ApiError` manualmente
+(porque rodam dentro da cadeia de filtros do Spring Security, fora do
+alcance do `GlobalExceptionHandler`), usando `ObjectMapper` diretamente.
+
+**Causa raiz:** `jackson-databind` nunca tinha sido uma dependência
+DIRETA do projeto — chegava só transitivamente, bem fundo na árvore, via
+`spring-boot-starter-web` → `spring-boot-starter-json`. Nenhuma classe
+antes desta fase importava `ObjectMapper` no código-fonte (o
+`GlobalExceptionHandler` já existente desde a Fase 2 só devolve
+`ResponseEntity<ApiError>` e deixa o Spring MVC serializar via seus
+conversores de mensagem, sem precisar de import direto). Ao adicionar
+`spring-security-test` (escopo `test`) nesta mesma fase, o Maven passou
+a enxergar `jackson-databind` por um caminho bem mais RASO da árvore de
+dependências (via `spring-security-test`) do que o caminho antigo via
+`spring-boot-starter-web` — e a regra de mediação "nearest definition"
+do Maven usa a declaração mais próxima na árvore, mesmo que o escopo
+dela (`test`) seja mais restrito que o da declaração mais distante
+(`compile`). Resultado: `jackson-databind` ficou disponível só no
+classpath de teste, sumindo do classpath de compilação principal — um
+efeito colateral silencioso e nada óbvio de ter adicionado uma
+dependência de teste.
+
+**Correção:** declarar `com.fasterxml.jackson.core:jackson-databind`
+como dependência DIRETA do projeto, sem escopo (= `compile`), no
+`pom.xml`. Por ser uma declaração direta (profundidade 1), essa
+dependência agora vence qualquer mediação por profundidade contra
+caminhos transitivos mais fundos, independentemente de quais outras
+dependências também a trazem. Sem versão própria: gerenciada pelo BOM
+do Spring Boot 4.1.1, igual às demais dependências deste projeto sem
+`<version>` explícita.
+
+**⏳ Ainda não confirmado por um `mvn clean verify` completo** — o
+usuário aplicou a correção e vai rodar o build de novo; esta ressalva
+sai daqui quando o `BUILD SUCCESS` chegar.
 
 ## Como rodar localmente
 

@@ -114,6 +114,31 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Jackson databind (seção 105, Fase 5) — bug real encontrado em
+             21/09/2026, ver README.md: RestAuthenticationEntryPoint/
+             RestAccessDeniedHandler usam com.fasterxml.jackson.databind.ObjectMapper
+             diretamente no código-fonte, mas essa classe nunca tinha sido
+             uma dependência DIRETA do projeto — só chegava transitivamente
+             via spring-boot-starter-web -> spring-boot-starter-json (bem
+             fundo na árvore). Ao adicionar spring-security-test (escopo
+             test) nesta mesma fase, o Maven passou a resolver
+             jackson-databind pelo caminho mais RASO da árvore (via
+             spring-security-test), que tem escopo test — a regra de
+             mediação "nearest definition" do Maven despreza o caminho mais
+             profundo com escopo compile em favor do mais raso com escopo
+             test, escondendo a classe do classpath de compilação principal
+             (`mvn clean verify` falhou com "package ... does not exist").
+             Declarar a dependência aqui, direta e sem escopo (= compile),
+             garante que ela vença qualquer mediação por profundidade,
+             independente de quais outras dependências a trazem
+             transitivamente. Sem versão própria: gerenciada pelo BOM do
+             Spring Boot 4.1.1, igual às demais dependências deste arquivo
+             sem <version>. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <!-- Actuator: /actuator/health (seção 66) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
