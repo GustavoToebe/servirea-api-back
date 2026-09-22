@@ -7,6 +7,8 @@ import br.com.servire.api.escala.EscalaService;
 import br.com.servire.api.escala.EscalaVaga;
 import br.com.servire.api.inscricao.Inscricao;
 import br.com.servire.api.inscricao.InscricaoService;
+import br.com.servire.api.tenant.Tenant;
+import br.com.servire.api.tenant.TenantService;
 import br.com.servire.api.voluntario.DisponibilidadeVoluntarioService;
 import br.com.servire.api.voluntario.FuncaoEscala;
 import br.com.servire.api.voluntario.Voluntario;
@@ -34,6 +36,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -101,10 +104,22 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
     @MockitoBean
     private AuditLogService auditLogService;
 
+    @MockitoBean
+    private TenantService tenantService;
+
     @Test
     void semAutenticacaoRecebe401() throws Exception {
         mockMvc.perform(get("/voluntarios"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void visualizadorPodeListarCompromissos() throws Exception {
+        when(voluntarioService.listarCompromissos(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/voluntarios/{id}/commitments", UUID.randomUUID())
+                        .with(comoUsuario(UsuarioTenant.Role.VISUALIZADOR)))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -134,6 +149,16 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void visualizadorPodeListarCandidatos() throws Exception {
+        when(escalaService.listarCandidatos(any(), any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/escalas/{eventoId}/candidatos", UUID.randomUUID())
+                        .param("funcao", "MISSAL")
+                        .with(comoUsuario(UsuarioTenant.Role.VISUALIZADOR)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void visualizadorNaoPodeRegistrarPresenca() throws Exception {
         mockMvc.perform(patch("/escalas/vagas/{vagaId}/presenca", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -150,6 +175,28 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(patch("/escalas/vagas/{vagaId}/presenca", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"presenca\":\"PRESENTE\"}")
+                        .with(comoUsuario(UsuarioTenant.Role.COORDENADOR))
+                        .with(csrf()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void visualizadorNaoPodeAlocarVaga() throws Exception {
+        mockMvc.perform(patch("/escalas/vagas/{vagaId}", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"voluntarioId\":null}")
+                        .with(comoUsuario(UsuarioTenant.Role.VISUALIZADOR))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void coordenadorPodeAlocarVaga() throws Exception {
+        when(escalaService.alocarVaga(any(), any())).thenReturn(new EscalaVaga(FuncaoEscala.MISSAL, 1));
+
+        mockMvc.perform(patch("/escalas/vagas/{vagaId}", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"voluntarioId\":\"" + UUID.randomUUID() + "\"}")
                         .with(comoUsuario(UsuarioTenant.Role.COORDENADOR))
                         .with(csrf()))
                 .andExpect(status().isOk());
@@ -190,6 +237,35 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
     @Test
     void adminAcessaAuditoria() throws Exception {
         mockMvc.perform(get("/audit-log").with(comoUsuario(UsuarioTenant.Role.ADMIN)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void coordenadorNaoAcessaConfiguracaoDoTenant() throws Exception {
+        mockMvc.perform(get("/tenant").with(comoUsuario(UsuarioTenant.Role.COORDENADOR)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(put("/tenant")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Paróquia\"}")
+                        .with(comoUsuario(UsuarioTenant.Role.COORDENADOR))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminPodeLerEAtualizarTenant() throws Exception {
+        when(tenantService.buscarAtual()).thenReturn(new Tenant("COD", "slug", "Paróquia", Tenant.Status.ATIVO));
+        when(tenantService.atualizar(any())).thenReturn(new Tenant("COD", "slug", "Paróquia", Tenant.Status.ATIVO));
+
+        mockMvc.perform(get("/tenant").with(comoUsuario(UsuarioTenant.Role.ADMIN)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/tenant")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Paróquia\"}")
+                        .with(comoUsuario(UsuarioTenant.Role.ADMIN))
+                        .with(csrf()))
                 .andExpect(status().isOk());
     }
 

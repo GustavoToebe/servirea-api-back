@@ -31,4 +31,13 @@ public record StorageProperties(
         @DefaultValue("PT1H") Duration signedUrlTtl,
         @DefaultValue("5242880") long maxFileSizeBytes,
         @DefaultValue({"image/jpeg", "image/png", "image/webp", "image/heic"}) List<String> allowedMimeTypes) {
+
+    public StorageProperties {
+        if (baseUrl != null) {
+            baseUrl = baseUrl.trim();
+        }
+        if (serviceRoleKey != null) {
+            serviceRoleKey = serviceRoleKey.trim();
+        }
+    }
 }

@@ -25,8 +25,7 @@ import java.util.UUID;
  * Disponibilidade do voluntário (Fase 11 do plano mestre — item 12 da
  * seção 122, detalhado na seção 131.5): dias/horários em que ele PODE
  * servir, pensado como filtro adicional para o picker de candidatos
- * (seção 49) — integração com o picker ainda não feita nesta rodada, ver
- * javadoc de {@code EscalaController} e "Próximos passos" do README.
+ * (seção 49) — usada por {@code EscalaService#listarCandidatos}.
  *
  * <p>Mapeia {@code disponibilidade_voluntario} (V025). Exatamente um entre
  * {@code diaSemana} (disponibilidade recorrente, ex. "toda quarta") e

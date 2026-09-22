@@ -1,0 +1,11 @@
+# Copie para application-dev-local.yml na raiz do repo (gitignorado).
+# Nunca commite service_role nem a API key do Resend. Valores entre aspas, numa linha só.
+servire:
+  storage:
+    base-url: https://SEU_PROJECT_REF.supabase.co
+    service-role-key: "COLE_A_SERVICE_ROLE_KEY_AQUI"
+  email:
+    provider: resend
+    resend:
+      api-key: "COLE_A_RESEND_API_KEY_AQUI"
+      from: onboarding@resend.dev

@@ -1,9 +1,14 @@
 package br.com.servire.api.escala;
 
 import br.com.servire.api.audit.AuditLogService;
+import br.com.servire.api.escala.dto.CandidatoResponse;
 import br.com.servire.api.escala.dto.EscalaEventoRequest;
 import br.com.servire.api.escala.dto.EscalaRequest;
 import br.com.servire.api.escala.dto.EscalaVagaRequest;
+import br.com.servire.api.voluntario.DisponibilidadeVoluntario;
+import br.com.servire.api.voluntario.DisponibilidadeVoluntarioRepository;
+import br.com.servire.api.voluntario.FuncaoEscala;
+import br.com.servire.api.voluntario.Periodo;
 import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.voluntario.VoluntarioRepository;
 import br.com.servire.api.web.BadRequestException;
@@ -12,29 +17,42 @@ import br.com.servire.api.web.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Regras de negócio de escalas (Fase 9, seção 46/47/109 do plano mestre;
  * controle de faltas — {@link #registrarPresenca} — somado na Fase 11,
- * seção 131.5 item 11).
+ * seção 131.5 item 11; picker de candidatos — {@link #listarCandidatos}
+ * — seção 49; alocação pontual — {@link #alocarVaga}).
  */
 @Service
 public class EscalaService {
 
     private final EscalaRepository escalaRepository;
     private final EscalaVagaRepository escalaVagaRepository;
+    private final EscalaEventoRepository escalaEventoRepository;
     private final VoluntarioRepository voluntarioRepository;
+    private final DisponibilidadeVoluntarioRepository disponibilidadeRepository;
     private final AuditLogService auditLogService;
 
     public EscalaService(EscalaRepository escalaRepository, EscalaVagaRepository escalaVagaRepository,
-                          VoluntarioRepository voluntarioRepository, AuditLogService auditLogService) {
+                          EscalaEventoRepository escalaEventoRepository,
+                          VoluntarioRepository voluntarioRepository,
+                          DisponibilidadeVoluntarioRepository disponibilidadeRepository,
+                          AuditLogService auditLogService) {
         this.escalaRepository = escalaRepository;
         this.escalaVagaRepository = escalaVagaRepository;
+        this.escalaEventoRepository = escalaEventoRepository;
         this.voluntarioRepository = voluntarioRepository;
+        this.disponibilidadeRepository = disponibilidadeRepository;
         this.auditLogService = auditLogService;
     }
 
@@ -47,6 +65,78 @@ public class EscalaService {
     public Escala buscarPorId(UUID id) {
         return escalaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Escala não encontrada."));
+    }
+
+    /**
+     * Picker de candidatos (seção 49): tenant atual (via {@code @TenantId}),
+     * ativo, função habilitada, ainda não alocado neste evento, e
+     * disponibilidade compatível com data/horário do evento.
+     *
+     * <p>Sem nenhuma disponibilidade cadastrada o voluntário entra — o
+     * cadastro de disponibilidade é opt-in; esconder quem ainda não
+     * preencheu esvaziaria o picker nas paróquias existentes. Quem
+     * cadastrou alguma linha precisa bater dia (recorrente ou pontual) e
+     * período ({@code 00:00–11:59} manhã, {@code 12:00–17:59} tarde,
+     * {@code 18:00+} noite).</p>
+     *
+     * <p>Não há matriz {@code tipo × função} no plano (tipo é
+     * COROINHA/ACOLITO/AMBOS; função é MISSAL/CRUZ/…); o tipo vai só na
+     * resposta para o front filtrar se quiser.</p>
+     */
+    @Transactional(readOnly = true)
+    public List<CandidatoResponse> listarCandidatos(UUID eventoId, FuncaoEscala funcao) {
+        EscalaEvento evento = escalaEventoRepository.findById(eventoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        Set<UUID> jaAlocados = evento.getVagas().stream()
+                .map(EscalaVaga::getVoluntario)
+                .filter(v -> v != null)
+                .map(Voluntario::getId)
+                .collect(Collectors.toSet());
+        Map<UUID, List<DisponibilidadeVoluntario>> porVoluntario = disponibilidadeRepository.findAll().stream()
+                .collect(Collectors.groupingBy(d -> d.getVoluntario().getId()));
+        Periodo periodo = periodoDe(evento.getHorario());
+        DayOfWeek diaSemana = evento.getData().getDayOfWeek();
+        LocalDate data = evento.getData();
+        return voluntarioRepository.findByAtivoTrueOrderByNomeCompletoAsc().stream()
+                .filter(v -> !jaAlocados.contains(v.getId()))
+                .filter(v -> temFuncao(v, funcao))
+                .filter(v -> disponivelEm(porVoluntario.getOrDefault(v.getId(), List.of()), data, diaSemana, periodo))
+                .map(CandidatoResponse::de)
+                .toList();
+    }
+
+    static Periodo periodoDe(LocalTime horario) {
+        if (horario.isBefore(LocalTime.NOON)) {
+            return Periodo.MANHA;
+        }
+        if (horario.isBefore(LocalTime.of(18, 0))) {
+            return Periodo.TARDE;
+        }
+        return Periodo.NOITE;
+    }
+
+    private static boolean temFuncao(Voluntario voluntario, FuncaoEscala funcao) {
+        FuncaoEscala[] funcoes = voluntario.getFuncoesHabilitadas();
+        if (funcoes == null) {
+            return false;
+        }
+        for (FuncaoEscala habilitada : funcoes) {
+            if (habilitada == funcao) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean disponivelEm(List<DisponibilidadeVoluntario> disponibilidades,
+                                        LocalDate data, DayOfWeek diaSemana, Periodo periodo) {
+        if (disponibilidades.isEmpty()) {
+            return true;
+        }
+        return disponibilidades.stream().anyMatch(d ->
+                d.getPeriodo() == periodo
+                        && ((d.getData() != null && d.getData().equals(data))
+                        || (d.getDiaSemana() != null && d.getDiaSemana() == diaSemana)));
     }
 
     @Transactional
@@ -163,6 +253,58 @@ public class EscalaService {
         }
         vaga.setPresenca(presenca);
         auditLogService.registrar("PRESENCA_REGISTRADA", "ESCALA_VAGA", vagaId, List.of("presenca"));
+        return vaga;
+    }
+
+    /**
+     * Aloca (ou desaloca) um voluntário numa vaga, sem reenviar a escala
+     * inteira. Complemento do picker (seção 49): o front escolhe um
+     * candidato e grava só esta vaga.
+     *
+     * <p>Só em {@code RASCUNHO} (mesma regra do {@link #atualizar}).
+     * Voluntário inativo ou já alocado em outra vaga do mesmo evento
+     * falha alto. Trocar ou esvaziar zera a presença para
+     * {@code PENDENTE} — não faz sentido manter PRESENTE/FALTOU de outra
+     * pessoa.</p>
+     */
+    @Transactional
+    public EscalaVaga alocarVaga(UUID vagaId, UUID voluntarioId) {
+        EscalaVaga vaga = escalaVagaRepository.findById(vagaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaga não encontrada."));
+        if (vaga.getEvento().getEscala().getStatus() != StatusEscala.RASCUNHO) {
+            throw new ConflictException(
+                    "Só é possível alocar voluntário numa escala em RASCUNHO — reabra a escala antes de editar.");
+        }
+        UUID atual = vaga.getVoluntario() != null ? vaga.getVoluntario().getId() : null;
+        if (voluntarioId == null) {
+            if (atual == null) {
+                return vaga;
+            }
+            vaga.setVoluntario(null);
+            vaga.setPresenca(Presenca.PENDENTE);
+            auditLogService.registrar("ALOCACAO", "ESCALA_VAGA", vagaId, List.of("voluntario", "presenca"));
+            return vaga;
+        }
+        if (voluntarioId.equals(atual)) {
+            return vaga;
+        }
+        Voluntario voluntario = voluntarioRepository.findById(voluntarioId)
+                .orElseThrow(() -> new ResourceNotFoundException("Voluntário não encontrado."));
+        if (!voluntario.isAtivo()) {
+            throw new BadRequestException("Não é possível alocar um voluntário inativo.");
+        }
+        for (EscalaVaga outra : vaga.getEvento().getVagas()) {
+            if (!outra.getId().equals(vaga.getId())
+                    && outra.getVoluntario() != null
+                    && voluntarioId.equals(outra.getVoluntario().getId())) {
+                throw new BadRequestException(
+                        "O mesmo voluntário não pode ocupar duas vagas no mesmo evento (data "
+                                + vaga.getEvento().getData() + ").");
+            }
+        }
+        vaga.setVoluntario(voluntario);
+        vaga.setPresenca(Presenca.PENDENTE);
+        auditLogService.registrar("ALOCACAO", "ESCALA_VAGA", vagaId, List.of("voluntario", "presenca"));
         return vaga;
     }
 

@@ -1,19 +1,26 @@
 package br.com.servire.api.voluntario;
 
 import br.com.servire.api.audit.AuditLogService;
+import br.com.servire.api.escala.EscalaVagaRepository;
 import br.com.servire.api.storage.StorageService;
+import br.com.servire.api.voluntario.dto.CompromissoResponse;
 import br.com.servire.api.voluntario.dto.ResponsavelRequest;
 import br.com.servire.api.voluntario.dto.VoluntarioRequest;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,22 +45,51 @@ public class VoluntarioService {
             "autorizaWhatsapp", "funcoesHabilitadas", "responsaveis");
 
     private final VoluntarioRepository voluntarioRepository;
+    private final EscalaVagaRepository escalaVagaRepository;
     private final StorageService storageService;
     private final AuditLogService auditLogService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public VoluntarioService(VoluntarioRepository voluntarioRepository, StorageService storageService,
+    public VoluntarioService(VoluntarioRepository voluntarioRepository,
+                              EscalaVagaRepository escalaVagaRepository,
+                              StorageService storageService,
                               AuditLogService auditLogService) {
         this.voluntarioRepository = voluntarioRepository;
+        this.escalaVagaRepository = escalaVagaRepository;
         this.storageService = storageService;
         this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
     public List<Voluntario> buscar(Boolean ativo, TipoVoluntario tipo, String nome) {
-        return voluntarioRepository.buscar(ativo, tipo, nome);
+        return voluntarioRepository.findAll(filtroBusca(ativo, tipo, nome), Sort.by(Sort.Direction.ASC, "nomeCompleto"));
+    }
+
+    /**
+     * Só adiciona predicado quando o filtro veio preenchido. Evita o
+     * {@code (:param IS NULL OR ...)} que o Postgres não consegue tipar
+     * quando o bind é nulo (500 no GET /voluntarios sem query string).
+     */
+    private static Specification<Voluntario> filtroBusca(Boolean ativo, TipoVoluntario tipo, String nome) {
+        return (root, query, cb) -> {
+            if (query != null && query.getResultType() != Long.class && query.getResultType() != long.class) {
+                root.fetch("responsaveis", JoinType.LEFT);
+                query.distinct(true);
+            }
+            List<Predicate> predicados = new ArrayList<>();
+            if (ativo != null) {
+                predicados.add(cb.equal(root.get("ativo"), ativo));
+            }
+            if (tipo != null) {
+                predicados.add(cb.equal(root.get("tipo"), tipo));
+            }
+            if (nome != null && !nome.isBlank()) {
+                predicados.add(cb.like(cb.lower(root.get("nomeCompleto")), "%" + nome.trim().toLowerCase() + "%"));
+            }
+            return cb.and(predicados.toArray(Predicate[]::new));
+        };
     }
 
     @Transactional(readOnly = true)
@@ -132,6 +168,20 @@ public class VoluntarioService {
         voluntario.setFotoPath(caminhoSalvo);
         auditLogService.registrar("FOTO_ATUALIZADA", "VOLUNTARIO", id, List.of("fotoPath"));
         return voluntario;
+    }
+
+    /**
+     * Histórico de compromissos ({@code GET .../commitments}): equivalente
+     * à view {@code vw_voluntario_compromissos} (V010) — inclui escalas
+     * RASCUNHO/CANCELADA de propósito (dívida da view, não corrigida).
+     * Voluntário inexistente (ou de outro tenant) vira 404.
+     */
+    @Transactional(readOnly = true)
+    public List<CompromissoResponse> listarCompromissos(UUID id) {
+        buscarPorId(id);
+        return escalaVagaRepository.findByVoluntario_IdOrderByEvento_DataAscEvento_HorarioAsc(id).stream()
+                .map(CompromissoResponse::de)
+                .toList();
     }
 
     @Transactional(readOnly = true)

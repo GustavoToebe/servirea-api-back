@@ -48,15 +48,15 @@ class SupabaseStorageServiceTest {
         SupabaseStorageService service = new SupabaseStorageService(builder, properties("", ""));
 
         assertThatThrownBy(() -> service.armazenar("qualquer/caminho.jpg", new byte[]{1, 2, 3}, "image/jpeg"))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(StorageException.class);
         assertThatThrownBy(() -> service.gerarUrlAssinada("qualquer/caminho.jpg"))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(StorageException.class);
         // excluir() só é best-effort quanto a FALHAS DE REDE (ver javadoc
         // do método) — requireConfigurado() é chamado ANTES do try/catch,
-        // então configuração ausente ainda propaga IllegalStateException
+        // então configuração ausente ainda propaga StorageException
         // normalmente, igual aos outros dois métodos.
         assertThatThrownBy(() -> service.excluir("qualquer/caminho.jpg"))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(StorageException.class);
     }
 
     @Test
@@ -92,6 +92,12 @@ class SupabaseStorageServiceTest {
     }
 
     @Test
+    void removeEspacoDasPontasDaServiceRoleKey() {
+        StorageProperties props = properties(BASE_URL, "  chave-teste  ");
+        assertThat(props.serviceRoleKey()).isEqualTo("chave-teste");
+    }
+
+    @Test
     void enviaArquivoComHeaderDeUpsertEAutorizacaoBearer() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
@@ -99,6 +105,7 @@ class SupabaseStorageServiceTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("x-upsert", "true"))
                 .andExpect(header("Authorization", "Bearer chave-teste"))
+                .andExpect(header("apikey", "chave-teste"))
                 .andRespond(withSuccess());
 
         SupabaseStorageService service = new SupabaseStorageService(builder, properties(BASE_URL, "chave-teste"));
@@ -115,6 +122,8 @@ class SupabaseStorageServiceTest {
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo(BASE_URL + "/storage/v1/object/sign/voluntarios-fotos/abc/perfil.jpg"))
                 .andExpect(method(HttpMethod.POST))
+                .andExpect(header("Authorization", "Bearer chave-teste"))
+                .andExpect(header("apikey", "chave-teste"))
                 .andRespond(withSuccess(
                         "{\"signedURL\": \"/object/sign/voluntarios-fotos/abc/perfil.jpg?token=xyz\"}",
                         MediaType.APPLICATION_JSON));

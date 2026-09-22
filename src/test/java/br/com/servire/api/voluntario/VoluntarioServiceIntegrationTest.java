@@ -7,6 +7,7 @@ import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
 import br.com.servire.api.voluntario.dto.ResponsavelRequest;
 import br.com.servire.api.voluntario.dto.VoluntarioRequest;
+import br.com.servire.api.voluntario.dto.VoluntarioResponse;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -153,6 +155,7 @@ class VoluntarioServiceIntegrationTest extends AbstractIntegrationTest {
         Voluntario atualizado = voluntarioService.definirFoto(criado.getId(), foto);
 
         assertThat(atualizado.getFotoPath()).isEqualTo("caminho-retornado-pelo-storage.png");
+        assertThatCode(() -> VoluntarioResponse.de(atualizado)).doesNotThrowAnyException();
     }
 
     @Test
@@ -171,6 +174,17 @@ class VoluntarioServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertThatThrownBy(() -> voluntarioService.obterUrlFoto(criado.getId()))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void buscarSemFiltrosNaoLancaExcecaoDeSql() {
+        voluntarioService.criar(requestCom(List.of(
+                new ResponsavelRequest("Mãe", "Fulana", null, null, null, true))));
+
+        List<Voluntario> todos = voluntarioService.buscar(null, null, null);
+
+        assertThat(todos).isNotEmpty();
+        assertThatCode(() -> todos.forEach(VoluntarioResponse::de)).doesNotThrowAnyException();
     }
 
     @Test

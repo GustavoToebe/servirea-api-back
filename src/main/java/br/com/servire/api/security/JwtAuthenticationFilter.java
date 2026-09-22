@@ -136,6 +136,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return Optional.empty();
         }
 
+        // tenant precisa já vir inicializado pelo repositório (EntityGraph
+        // em findByUsuario_IdAndTenant_Id) — este filtro não é @Transactional
+        // e open-in-view está desligado.
         Tenant tenant = vinculo.get().getTenant();
         if (tenant.getStatus() != Tenant.Status.ATIVO && tenant.getStatus() != Tenant.Status.TRIAL) {
             return Optional.empty();

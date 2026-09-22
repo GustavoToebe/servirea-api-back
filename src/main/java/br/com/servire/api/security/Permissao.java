@@ -9,10 +9,8 @@ package br.com.servire.api.security;
  * — isso é o que permite adicionar uma role nova no futuro (SECRETARIA,
  * SUPORTE etc., já cogitadas na seção 31) sem tocar em nenhum controller.
  *
- * <p>{@code CONFIG_WRITE} está definida aqui por completude com a lista da
- * seção 31, mas ainda não é usada por nenhum endpoint desta rodada — não
- * existe ainda um controller de configurações do tenant no backend Java
- * (ver README.md/plano mestre, "Próximos passos").</p>
+ * <p>{@code CONFIG_WRITE} protege {@code GET}/{@code PUT /tenant}
+ * ({@link br.com.servire.api.tenant.TenantController}).</p>
  */
 public enum Permissao {
     VOLUNTARIO_READ,

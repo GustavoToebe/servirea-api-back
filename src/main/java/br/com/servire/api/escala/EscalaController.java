@@ -1,10 +1,13 @@
 package br.com.servire.api.escala;
 
+import br.com.servire.api.escala.dto.AlocacaoVagaRequest;
+import br.com.servire.api.escala.dto.CandidatoResponse;
 import br.com.servire.api.escala.dto.EscalaRequest;
 import br.com.servire.api.escala.dto.EscalaResponse;
 import br.com.servire.api.escala.dto.EscalaVagaResponse;
 import br.com.servire.api.escala.dto.PresencaRequest;
 import br.com.servire.api.security.AuthenticatedUser;
+import br.com.servire.api.voluntario.FuncaoEscala;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,11 +38,9 @@ import java.util.UUID;
  * {@code PATCH .../vagas/{vagaId}/presenca}, implementado nesta rodada —
  * ver {@link Presenca}/{@link EscalaVaga#getPresenca()}.</p>
  *
- * <p><b>Ainda fora do escopo desta versão</b> (a documentar em "Próximos
- * passos"): disponibilidade do voluntário (item 12) como filtro do picker
- * de candidatos (seção 49) — a entidade {@code DisponibilidadeVoluntario}
- * já existe (Fase 11), mas o próprio endpoint do picker ainda não existe
- * no backend Java para ser filtrado por ela.</p>
+ * <p>Picker de candidatos (seção 49): {@code GET /escalas/{eventoId}/candidatos}
+ * — ver {@link EscalaService#listarCandidatos}. Alocação pontual:
+ * {@code PATCH /escalas/vagas/{vagaId}} — ver {@link EscalaService#alocarVaga}.</p>
  */
 @RestController
 @RequestMapping("/escalas")
@@ -64,6 +65,13 @@ public class EscalaController {
     @GetMapping("/{id}")
     public EscalaResponse buscarPorId(@PathVariable UUID id) {
         return EscalaResponse.de(escalaService.buscarPorId(id));
+    }
+
+    @PreAuthorize("hasAuthority('PERM_ESCALA_READ')")
+    @GetMapping("/{eventoId}/candidatos")
+    public List<CandidatoResponse> listarCandidatos(@PathVariable UUID eventoId,
+                                                     @RequestParam FuncaoEscala funcao) {
+        return escalaService.listarCandidatos(eventoId, funcao);
     }
 
     @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
@@ -110,5 +118,12 @@ public class EscalaController {
     @PatchMapping("/vagas/{vagaId}/presenca")
     public EscalaVagaResponse registrarPresenca(@PathVariable UUID vagaId, @RequestBody @Valid PresencaRequest request) {
         return EscalaVagaResponse.de(escalaService.registrarPresenca(vagaId, request.presenca()));
+    }
+
+    /** Aloca ou desaloca o voluntário desta vaga — complemento do picker (seção 49). */
+    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PatchMapping("/vagas/{vagaId}")
+    public EscalaVagaResponse alocarVaga(@PathVariable UUID vagaId, @RequestBody AlocacaoVagaRequest request) {
+        return EscalaVagaResponse.de(escalaService.alocarVaga(vagaId, request.voluntarioId()));
     }
 }

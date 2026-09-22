@@ -155,9 +155,11 @@ voluntário, tabela de auditoria e provedor de e-mail real, seção
 > lacunas de teste identificadas na rodada anterior estão todas
 > confirmadas de verdade contra um Postgres real** — nenhuma ressalva de
 > build pendente nesta fase. Ver "Próximos passos" para os itens que
-> continuam fora do alcance de qualquer `mvn clean verify` (comportamento
-> real de Supabase Storage/Turnstile/Resend contra os serviços de
-> verdade, não só contra mocks/documentação).
+> continuam fora do alcance de qualquer `mvn clean verify` agora são
+> sobretudo o reverse proxy (`X-Forwarded-For`) e o envio pelo domínio
+> próprio. Turnstile, Supabase Storage e Resend (remetente de teste
+> `onboarding@resend.dev`) já foram confirmados ponta a ponta em
+> 22/09/2026 — ver "Próximos passos" item 3.
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -879,17 +881,12 @@ incremental.
 | `POST /voluntarios` | Cria voluntário + responsáveis numa transação |
 | `PUT /voluntarios/{id}` | Atualiza voluntário + substitui responsáveis |
 | `PATCH /voluntarios/{id}/ativo?ativo=` | Equivalente a `setActive` |
+| `GET /voluntarios/{id}/commitments` | Compromissos (escalas/eventos/vagas) |
 
 **Deliberadamente fora do escopo desta primeira versão** (documentado
 também no javadoc de `VoluntarioController`):
-- Upload real de foto / signed URL — depende do Storage (Fase 7, seção
-  107). `fotoPath` existe na entidade e na resposta, mas nenhum endpoint
-  escreve nele ainda.
-- Filtro de listagem por `funcoesHabilitadas` (o "picker de candidatos"
-  da seção 49) — só faz sentido junto do módulo de escalas (Fase 9).
-- `GET .../commitments` (histórico de compromissos, view
-  `vw_voluntario_compromissos`) — depende de `escalas`/`escala_eventos`/
-  `escala_vagas`, que só existem no banco, sem entidade JPA ainda (Fase 9).
+- Filtro de listagem por `funcoesHabilitadas` na lista geral de
+  voluntários — o picker (seção 49) já filtra por função no evento.
 
 ### ✅ Risco residual confirmado: array de ENUM nativo do Postgres (`funcoesHabilitadas`)
 
@@ -973,9 +970,34 @@ desfaz tudo), só antecipa a sincronização. Exige injetar
 > formatação padrão do projeto, e corrigido proativamente o mesmo bug
 > (mesmo padrão "apaga tudo e reinsere") em
 > `InscricaoService.substituirResponsaveis` (Fase 8), que só é exercitado
-> contra uma inscrição já existente via `atualizarPendente` — esse
-> segundo ponto **ainda sem confirmação de build real**, ver seção da
-> Fase 8 abaixo.
+> contra uma inscrição já existente via `atualizarPendente` — ✅
+> confirmado em 22/09/2026 18:50 (`BUILD SUCCESS`, 109 testes; ver
+> "Próximos passos" item 2).
+
+### 🐛 Bugs reais #15 (listagem) e filtro JWT, encontrados na validação do Storage (22/09/2026)
+
+O roteiro manual do Storage passou por login → CSRF → `POST /voluntarios`
+→ `GET /voluntarios` → `POST .../foto`. Três bloqueios **antes** do
+Supabase, todos de produção:
+
+1. **CSRF** — `POST /voluntarios` sem cookie `XSRF-TOKEN` + header
+   `X-XSRF-TOKEN` devolve 403 `"Acesso negado."` (parece role/tenant;
+   não é). `csrf.spa()` isenta só login/select-tenant/forgot/reset e
+   `/public/**`. Tenant vai no JWT, não em `X-Tenant-ID`.
+2. **Bug real #15 (`JwtAuthenticationFilter`):**
+   `vinculo.getTenant().getStatus()` fora de transação, com
+   `open-in-view: false` → `LazyInitializationException` → o Boot
+   despacha `/error` e o cliente via 401 (`path=/error`,
+   `requestId=null`). Corrigido com `@EntityGraph(attributePaths =
+   "tenant")` em `UsuarioTenantRepository.findByUsuario_IdAndTenant_Id`
+   e `/error` em `permitAll`.
+3. **`GET /voluntarios` 500** — JPQL com `(:param IS NULL OR ...)` +
+   `CONCAT`/`lower` no Hibernate 7 + Postgres: primeiro
+   `function lower(bytea) does not exist`, depois
+   `could not determine data type of parameter`. Corrigido: listagem
+   via `JpaSpecificationExecutor` / Criteria, predicado só quando o
+   filtro veio preenchido. `VoluntarioService.buscarSemFiltros…`
+   cobre o caso sem query string.
 
 ## ✅ Fase 7 — storage de fotos (seção 107 do plano mestre)
 
@@ -996,12 +1018,19 @@ V015: privado, 5 MB, jpeg/png/webp/heic), `StorageService` (interface) +
 privado). `InscricaoService` (Fase 8) reusa o mesmo `StorageService` para a
 foto do formulário público.
 
-**Configuração:** `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` sem valor
-padrão em `application.yml` (mesma regra de `JWT_SECRET`/`DB_URL`, seção
-90) — vazios em dev/test, obrigatórios via variável de ambiente em
-produção. Upload de multipart exigiu subir
-`spring.servlet.multipart.max-file-size`/`max-request-size` (padrão do
-Spring Boot é 1 MB, abaixo do limite de 5 MB do bucket) para 6 MB.
+**Configuração:** em produção, `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`
+via variável de ambiente (`application-prod.yml`), sem valor padrão
+(mesma regra de `JWT_SECRET`/`DB_URL`, seção 90). Em dev, **não** use
+`${SUPABASE_URL:}` / `${SUPABASE_SERVICE_ROLE_KEY:}` vazios em
+`application-dev.yml` — um placeholder vazio **sobrescreve** o arquivo
+importado e o Supabase responde `Invalid Compact JWS`. Segredos locais
+ficam em `application-dev-local.yml` na raiz do repo (gitignorado,
+importado por `spring.config.import`; o example no repo só tem
+placeholder). Alternativa: `SERVIRE_STORAGE_BASE_URL` /
+`SERVIRE_STORAGE_SERVICE_ROLE_KEY` (binding padrão do Spring). Upload de
+multipart exigiu subir `spring.servlet.multipart.max-file-size` /
+`max-request-size` (padrão do Spring Boot é 1 MB, abaixo do limite de
+5 MB do bucket) para 6 MB.
 
 ### 🐛 Bug real #6 (22/09/2026): `RestClient.Builder` não é auto-configurado só pelo `spring-boot-starter-web`
 
@@ -1067,36 +1096,103 @@ arbitrário do usuário) — não há necessidade de escapar caracteres
 especiais além de preservar as barras como separadoras de verdade.
 
 > ✅ **Confirmado pelo `BUILD SUCCESS` de 75 testes descrito no topo deste
-> README** (`SupabaseStorageServiceTest` passa 8/8 com `MockRestServiceServer`,
-> URL literal esperada com barras, não `%2F`) — mas só um teste contra um
-> projeto Supabase de verdade fecharia por completo o risco 1 da lista
-> abaixo, que continua de pé.
+> README** (`SupabaseStorageServiceTest` com `MockRestServiceServer`,
+> URL literal esperada com barras, não `%2F`). O risco 1 da lista abaixo
+> (formato real da API) foi fechado depois, contra o projeto Supabase
+> de verdade — ver a confirmação de 22/09/2026 no fim desta seção.
 
-### ⚠️ Riscos residuais a verificar no próximo build real
+### 🐛 Bug real #16 (22/09/2026): Kong do Supabase recusa JWT sem header `apikey` (`Invalid Compact JWS`)
 
-1. **Formato exato da API REST do Supabase Storage.** `SupabaseStorageService`
-   usa três endpoints (`POST /storage/v1/object/{bucket}/{caminho}` para
-   upload com header `x-upsert: true`, `POST /storage/v1/object/sign/{bucket}/{caminho}`
-   para gerar URL assinada, `DELETE /storage/v1/object/{bucket}/{caminho}`
-   para excluir) baseados na documentação pública do Supabase Storage —
-   **não foi possível confirmar contra um projeto Supabase real neste
-   ambiente de pesquisa.** Se o upload/assinatura falhar com um erro de
-   formato de request/response, `SupabaseStorageService` é o primeiro
-   lugar a checar (tem javadoc detalhado apontando exatamente isso).
+Validação manual contra o projeto real `qcybebkhwhrudbwoweip`. Com
+`base-url`/`service-role-key` já chegando no processo, o upload ia até
+o Storage e voltava HTTP 400 com corpo
+`{"statusCode":"403","error":"Unauthorized","message":"Invalid Compact JWS","code":"AccessDenied"}`
+— a API Servire mapeava isso para 503 ("Não foi possível enviar o
+arquivo…"). A `service_role` JWT estava bem formada (`keyLen=219`,
+dois pontos). O gateway (Kong) exige **os dois** headers:
+`Authorization: Bearer <key>` **e** `apikey: <key>`. Só o Bearer não
+basta. Corrigido em `SupabaseStorageService.aplicarAuthSupabase` nas
+três operações. A key é lida com `trim()` em `StorageProperties`.
+
+Dois bloqueios de configuração vieram **antes** desse 400, e não são
+bug do Supabase:
+
+1. `$env:SUPABASE_*` setado noutro terminal não entra no
+   `mvn spring-boot:run` — a API subia com storage vazio. Por isso
+   `application-dev.yml` importa `optional:file:./application-dev-local.yml`
+   (gitignorado).
+2. `service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}` vazio em
+   `application-dev.yml` **sobrescreve** o arquivo local (documento
+   que importa ganha do importado). Removido o placeholder; a key
+   fica só no arquivo local ou em `SERVIRE_STORAGE_*`.
+
+`StorageException` agora estende `ApiException` → HTTP 503 com mensagem
+clara, em vez de 500 genérico. O corpo HTTP do Supabase vai para
+`target/servire-dev.log` (appender FILE do profile `dev`).
+
+### 🐛 Bug real #17 (22/09/2026): `POST /voluntarios/{id}/foto` 500 *depois* do upload já ter funcionado
+
+Encontrado na mesma validação. O arquivo chegou ao bucket
+`voluntarios-fotos` e `GET /foto-url` já devolvia URL assinada real;
+o POST ainda respondia 500 (`requestId` `b8b90269-…`). Causa:
+`VoluntarioResponse.de` lê `responsaveis` no controller, já com a
+transação do service fechada (`open-in-view: false`) →
+`LazyInitializationException`. O mesmo vale para `GET /voluntarios`
+e `GET /{id}` / `PATCH /ativo` quando a coleção não foi tocada na
+transação. Corrigido com `@EntityGraph(attributePaths = "responsaveis")`
+em `VoluntarioRepository.findById` e `JOIN FETCH` na Specification da
+listagem. Testes em `VoluntarioServiceIntegrationTest` agora chamam
+`VoluntarioResponse.de` fora da transação do service.
+
+> ⏳ O POST /foto com 200 (JSON do voluntário + `fotoPath`) **não foi
+> reconfirmado** depois desse fix — o Maven precisa ter subido com o
+> bytecode novo. O upload em si e a URL assinada **já estavam ok**
+> antes da correção.
+
+### ⚠️ Riscos residuais
+
+1. ~~**Formato exato da API REST do Supabase Storage.**~~ **Fechado em
+   22/09/2026** — ver confirmação abaixo. `DELETE` de arquivo órfão
+   continua só coberto por mock (`exclusaoFalhaSilenciosamente…`); não
+   foi exercitado contra o projeto real.
 2. **Upload de foto não participa da transação SQL** — documentado
    deliberadamente assim (mesmo texto já usado na javadoc de
    `VoluntarioService`): se o commit do banco falhar depois de um upload
-   bem-sucedido, fica um arquivo órfão no bucket. Aceitável, não corrigido
-   nesta rodada.
+   bem-sucedido, fica um arquivo órfão no bucket. Aceitável, não
+   corrigido nesta rodada. A validação real mostrou o inverso também:
+   upload ok + falha ao montar o JSON (Bug real #17) deixa o arquivo
+   no bucket e `foto_path` gravado.
 
 > ✅ **Débito de testes desta fase pago na Fase 10, com `BUILD SUCCESS`
 > confirmado (22/09/2026):** `SupabaseStorageServiceTest` cobre os três
-> endpoints (upload, URL assinada, exclusão best-effort), as validações
-> de arquivo (content-type/tamanho/vazio) e o "falha alto e cedo" de
-> configuração ausente — foi justamente escrevendo esse teste que o
-> **Bug real #7** acima foi encontrado. O item 1 da lista acima (formato
-> real da API Supabase) continua **não verificado** — só um teste contra
-> um projeto Supabase de verdade fecha esse risco.
+> endpoints via mock, as validações de arquivo e o "falha alto e cedo"
+> de configuração ausente — foi escrevendo esse teste que o
+> **Bug real #7** foi encontrado.
+
+> ✅ **Confirmação real contra o projeto Supabase `qcybebkhwhrudbwoweip`
+> (22/09/2026, à noite), segunda integração externa ponta a ponta
+> (Turnstile foi a primeira).** Bucket privado `voluntarios-fotos`,
+> profile `dev`, `application-dev-local.yml`, usuário
+> `teste@teste.com` / tenant `teste-turnstile`, voluntário
+> `40141eda-7449-4eca-9567-ade9d393e98c`. Resultado:
+>
+> - `POST /storage/v1/object/voluntarios-fotos/{uuid}/perfil-*.jpg` com
+>   `x-upsert: true`, `Authorization` + `apikey` — arquivo persistido.
+> - `POST /storage/v1/object/sign/...` + `{"expiresIn": 3600}` — resposta
+>   `signedURL` no formato `/object/sign/{bucket}/{caminho}?token=...`
+>   (JWT HS512). A URL final
+>   `baseUrl + "/storage/v1" + signedURL` abre no navegador.
+> - Abrir o caminho **sem** `?token=` (o terminal do Windows/VS Code
+>   corta o link em `?`) devolve
+>   `querystring must have required property 'token'` — não é falha da
+>   API; `Start-Process` com a URL completa resolve.
+> - A `foto-teste.jpg` usada no roteiro é um JPEG 1×1: o browser mostra
+>   tela preta, não um erro JSON.
+>
+> **Não exercitado no projeto real:** `DELETE` do objeto. **Nota de
+> segurança:** a `service_role` desse projeto apareceu no chat e num
+> `application-dev-local.yml.example` (já sanitizado para placeholder)
+> — rotacionar no painel do Supabase antes de usar em produção.
 
 ## ✅ Fase 8 — inscrições públicas (seção 21/44/108 do plano mestre)
 
@@ -1202,11 +1298,11 @@ mesmo padrão "apaga tudo e reinsere" que causou o **Bug real #10** em
 (`ux_inscricao_responsavel_principal`, V009) que causaria o mesmo
 `duplicate key value violates unique constraint` ao trocar o responsável
 principal de uma inscrição existente. Corrigido por analogia, com o
-mesmo `entityManager.flush()` logo após o `clear()` — **mas sem
-confirmação de build real**, já que nenhum teste automatizado exercita
-essa troca de principal em `atualizarPendente`
-(`InscricaoServiceIntegrationTest.atualizarPendenteDepoisDeAprovadaLancaConflictException`
-é o único teste que toca esse método, e não troca o principal).
+mesmo `entityManager.flush()` logo após o `clear()`. ✅ **Confirmado em
+22/09/2026 18:50** por
+`InscricaoServiceIntegrationTest.atualizarPendenteTrocandoOResponsavelPrincipalNaoLancaConflictException`
+no `mvn clean verify` real (`BUILD SUCCESS`, 109 testes, 0 falhas, 0
+erros).
 
 ### ⚠️ Riscos residuais a verificar no próximo build real
 
@@ -1275,12 +1371,51 @@ RASCUNHO), `DELETE /escalas/{id}` (só permitido se CANCELADA — regra
 explícita do plano mestre). Edição (`PUT`) só é permitida em RASCUNHO —
 uma escala FINALIZADA precisa ser reaberta antes de editar.
 
+**Compromissos do voluntário (22/09/2026):**
+`GET /voluntarios/{id}/commitments` (`PERM_VOLUNTARIO_READ`). Mesmo
+conteúdo da view `vw_voluntario_compromissos` (V010: escala, status,
+data, horário, celebração, função), montado via JPA em
+`EscalaVaga`+`EscalaEvento`+`Escala` para não usar SQL nativo (seção 81).
+Inclui RASCUNHO/CANCELADA de propósito (dívida da view, não corrigida).
+Voluntário inexistente ou de outro tenant → 404. Testes em
+`CompromissoIntegrationTest`. ✅ `mvn clean verify` real de 22/09/2026
+19:20: `BUILD SUCCESS`, 122 testes, 0 falhas (era 117; os 5 a mais são
+compromissos + o GET de autorização).
+
+**Picker de candidatos (seção 49, 22/09/2026):**
+`GET /escalas/{eventoId}/candidatos?funcao=MISSAL` (`PERM_ESCALA_READ`).
+Filtra no backend: tenant (`@TenantId`), voluntário ativo, função em
+`funcoes_habilitadas`, ainda não alocado no evento, disponibilidade
+compatível. Sem nenhuma linha em `disponibilidade_voluntario` o
+voluntário entra (opt-in — não esvaziar o picker de quem ainda não
+cadastrou). Quem cadastrou precisa bater dia (recorrente `dia_semana`
+ou pontual `data`) e período (`00:00–11:59` manhã, `12:00–17:59` tarde,
+`18:00+` noite). Não há matriz `tipo × função` no plano; o `tipo` só
+vai na resposta. Testes em `CandidatoPickerIntegrationTest`. ✅
+`mvn clean verify` real de 22/09/2026 19:13: `BUILD SUCCESS`, 117
+testes, 0 falhas (era 109; os 8 a mais são o picker + o GET de
+autorização).
+
+**Alocação pontual da vaga (22/09/2026):**
+`PATCH /escalas/vagas/{vagaId}` (`PERM_ESCALA_WRITE`), corpo
+`{ "voluntarioId": "<uuid>" }` ou `null` para esvaziar. Complemento do
+picker: grava só aquela vaga, sem o `PUT` da escala inteira. Só em
+RASCUNHO (mesma regra do `PUT`; CANCELADA/FINALIZADA → 409, reabrir
+antes). Recusa voluntário inativo ou já alocado em outra vaga do mesmo
+evento. Trocar ou esvaziar zera `presenca` para PENDENTE. Testes em
+`AlocacaoVagaIntegrationTest`. ✅ `mvn clean verify` real de 22/09/2026
+19:25: `BUILD SUCCESS`, 133 testes, 0 falhas (era 122; os 11 a mais são
+a alocação + os 2 de autorização).
+
 **Endpoints:**
 
 | Verbo/rota | Uso |
 |---|---|
 | `GET /escalas?tipo=&status=&ano=&mes=` | Lista com filtros |
 | `GET /escalas/{id}` | Detalhe com eventos/vagas aninhados |
+| `GET /escalas/{eventoId}/candidatos?funcao=` | Picker de candidatos (seção 49) |
+| `PATCH /escalas/vagas/{vagaId}` | Aloca/desaloca voluntário na vaga |
+| `PATCH /escalas/vagas/{vagaId}/presenca` | Marca presença/falta |
 | `POST /escalas` | Cria (RASCUNHO) |
 | `PUT /escalas/{id}` | Substitui eventos/vagas (controle otimista) |
 | `POST /escalas/{id}/finalizar` \| `/cancelar` \| `/reabrir` | Transições de estado |
@@ -1379,8 +1514,10 @@ mais a Fase 10 aí fazemos todos os testes pendentes").
    pago nesta rodada) cobre os três endpoints via `MockRestServiceServer`;
    foi escrevendo esse teste que o **Bug real #7** (ver seção da Fase 7)
    foi encontrado e corrigido. ✅ Confirmado pelo `BUILD SUCCESS` de 75
-   testes. O formato real da API Supabase continua **não confirmado**
-   contra um projeto de verdade (mesma ressalva já feita na Fase 7).
+   testes. ✅ **Formato real da API confirmado em 22/09/2026** contra o
+   projeto `qcybebkhwhrudbwoweip` (upload + URL assinada + download no
+   navegador) — ver seção da Fase 7. `DELETE` real e o POST /foto
+   devolvendo 200 depois do Bug real #17 ainda não foram refeitos.
 6. **Validar inscrição pública por slug** — coberto indiretamente pelo
    teste de isolamento de `Inscricao` (item 2 acima): dois tenants com
    slugs distintos, cada um só enxergando a própria inscrição, mais os
@@ -1407,12 +1544,13 @@ métodos, ver item 3 dos "Riscos residuais" da Fase 9 acima).
 > Toda a Fase 10 + o débito de testes automatizados das Fases 5-9 estão
 > agora confirmados de verdade contra um Postgres real — não só que o
 > código compila, mas que as regras de negócio de cada fase funcionam
-> como esperado. Os únicos riscos que continuam sem confirmação são os
-> que nenhum teste automatizado fecha sozinho: o formato real das APIs do
-> Supabase Storage e do Cloudflare Turnstile, a configuração real do
-> reverse proxy de produção (`X-Forwarded-For`), e o fix proativo (por
-> analogia ao Bug real #10) em `InscricaoService.substituirResponsaveis`
-> (seção da Fase 8) — ver "Próximos passos" abaixo.
+> como esperado. O fix proativo em
+> `InscricaoService.substituirResponsaveis` fechou no `verify` de
+> 22/09/2026 18:50 (109 testes). Os riscos que nenhum teste
+> automatizado fecha sozinho e **ainda** estão abertos: a API real do
+> Resend e a configuração real do reverse proxy (`X-Forwarded-For`).
+> Storage e Turnstile já foram confirmados contra os serviços reais —
+> ver "Próximos passos" item 3.
 
 ## ⏳ Fase 11 — permissões, faltas, disponibilidade, auditoria e e-mail real (seção 31/59/122/131.5)
 
@@ -1486,8 +1624,14 @@ Implementado:
   leitura exige a permissão `*_READ`, escrita exige `*_WRITE` (ou
   `INSCRICAO_APPROVE`, já que a seção 31 não define uma `INSCRICAO_WRITE`
   própria — decisão documentada no javadoc de `InscricaoController`).
-- `CONFIG_WRITE` fica definida mas sem nenhum endpoint que a use ainda —
-  não existe um controller de configurações do tenant no backend Java.
+- `GET`/`PUT /tenant` (`PERM_CONFIG_WRITE`) — nome, razão social e CNPJ
+  da paróquia do JWT. `codigo`/`slug`/`status` só na resposta (slug
+  quebra URL pública; status é Kill Switch). Tabela `tenant` é global:
+  o serviço lê só o id do `TenantContext`, nunca do path. COORDENADOR
+  não entra (só ADMIN tem `CONFIG_WRITE`). Testes em
+  `TenantServiceIntegrationTest`. ✅ `mvn clean verify` real de
+  22/09/2026 19:31: `BUILD SUCCESS`, 140 testes, 0 falhas (era 133;
+  os 7 a mais são o tenant + autorização).
 
 **Risco residual:** uma `AccessDeniedException` de `@PreAuthorize` deveria
 cair no mesmo `RestAccessDeniedHandler` já usado por
@@ -1849,20 +1993,23 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
      HTTP (500, 401) vira `EmailException` — nunca engolida. Continua sem
      confirmação contra a API real do Resend (nenhum acesso de rede a
      serviços externos a partir deste ambiente de pesquisa).
-2. ⏳ **Teste escrito (22/09/2026) — ainda sem confirmação de `mvn clean
-   verify` real:** `InscricaoServiceIntegrationTest.atualizarPendenteTrocandoOResponsavelPrincipalNaoLancaConflictException`
+2. ✅ **Confirmado em 22/09/2026 18:50** — `mvn clean verify` real:
+   `BUILD SUCCESS`, `Tests run: 109, Failures: 0, Errors: 0` (era 104
+   na quinta rodada da Fase 11; os 5 a mais desta sessão incluem o
+   teste abaixo, o trim da service_role key e os HTTP do
+   `JwtAuthenticationFilter`). 
+   `InscricaoServiceIntegrationTest.atualizarPendenteTrocandoOResponsavelPrincipalNaoLancaConflictException`
    troca o responsável principal de uma inscrição PENDENTE via
    `atualizarPendente` e confirma que isso não lança `ConflictException`
-   — fecha a lacuna do fix proativo em
-   `InscricaoService.substituirResponsaveis` (mesmo padrão do Bug real
-   #10, aplicado por analogia desde a Fase 8/10, nunca antes exercitado
-   por um teste que trocasse o principal). Trate como ⏳ até o usuário
-   confirmar com um `mvn clean verify` real.
+   — fecha o fix proativo em `InscricaoService.substituirResponsaveis`
+   (mesmo padrão do Bug real #10). Também passam os testes novos do
+   Storage (`apikey`, trim da key, `VoluntarioResponse.de` fora da
+   sessão).
 3. Confirmar de verdade contra um serviço real: o formato da API REST do
    Supabase Storage (Fase 7), a resposta do Cloudflare Turnstile (Fase 8)
-   e agora também a API do Resend (Fase 11) — todos os três implementados
-   a partir de documentação pública, nunca testados contra o serviço real
-   neste ambiente de pesquisa.
+   e a API do Resend (Fase 11) — **os três fechados em 22/09/2026**
+   (Resend ainda só com `onboarding@resend.dev`; o domínio próprio
+   espera o DNS).
 
    ✅ **Turnstile — CONFIRMADO de verdade em 22/09/2026, primeira das três
    integrações externas a ser validada ponta a ponta.** Widget "Servirea"
@@ -1894,8 +2041,31 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    Secret Key" do próprio painel (limite: uma rotação a cada 2h, chave
    antiga continua válida durante a transição) antes de usar em produção.
 
-   ⏳ **Supabase Storage e Resend continuam SEM confirmação real** — só
-   testados contra mocks/documentação até aqui.
+   ✅ **Supabase Storage — CONFIRMADO de verdade em 22/09/2026, segunda
+   das três integrações externas.** Projeto `qcybebkhwhrudbwoweip`,
+   bucket privado `voluntarios-fotos`. Upload REST + URL assinada +
+   download no navegador com `?token=` funcionaram; o Kong exige
+   `Authorization` **e** `apikey` (Bug real #16). Detalhe, bloqueios de
+   config e o 500 do POST /foto depois do upload (Bug real #17) estão
+   na seção da Fase 7. **Não exercitado:** `DELETE` real. **Rotacionar**
+   a `service_role` que vazou no chat antes de produção.
+
+   ✅ **Resend — CONFIRMADO de verdade em 22/09/2026, terceira e última
+   das três integrações externas.** `POST /auth/forgot-password` com
+   profile `dev`, `servire.email.provider=resend` em
+   `application-dev-local.yml`, remetente `onboarding@resend.dev` (o
+   domínio `servirea.com.br` ainda estava Pending/Checking DNS no
+   painel). A API respondeu 202; o Resend entregou no Gmail do dono da
+   conta (`gustavotoebe4@gmail.com`) o e-mail "Redefinição de senha —
+   Servire" com o link de reset. Confirma o `POST https://api.resend.com/emails`
+   (`Authorization: Bearer`, corpo `from`/`to`/`subject`/`html`).
+   `${EMAIL_PROVIDER:log}` em `application-dev.yml` **sobrescrevia** o
+   arquivo local e mantinha o `LoggingEmailSender` (mesmo padrão do
+   Storage) — removido. Dois `servire:` no YAML local também apagavam
+   o bloco de cima; tem que ser um único `servire:` com `storage` +
+   `email`. **Ainda não confirmado:** envio com
+   `contato@servirea.com.br` (espera Verify no Resend). **Rotacionar**
+   a API key `re_` que vazou no chat.
 4. ⏳ **Em andamento (22/09/2026):** domínio `servirea.com.br` adicionado
    na Cloudflare (nameservers ainda propagando) e os registros de DNS de
    verificação do Resend (DKIM TXT + duas SPF CNAME) já foram criados —
@@ -1908,9 +2078,18 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    "Verify" no painel do Resend assim que a propagação terminar, e então
    confirmar (por exemplo enviando uma inscrição de teste) que o e-mail
    chega usando o domínio próprio.
-5. Integrar `DisponibilidadeVoluntario` (Fase 11) como filtro do picker de
-   candidatos (seção 49) — depende do próprio endpoint do picker existir
-   primeiro no backend Java, o que ainda não aconteceu.
+5. ✅ **Picker de candidatos (seção 49) — CONFIRMADO em 22/09/2026 19:13**
+   (`BUILD SUCCESS`, 117 testes). `GET /escalas/{eventoId}/candidatos?funcao=`
+   + filtro de `DisponibilidadeVoluntario` (ver seção da Fase 9).
+5b. ✅ **Compromissos do voluntário — CONFIRMADO em 22/09/2026 19:20**
+   (`BUILD SUCCESS`, 122 testes). `GET /voluntarios/{id}/commitments`
+   (ver seção da Fase 6 / Fase 9).
+5c. ✅ **Alocação pontual da vaga — CONFIRMADO em 22/09/2026 19:25**
+   (`BUILD SUCCESS`, 133 testes). `PATCH /escalas/vagas/{vagaId}`
+   (ver seção da Fase 9).
+5d. ✅ **Configuração do tenant — CONFIRMADO em 22/09/2026 19:31**
+   (`BUILD SUCCESS`, 140 testes). `GET`/`PUT /tenant`
+   (`PERM_CONFIG_WRITE`, ver Fase 11).
 6. Validar a configuração real do reverse proxy do VPS de produção
    (Nginx/Caddy, seção 11/89) quanto a `X-Forwarded-For` — o rate limit da
    Fase 8 depende de esse header vir reescrito pelo proxy, não só

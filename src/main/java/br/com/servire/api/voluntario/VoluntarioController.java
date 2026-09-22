@@ -1,5 +1,6 @@
 package br.com.servire.api.voluntario;
 
+import br.com.servire.api.voluntario.dto.CompromissoResponse;
 import br.com.servire.api.voluntario.dto.FotoUrlResponse;
 import br.com.servire.api.voluntario.dto.VoluntarioRequest;
 import br.com.servire.api.voluntario.dto.VoluntarioResponse;
@@ -35,19 +36,8 @@ import java.util.UUID;
  * {@code VOLUNTARIO_READ}; escrita (criar/atualizar/ativar-desativar/foto)
  * exige {@code VOLUNTARIO_WRITE} — ver {@link br.com.servire.api.security.RolePermissoes}.</p>
  *
- * <p><b>Deliberadamente fora do escopo desta versão</b> (a documentar em
- * "Próximos passos" até serem implementados):</p>
- * <ul>
- *   <li>Filtro de listagem por {@code funcoes_habilitadas} (o "picker de
- *   candidatos" da seção 49) — só faz sentido junto do módulo de escalas
- *   (Fase 9, seção 109).</li>
- *   <li>{@code GET .../commitments} (histórico de compromissos do
- *   voluntário, view {@code vw_voluntario_compromissos}) — depende de
- *   {@code escalas}/{@code escala_eventos}/{@code escala_vagas}; mesmo já
- *   existindo entidade JPA para elas a partir da Fase 9, este endpoint
- *   específico não foi implementado nesta rodada (ver README/plano
- *   mestre).</li>
- * </ul>
+ * <p>{@code GET .../commitments} lista os compromissos do voluntário
+ * (seção 9.3 / view {@code vw_voluntario_compromissos}), via JPA.</p>
  */
 @RestController
 @RequestMapping("/voluntarios")
@@ -108,5 +98,11 @@ public class VoluntarioController {
     @GetMapping("/{id}/foto-url")
     public FotoUrlResponse obterUrlFoto(@PathVariable UUID id) {
         return new FotoUrlResponse(voluntarioService.obterUrlFoto(id));
+    }
+
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @GetMapping("/{id}/commitments")
+    public List<CompromissoResponse> listarCompromissos(@PathVariable UUID id) {
+        return voluntarioService.listarCompromissos(id);
     }
 }

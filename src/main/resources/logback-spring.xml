@@ -22,8 +22,18 @@
                 <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level [%X{requestId}] %logger{36} - %msg%n</pattern>
             </encoder>
         </appender>
+        <!-- Cópia em arquivo: o console do Maven no Windows trunca o stack
+             e some a linha Caused by — sem isto o 500 do Storage fica cego. -->
+        <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+            <file>target/servire-dev.log</file>
+            <append>true</append>
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level [%X{requestId}] %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
         </root>
     </springProfile>
 

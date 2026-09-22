@@ -76,7 +76,11 @@ import java.util.List;
 @EnableConfigurationProperties(SecurityProperties.class)
 public class SecurityConfig {
 
-    private static final String[] ROTAS_PUBLICAS = {"/auth/**", "/public/**", "/actuator/health"};
+    // /error precisa ser público: se uma exceção estoura na cadeia de
+    // filtros, o Boot despacha para cá SEM reaplicar o JWT
+    // (OncePerRequestFilter pula ERROR dispatch). Sem isto, o cliente
+    // vê 401 path=/error em vez do 500 real (Bug real #15).
+    private static final String[] ROTAS_PUBLICAS = {"/auth/**", "/public/**", "/actuator/health", "/error"};
 
     @Bean
     public PasswordEncoder passwordEncoder() {

@@ -6,3 +6,8 @@ target/
 .DS_Store
 .env
 *.log
+application-dev-local.yml
+login.json
+forgot.json
+cookies.txt
+bootstrap-resend-teste.sql

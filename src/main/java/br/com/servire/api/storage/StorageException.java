@@ -1,16 +1,18 @@
 package br.com.servire.api.storage;
 
+import br.com.servire.api.web.ApiException;
+import org.springframework.http.HttpStatus;
+
 /**
- * Falha de infraestrutura ao falar com o Supabase Storage — deliberadamente
- * NÃO é uma {@link br.com.servire.api.web.ApiException}: cai no handler
- * genérico de {@code GlobalExceptionHandler} (HTTP 500, mensagem pública
- * neutra, detalhe completo só no log), porque o cliente não pode fazer
- * nada com o motivo exato (diferente de um {@code BadRequestException} de
- * validação, que é acionável pelo próprio usuário).
+ * Falha de infraestrutura ao falar com o Supabase Storage, ou Storage
+ * sem {@code SUPABASE_URL}/{@code SUPABASE_SERVICE_ROLE_KEY} no processo.
+ * Vira HTTP 503 (não 500 genérico) para o operador distinguir "não
+ * configurado" / "Supabase recusou" de um bug interno — a mensagem é
+ * acionável e não vaza corpo HTTP nem a service role key.
  */
-public class StorageException extends RuntimeException {
+public class StorageException extends ApiException {
 
     public StorageException(String message, Throwable cause) {
-        super(message, cause);
+        super(HttpStatus.SERVICE_UNAVAILABLE, message, cause);
     }
 }

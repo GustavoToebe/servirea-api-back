@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.Map;
 
@@ -37,12 +38,15 @@ import java.util.Map;
  * </ul>
  *
  * <p>Todas as chamadas usam {@code Authorization: Bearer
- * <service-role-key>} — a {@code service_role} do Supabase ignora RLS/
- * policies de {@code storage.objects} (V015), então é a própria aplicação
- * Java, não o Postgres, quem passa a ser responsável por só deixar um
- * usuário autenticado do tenant certo chegar a estes métodos (chamada
- * sempre a partir de {@code VoluntarioService}/{@code InscricaoService},
- * nunca exposta direto num controller sem validação de tenant antes).</p>
+ * <service-role-key>} <b>e</b> {@code apikey: <service-role-key>}. O
+ * gateway do Supabase (Kong) exige os dois; só o Bearer produz
+ * {@code Invalid Compact JWS} / {@code AccessDenied}. A
+ * {@code service_role} ignora RLS/policies de {@code storage.objects}
+ * (V015), então é a própria aplicação Java, não o Postgres, quem passa a
+ * ser responsável por só deixar um usuário autenticado do tenant certo
+ * chegar a estes métodos (chamada sempre a partir de
+ * {@code VoluntarioService}/{@code InscricaoService}, nunca exposta
+ * direto num controller sem validação de tenant antes).</p>
  *
  * <p><b>Bug real #7 (22/09/2026), encontrado escrevendo
  * {@code SupabaseStorageServiceTest} (não por build — débito técnico de
@@ -90,7 +94,7 @@ public class SupabaseStorageService implements StorageService {
         try {
             restClient.post()
                     .uri(properties.baseUrl() + "/storage/v1/object/" + properties.bucket() + "/" + caminho)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.serviceRoleKey())
+                    .headers(this::aplicarAuthSupabase)
                     .header("x-upsert", "true")
                     .contentType(MediaType.parseMediaType(contentType))
                     .body(conteudo)
@@ -98,10 +102,7 @@ public class SupabaseStorageService implements StorageService {
                     .toBodilessEntity();
             return caminho;
         } catch (RestClientException e) {
-            // Falha de infraestrutura (Supabase fora do ar, credencial errada
-            // etc.) — nunca detalhe do driver HTTP pro cliente, só log (mesma
-            // regra do GlobalExceptionHandler para exceção não mapeada).
-            log.error("Falha ao enviar arquivo para o Supabase Storage: bucket={} caminho={}", properties.bucket(), caminho, e);
+            logarFalhaHttp("enviar arquivo", caminho, e);
             throw new StorageException("Não foi possível enviar o arquivo no momento. Tente novamente em instantes.", e);
         }
     }
@@ -113,7 +114,7 @@ public class SupabaseStorageService implements StorageService {
         try {
             Map<String, Object> resposta = restClient.post()
                     .uri(properties.baseUrl() + "/storage/v1/object/sign/" + properties.bucket() + "/" + caminho)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.serviceRoleKey())
+                    .headers(this::aplicarAuthSupabase)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("expiresIn", properties.signedUrlTtl().toSeconds()))
                     .retrieve()
@@ -123,7 +124,7 @@ public class SupabaseStorageService implements StorageService {
             }
             return properties.baseUrl() + "/storage/v1" + resposta.get("signedURL");
         } catch (RestClientException e) {
-            log.error("Falha ao gerar URL assinada no Supabase Storage: bucket={} caminho={}", properties.bucket(), caminho, e);
+            logarFalhaHttp("gerar URL assinada", caminho, e);
             throw new StorageException("Não foi possível gerar o link da foto no momento. Tente novamente em instantes.", e);
         }
     }
@@ -134,7 +135,7 @@ public class SupabaseStorageService implements StorageService {
         try {
             restClient.delete()
                     .uri(properties.baseUrl() + "/storage/v1/object/" + properties.bucket() + "/" + caminho)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.serviceRoleKey())
+                    .headers(this::aplicarAuthSupabase)
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientException e) {
@@ -169,9 +170,39 @@ public class SupabaseStorageService implements StorageService {
     private void requireConfigurado() {
         if (properties.baseUrl() == null || properties.baseUrl().isBlank()
                 || properties.serviceRoleKey() == null || properties.serviceRoleKey().isBlank()) {
-            throw new IllegalStateException(
-                    "Storage não configurado (servire.storage.base-url/service-role-key ausentes) — "
-                            + "defina SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY.");
+            throw new StorageException(
+                    "Storage não configurado. Preencha application-dev-local.yml (gitignorado) ou defina SERVIRE_STORAGE_BASE_URL e SERVIRE_STORAGE_SERVICE_ROLE_KEY e reinicie a API.",
+                    null);
         }
+        String key = properties.serviceRoleKey();
+        int separadores = 0;
+        for (int i = 0; i < key.length(); i++) {
+            if (key.charAt(i) == '.') {
+                separadores++;
+            }
+        }
+        if (key.length() >= 80 && separadores != 2) {
+            log.warn("service-role-key não parece um JWT compacto (keyLen={} separadores={}; esperado 2). Confira aspas e quebra de linha no YAML.",
+                    key.length(), separadores);
+        } else {
+            log.debug("Storage configurado: keyLen={} jwtSeparadores={}", key.length(), separadores);
+        }
+    }
+
+    /** Kong do Supabase exige Bearer e {@code apikey} com a mesma chave. */
+    private void aplicarAuthSupabase(HttpHeaders headers) {
+        String key = properties.serviceRoleKey();
+        headers.setBearerAuth(key);
+        headers.set("apikey", key);
+    }
+
+    private void logarFalhaHttp(String operacao, String caminho, RestClientException e) {
+        if (e instanceof RestClientResponseException http) {
+            log.error("Falha ao {} no Supabase Storage: bucket={} caminho={} status={} body={}",
+                    operacao, properties.bucket(), caminho, http.getStatusCode(), http.getResponseBodyAsString(), e);
+            return;
+        }
+        log.error("Falha ao {} no Supabase Storage: bucket={} caminho={}",
+                operacao, properties.bucket(), caminho, e);
     }
 }
