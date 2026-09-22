@@ -9,47 +9,54 @@ própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 46/47/109) e a **FASE 10** (multi-tenant real, seção 110) do
 `plano_mestre_servire_v2_mvp_baixo_custo.md`.
 
-> ⏳ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
+> ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
-> instrução explícita do usuário — AINDA SEM confirmação de um
-> `mvn clean verify` real.** Nenhum `mvn` local está disponível neste
-> ambiente de pesquisa (Maven Central bloqueado); todo o código novo abaixo
-> foi revisado manualmente, linha por linha, e teve as contagens de
-> argumento de construtor/record checadas por um script auxiliar — mas
-> **nada aqui deve ser tratado como "pronto" até o próximo build real do
-> usuário confirmar.**
+> instrução explícita do usuário — CONFIRMADO com `mvn clean verify` real:
+> `BUILD SUCCESS`, 75 testes, 0 falhas, 0 erros.** Foram necessárias três
+> rodadas reais de build até chegar aqui — ver o histórico completo logo
+> abaixo — encontrando e corrigindo **três bugs reais de produção (#8, #9
+> e #10)** e três correções de teste ao longo do caminho. Nenhum `mvn`
+> local está disponível neste ambiente de pesquisa (Maven Central
+> bloqueado); toda correção foi feita por revisão manual a partir dos
+> logs completos que o usuário enviou depois de cada rodada.
 >
-> 🔴 **Primeira rodada real desse build (22/09/2026): `BUILD FAILURE`** —
-> `Tests run: 75, Failures: 2, Errors: 14`. Analisado o log completo
-> (`erros.md` enviado pelo usuário) e corrigidos os quatro problemas
-> encontrados — **dois bugs reais de produção (#8 e #9) e duas correções
-> de teste** — ver "Bug real #8" (seção da Fase 8) e "Bug real #9" (seção
-> da Fase 5) abaixo para os detalhes completos. **Ainda sem confirmação de
-> um novo `mvn clean verify` real** — só revisão manual das quatro
-> correções foi possível neste ambiente.
+> **Histórico das três rodadas reais desta batelada (22/09/2026):**
+> 1. 🔴 **Primeira rodada: `BUILD FAILURE`** — `Tests run: 75, Failures: 2,
+>    Errors: 14`. Corrigidos quatro problemas: **Bug real #8** (produção,
+>    `InscricaoService.criarPublica`, 2 erros — seção da Fase 8 abaixo),
+>    **Bug real #9** (produção/segurança, reuso de refresh token não
+>    revogava sessões de verdade, 1 falha — seção da Fase 5 abaixo), e
+>    duas correções de teste: `codigo` de tenant fixo (não randomizado
+>    como o `slug`) em `VoluntarioServiceIntegrationTest`/
+>    `EscalaServiceIntegrationTest` (12 erros, `UNIQUE constraint`), e
+>    `InscricaoRateLimiterTest` usando `Duration.ofNanos(1)` para simular
+>    janela expirada — suposição de resolução de relógio que não se
+>    confirmou no Windows do usuário (1 falha), trocado por uma janela
+>    real de 50ms + `Thread.sleep(60)`.
+> 2. 🔴 **Segunda rodada, depois das correções acima: `BUILD FAILURE`** —
+>    `Tests run: 75, Failures: 0, Errors: 1`. Só sobrou **um** erro — a
+>    correção do `codigo` duplicado parou de mascarar os outros 7 métodos
+>    de `VoluntarioServiceIntegrationTest`, revelando um bug real novo:
+>    **Bug real #10** (`VoluntarioService.substituirResponsaveis`, seção
+>    106 abaixo) — `atualizarSubstituiTodosOsResponsaveisAntigosPelosNovos`
+>    falhava com `duplicate key value violates unique constraint
+>    "uq_responsavel_principal_por_voluntario"`.
+> 3. ✅ **Terceira rodada, depois da correção do Bug real #10:
+>    `BUILD SUCCESS`, `Tests run: 75, Failures: 0, Errors: 0`.** Todas as
+>    75 classes/métodos de teste da Fase 10 + débito de testes das Fases
+>    5-9 confirmados de verdade contra um Postgres real — ver seção da
+>    Fase 10 abaixo para o detalhamento completo.
 >
-> Resumo dos quatro problemas (todos correspondem exatamente aos 14
-> erros + 2 falhas do log, confirmado por contagem):
-> 1. **Teste (12 erros):** `VoluntarioServiceIntegrationTest` (7 erros) e
->    `EscalaServiceIntegrationTest` (5 erros) — `@BeforeEach definirTenant`
->    randomizava o `slug` do tenant descartável mas não o `codigo` (coluna
->    `UNIQUE`), então só o primeiro método de teste de cada classe
->    conseguia inserir o tenant; os demais quebravam com
->    `duplicate key value violates unique constraint "tenant_codigo_key"`.
->    Corrigido randomizando o `codigo` também, com o mesmo sufixo UUID já
->    usado no `slug`.
-> 2. **Bug real #8, produção (2 erros):** `InscricaoService.criarPublica`
->    — detalhe completo na seção da Fase 8 abaixo.
-> 3. **Bug real #9, produção/segurança (1 falha):** detecção de reuso de
->    refresh token não revogava as sessões de verdade — detalhe completo
->    na seção da Fase 5 abaixo.
-> 4. **Teste (1 falha):** `InscricaoRateLimiterTest.tentativaForaDaJanelaDeslizanteNaoContaMaisParaOLimite`
->    usava `Duration.ofNanos(1)` apostando que qualquer intervalo real de
->    execução já excederia essa janela — não se confirmou na máquina
->    Windows do usuário (resolução de relógio do sistema operacional).
->    Corrigido trocando por uma janela real pequena (50ms) + um
->    `Thread.sleep(60)` explícito entre as duas chamadas, tornando o teste
->    determinístico independente da resolução do relógio.
+> **Nota sobre a autoria da correção do Bug real #10:** o usuário aplicou
+> essa correção com ajuda de outra IA (por ter esgotado o limite de uso
+> desta sessão no momento), e confirmou o `BUILD SUCCESS` acima. A
+> correção foi reaplicada aqui com a formatação/ordem de imports do resto
+> do projeto, e o mesmo bug foi corrigido proativamente por analogia em
+> `InscricaoService.substituirResponsaveis` (usado por
+> `atualizarPendente`) — esse segundo ponto **ainda não tem confirmação
+> de build real**, já que nenhum teste automatizado exercita essa troca
+> de responsável principal numa inscrição existente (ver seção da Fase 8
+> abaixo).
 >
 > **O que entrou nesta rodada:**
 > - **Fase 10** (seção 110): suíte de isolamento multi-tenant ampliada em
@@ -76,7 +83,8 @@ própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 >   `SupabaseStorageServiceTest`, não por build — as três chamadas HTTP de
 >   `SupabaseStorageService` codificavam a barra (`/`) do caminho do
 >   arquivo como `%2F`, o que teria quebrado toda chamada real ao Supabase
->   Storage. Corrigido; **também ainda sem confirmação de build real.**
+>   Storage. Corrigido; **✅ confirmado pelo `BUILD SUCCESS` de 75 testes
+>   descrito acima** (`SupabaseStorageServiceTest` passa 8/8).
 >
 > ✅ **Fases 7, 8 e 9 com `BUILD SUCCESS` confirmado em 22/09/2026** — por
 > instrução explícita do usuário, as três fases foram feitas juntas, numa
@@ -91,15 +99,17 @@ própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 > segunda rodada (09:24) confirmou o `BUILD SUCCESS`: 13 testes, 0
 > falhas, 0 erros** — Bug real #6 está corrigido de verdade.
 >
-> ⚠️ **Isso confirma que o contexto Spring sobe e os 13 testes existentes
-> continuam passando — não confirma o comportamento funcional das Fases
-> 7/8/9 em si**, já que nenhum teste automatizado novo cobre o storage, as
-> inscrições públicas ou as escalas (débito técnico assumido, seção
-> "Próximos passos"). Os riscos residuais de cada fase (formato real da
-> API do Supabase Storage, resposta do Cloudflare Turnstile,
-> confiabilidade de `X-Forwarded-For` em produção, controle otimista das
-> escalas sob concorrência real) continuam **não verificados** — ver as
-> seções de cada fase abaixo.
+> ⚠️ **Na época (09:24), isso só confirmava que o contexto Spring sobe e
+> os 13 testes existentes continuavam passando — não o comportamento
+> funcional das Fases 7/8/9 em si**, já que nenhum teste automatizado
+> novo cobria o storage, as inscrições públicas ou as escalas. **Essa
+> lacuna foi fechada pelo débito de testes pago na Fase 10, confirmado
+> pelo `BUILD SUCCESS` de 75 testes descrito no topo desta seção.** Os
+> únicos riscos residuais que continuam **não verificados** são os que
+> nenhum teste automatizado consegue fechar sem um ambiente de
+> produção/serviço externo de verdade: formato real da API do Supabase
+> Storage, resposta do Cloudflare Turnstile, e confiabilidade de
+> `X-Forwarded-For` em produção — ver as seções de cada fase abaixo.
 
 ## ✅ Fases 2, 3, 4 e 5 com build verificado de verdade (21/09/2026)
 
@@ -656,8 +666,11 @@ contornando a limitação de "self-invocation ignora o proxy" que
 inviabilizaria a mesma correção se tentada como um método privado dentro
 de `RefreshTokenService`.
 
-> ⏳ **Ainda não confirmado por um novo `mvn clean verify` real** — ver o
-> aviso no topo deste README.
+> ✅ **Confirmado pelo `mvn clean verify` real de 22/09/2026 (terceira
+> rodada da batelada da Fase 10): `BUILD SUCCESS`, 75 testes, 0 falhas, 0
+> erros** — `AuthServiceIntegrationTest.reusoDeRefreshTokenJaRevogadoRevogaTodasAsSessoesDoUsuario`
+> passa, confirmando que a segunda sessão é revogada de verdade. Ver o
+> aviso no topo deste README para o histórico completo das três rodadas.
 
 ## Fase 6 — voluntários e responsáveis (seção 37/38/39/106 do plano mestre)
 
@@ -749,13 +762,63 @@ sem erro de schema/tipo nesta coluna — o mapeamento
 `@ColumnTransformer` funciona de verdade contra Hibernate ORM
 7.4.5.Final + Postgres real. Risco encerrado.
 
-**Ressalva que continua valendo:** este `BUILD SUCCESS` confirma que o
-código compila e sobe o contexto corretamente, mas nenhum teste novo
-cobre as regras de negócio da Fase 6 (responsável principal único,
-substituição de responsáveis) — decisão explícita do usuário de adiar
-testes, ver "Próximos passos".
+**✅ Débito de testes desta fase pago na Fase 10 (22/09/2026), e agora com
+`BUILD SUCCESS` confirmado de verdade (75 testes, 0 falhas, 0 erros —
+terceira rodada da batelada, ver aviso no topo do README):**
+`VoluntarioServiceIntegrationTest` (8 métodos — responsável principal
+único/não-duplo, "apaga tudo e reinsere" de responsáveis, foto via
+`StorageService` mockado, `setAtivo`).
 
-## ⏳ Fase 7 — storage de fotos (seção 107 do plano mestre)
+### 🐛 Bug real #10 (22/09/2026): `INSERT` do novo responsável principal podia chegar ao banco antes do `DELETE` do antigo
+
+Encontrado na **segunda rodada** de `mvn clean verify` real da batelada da
+Fase 10 (depois de corrigidos os Bugs reais #8/#9 e as duas correções de
+teste da primeira rodada, que até então mascaravam este problema — só o
+primeiro dos 8 métodos de `VoluntarioServiceIntegrationTest` rodava por
+causa do bug do `codigo` duplicado, seção acima):
+`atualizarSubstituiTodosOsResponsaveisAntigosPelosNovos` falhava com
+
+```text
+ERROR: duplicate key value violates unique constraint "uq_responsavel_principal_por_voluntario"
+Detalhe: Key (voluntario_id)=(...) already exists.
+```
+
+**Causa raiz:** `substituirResponsaveis` chama
+`voluntario.getResponsaveis().clear()`, e o `orphanRemoval = true`
+agenda os `DELETE`s dos responsáveis antigos — mas isso não obriga o
+Hibernate a enviá-los ao banco imediatamente. Dentro do mesmo contexto de
+persistência, o Hibernate podia enviar o `INSERT` do novo responsável
+`principal = true` ANTES do `DELETE` do antigo (a ordem de flush do
+Hibernate agrupa as operações por tipo, não segue a ordem cronológica em
+que a coleção Java foi alterada). Por um instante, dentro da mesma
+transação, existiam DOIS responsáveis `principal = true` para o mesmo
+`voluntario_id` — e o índice único parcial `uq_responsavel_principal_por_voluntario`
+(V004) recusava corretamente o `INSERT`. A coleção em memória já estava
+certa; o estado físico do banco é que não tinha sido sincronizado na
+ordem necessária.
+
+**Correção:** um `entityManager.flush()` explícito logo após o
+`clear()`, forçando o Hibernate a sincronizar os `DELETE`s pendentes com
+o PostgreSQL naquele ponto — antes de qualquer novo `Responsavel` ser
+adicionado à coleção. O `flush()` não faz commit (continua dentro do
+mesmo `@Transactional` de `criar`/`atualizar`; um erro depois ainda
+desfaz tudo), só antecipa a sincronização. Exige injetar
+`jakarta.persistence.EntityManager` via `@PersistenceContext` em
+`VoluntarioService`.
+
+> ✅ **Confirmado pelo `mvn clean verify` real seguinte do usuário
+> (22/09/2026): `BUILD SUCCESS`, 75 testes, 0 falhas, 0 erros** — a
+> terceira e última rodada da batelada da Fase 10 (ver aviso no topo
+> deste README). O usuário aplicou esta correção com ajuda de outra IA
+> (sessão anterior já no limite de uso) — reaplicada aqui com a
+> formatação padrão do projeto, e corrigido proativamente o mesmo bug
+> (mesmo padrão "apaga tudo e reinsere") em
+> `InscricaoService.substituirResponsaveis` (Fase 8), que só é exercitado
+> contra uma inscrição já existente via `atualizarPendente` — esse
+> segundo ponto **ainda sem confirmação de build real**, ver seção da
+> Fase 8 abaixo.
+
+## ✅ Fase 7 — storage de fotos (seção 107 do plano mestre)
 
 Upload/leitura de foto de voluntário/inscrição via Supabase Storage,
 chamado diretamente por `RestClient` (não pelo SDK/protocolo S3 completo —
@@ -844,11 +907,11 @@ UUID + sufixo fixo + extensão de uma lista permitida, nunca com conteúdo
 arbitrário do usuário) — não há necessidade de escapar caracteres
 especiais além de preservar as barras como separadoras de verdade.
 
-> ⏳ **Ainda não confirmado por um `mvn clean verify` real** —
-> `SupabaseStorageServiceTest` cobre isso com `MockRestServiceServer` (URL
-> literal esperada com barras, não `%2F`), mas só um teste contra um
-> projeto Supabase de verdade fecharia esse risco por completo (ver
-> "Riscos residuais" abaixo, item 1, que continua de pé).
+> ✅ **Confirmado pelo `BUILD SUCCESS` de 75 testes descrito no topo deste
+> README** (`SupabaseStorageServiceTest` passa 8/8 com `MockRestServiceServer`,
+> URL literal esperada com barras, não `%2F`) — mas só um teste contra um
+> projeto Supabase de verdade fecharia por completo o risco 1 da lista
+> abaixo, que continua de pé.
 
 ### ⚠️ Riscos residuais a verificar no próximo build real
 
@@ -867,16 +930,16 @@ especiais além de preservar as barras como separadoras de verdade.
    bem-sucedido, fica um arquivo órfão no bucket. Aceitável, não corrigido
    nesta rodada.
 
-> ✅ **Débito de testes desta fase pago na Fase 10** (22/09/2026):
-> `SupabaseStorageServiceTest` cobre os três endpoints (upload, URL
-> assinada, exclusão best-effort), as validações de arquivo
-> (content-type/tamanho/vazio) e o "falha alto e cedo" de configuração
-> ausente — foi justamente escrevendo esse teste que o **Bug real #7**
-> acima foi encontrado. O item 1 da lista acima (formato real da API
-> Supabase) continua **não verificado** — só um teste contra um projeto
-> Supabase de verdade fecha esse risco.
+> ✅ **Débito de testes desta fase pago na Fase 10, com `BUILD SUCCESS`
+> confirmado (22/09/2026):** `SupabaseStorageServiceTest` cobre os três
+> endpoints (upload, URL assinada, exclusão best-effort), as validações
+> de arquivo (content-type/tamanho/vazio) e o "falha alto e cedo" de
+> configuração ausente — foi justamente escrevendo esse teste que o
+> **Bug real #7** acima foi encontrado. O item 1 da lista acima (formato
+> real da API Supabase) continua **não verificado** — só um teste contra
+> um projeto Supabase de verdade fecha esse risco.
 
-## ⏳ Fase 8 — inscrições públicas (seção 21/44/108 do plano mestre)
+## ✅ Fase 8 — inscrições públicas (seção 21/44/108 do plano mestre)
 
 Formulário público de auto-inscrição (`/public/{tenantSlug}/inscricoes`),
 com fila de aprovação/rejeição interna.
@@ -963,8 +1026,28 @@ chamado dentro de `transactionTemplate.execute(...)`. O `try/finally` que
 limpa `TenantContext`/MDC continua envolvendo tudo, exatamente como
 antes.
 
-> ⏳ **Ainda não confirmado por um novo `mvn clean verify` real** — ver o
-> aviso no topo deste README.
+> ✅ **Confirmado pelo `mvn clean verify` real seguinte do usuário
+> (22/09/2026): `BUILD SUCCESS`, 75 testes, 0 falhas, 0 erros** —
+> `InscricaoServiceIntegrationTest` passa 10/10, incluindo os métodos que
+> exercitam `criarPublica` de ponta a ponta. Ver o aviso no topo deste
+> README para o histórico completo das três rodadas de build desta
+> batelada.
+
+### 🐛 Bug real #10 (mesmo mecanismo, seção 106) também corrigido proativamente em `InscricaoService`
+
+O `substituirResponsaveis` de `InscricaoService` (usado por
+`atualizarPendente` contra uma inscrição PENDENTE já existente) tem o
+mesmo padrão "apaga tudo e reinsere" que causou o **Bug real #10** em
+`VoluntarioService` (ver seção da Fase 6) — e a tabela
+`inscricao_responsaveis` tem o mesmo tipo de índice único parcial
+(`ux_inscricao_responsavel_principal`, V009) que causaria o mesmo
+`duplicate key value violates unique constraint` ao trocar o responsável
+principal de uma inscrição existente. Corrigido por analogia, com o
+mesmo `entityManager.flush()` logo após o `clear()` — **mas sem
+confirmação de build real**, já que nenhum teste automatizado exercita
+essa troca de principal em `atualizarPendente`
+(`InscricaoServiceIntegrationTest.atualizarPendenteDepoisDeAprovadaLancaConflictException`
+é o único teste que toca esse método, e não troca o principal).
 
 ### ⚠️ Riscos residuais a verificar no próximo build real
 
@@ -997,7 +1080,7 @@ antes.
 > **confirmado** pelo `mvn clean verify` de 22/09/2026 09:24 (`BUILD
 > SUCCESS`, 0 erros).
 
-## ⏳ Fase 9 — escalas (seção 9.2/46/47/109 do plano mestre)
+## ✅ Fase 9 — escalas (seção 9.2/46/47/109 do plano mestre)
 
 Escalas de serviço (semanal/mensal), com eventos (missas) e vagas
 (funções a preencher por voluntário).
@@ -1080,22 +1163,25 @@ ainda a definir.
    (`atualizarComVersaoDivergenteLancaConflictException`, checagem
    explícita de `EscalaService`) e por
    `GlobalExceptionHandlerTest.objectOptimisticLockingFailureExceptionViraHttp409ComMensagemDeNegocio`
-   (rede de segurança do `ObjectOptimisticLockingFailureException`) —
-   ambos ainda **sem confirmação de build real**, só revisão manual.
+   (rede de segurança do `ObjectOptimisticLockingFailureException`) — ✅
+   **confirmado pelo `BUILD SUCCESS` de 75 testes** (ver aviso no topo do
+   README).
 2. ~~Cascata de três níveis tenant-aware~~ (`Escala` → `EscalaEvento` →
    `EscalaVaga`) — **coberta na Fase 10** por
    `TenantIsolationIntegrationTest.tenantNaoDeveEnxergarEscalaComCascataDeTresNiveisDeOutroTenant`,
    que verifica isolamento nos três níveis (o `Escala` raiz via
    `EscalaRepository`, `EscalaEvento`/`EscalaVaga` via JPQL direto, já que
-   não existe repositório dedicado para os dois níveis mais profundos).
+   não existe repositório dedicado para os dois níveis mais profundos) —
+   ✅ **confirmado**, `TenantIsolationIntegrationTest` passa 5/5.
 3. ~~Nenhum teste automatizado cobre o "apaga tudo e reinsere" de eventos,
    as transições de estado, nem o controle otimista~~ — **pago na Fase
    10** por `EscalaServiceIntegrationTest` (6 testes: criação com cascata,
    substituição de eventos, versão divergente, atualizar fora de
    RASCUNHO, mesmo voluntário em duas vagas do mesmo evento, e a matriz de
-   transição de estado completa da seção 46/109).
+   transição de estado completa da seção 46/109) — ✅ **confirmado**,
+   `EscalaServiceIntegrationTest` passa 6/6.
 
-## ⏳ Fase 10 — multi-tenant real (seção 110 do plano mestre)
+## ✅ Fase 10 — multi-tenant real (seção 110 do plano mestre)
 
 Feita junto com o pagamento de todo o débito de testes pendente (mesma
 rodada de 22/09/2026, por instrução explícita do usuário — "vamos fazer
@@ -1120,9 +1206,10 @@ mais a Fase 10 aí fazemos todos os testes pendentes").
    nível de repositório/Hibernate (não de controller), mesmo espírito do
    teste original de isolamento P0 (seção 78).
 3. **Executar suíte P0** — a suíte de isolamento (`TenantIsolationIntegrationTest`)
-   agora cobre as sete entidades tenant-aware que existem até a Fase 9;
-   ainda pendente de rodar de fato contra o Postgres real do usuário
-   (ver aviso ⏳ no topo deste README).
+   agora cobre as sete entidades tenant-aware que existem até a Fase 9; ✅
+   **já rodou de fato contra o Postgres real do usuário e passou 5/5**
+   (parte do `BUILD SUCCESS` de 75 testes — ver aviso no topo deste
+   README).
 4. **Ajustar índices** — **nenhuma migration nova foi necessária.** A
    V021 (`add_tenant_id_domain_tables`, Fase 3/4) já cria os índices
    compostos `(tenant_id, ...)` necessários para as sete tabelas de
@@ -1132,9 +1219,9 @@ mais a Fase 10 aí fazemos todos os testes pendentes").
 5. **Validar Storage** — `SupabaseStorageServiceTest` (débito da Fase 7,
    pago nesta rodada) cobre os três endpoints via `MockRestServiceServer`;
    foi escrevendo esse teste que o **Bug real #7** (ver seção da Fase 7)
-   foi encontrado e corrigido. O formato real da API Supabase continua
-   **não confirmado** contra um projeto de verdade (mesma ressalva já
-   feita na Fase 7).
+   foi encontrado e corrigido. ✅ Confirmado pelo `BUILD SUCCESS` de 75
+   testes. O formato real da API Supabase continua **não confirmado**
+   contra um projeto de verdade (mesma ressalva já feita na Fase 7).
 6. **Validar inscrição pública por slug** — coberto indiretamente pelo
    teste de isolamento de `Inscricao` (item 2 acima): dois tenants com
    slugs distintos, cada um só enxergando a própria inscrição, mais os
@@ -1153,23 +1240,20 @@ responsável principal único, "apaga tudo e reinsere", foto via
 `StorageService` mockado), `EscalaServiceIntegrationTest` (Fase 9, 6
 métodos, ver item 3 dos "Riscos residuais" da Fase 9 acima).
 
-> ⏳ **Nada nesta seção deve ser tratado como "pronto"** até um
-> `mvn clean verify` real confirmar que todo esse código novo sequer
-> compila — `mvn` não está disponível neste ambiente de pesquisa (Maven
-> Central bloqueado), então a única verificação possível aqui foi revisão
-> manual linha por linha, mais um script auxiliar para checar contagens de
-> argumento de construtores/records (que já pegou e ajudou a corrigir três
-> bugs reais de contagem de argumento antes mesmo de chegar num build).
->
-> 🔴 **Atualização (22/09/2026): o primeiro `mvn clean verify` real desta
-> rodada rodou e voltou `BUILD FAILURE`** (compilação passou — os 14 erros
-> e 2 falhas foram todos em tempo de execução/asserção, não de compilação)
-> — `Tests run: 75, Failures: 2, Errors: 14`. Isso já confirma que o
-> contexto Spring sobe com todo o código novo da Fase 10 + débito de
-> testes. Os quatro problemas encontrados (2 bugs reais de produção — #8 e
-> #9 — e 2 correções de teste) estão detalhados no aviso do topo deste
-> README e nas seções de cada fase — todos corrigidos, **ainda sem
-> confirmação de um novo `mvn clean verify` real.**
+> ✅ **Confirmado com `mvn clean verify` real: `BUILD SUCCESS`, 75 testes,
+> 0 falhas, 0 erros (22/09/2026).** Foram necessárias três rodadas reais
+> de build — o histórico completo, com os três bugs reais de produção
+> (#8, #9, #10) e as três correções de teste encontrados ao longo do
+> caminho, está no aviso no topo deste README e nas seções de cada fase.
+> Toda a Fase 10 + o débito de testes automatizados das Fases 5-9 estão
+> agora confirmados de verdade contra um Postgres real — não só que o
+> código compila, mas que as regras de negócio de cada fase funcionam
+> como esperado. Os únicos riscos que continuam sem confirmação são os
+> que nenhum teste automatizado fecha sozinho: o formato real das APIs do
+> Supabase Storage e do Cloudflare Turnstile, a configuração real do
+> reverse proxy de produção (`X-Forwarded-For`), e o fix proativo (por
+> analogia ao Bug real #10) em `InscricaoService.substituirResponsaveis`
+> (seção da Fase 8) — ver "Próximos passos" abaixo.
 
 ## Como rodar localmente
 
@@ -1283,22 +1367,20 @@ não existem `config/`, `backoffice/`, `arquivo/`, `billing/`,
 > **Atualização (22/09/2026):** a decisão anterior de adiar testes em
 > favor de velocidade foi revertida por instrução explícita do usuário —
 > a Fase 10 e todo o débito de testes pendente (item 2 antigo desta lista)
-> foram pagos na mesma rodada (ver seção da Fase 10 acima). O primeiro
-> `mvn clean verify` real dessa rodada já rodou e voltou `BUILD FAILURE`
-> (`Tests run: 75, Failures: 2, Errors: 14`) — os quatro problemas
-> encontrados (2 bugs reais de produção, #8 e #9, e 2 correções de teste)
-> já foram corrigidos (ver aviso no topo do README). O item 1 abaixo
-> continua sendo o próximo passo mais urgente: confirmar essas correções
-> com um novo build real.
+> foram pagos na mesma rodada, e **agora confirmados com `BUILD SUCCESS`
+> real: 75 testes, 0 falhas, 0 erros** (ver aviso no topo do README e
+> seção da Fase 10). Três bugs reais de produção (#8, #9, #10) e três
+> correções de teste foram encontrados e corrigidos ao longo de três
+> rodadas de build. O item 1 antigo desta lista (confirmar com um build
+> real) está feito — o que resta é o fix proativo em `InscricaoService`
+> (item 1 abaixo) e o resto da dívida técnica já conhecida.
 
-1. **Confirmar as correções dos Bugs reais #8/#9 (e as duas correções de
-   teste) com um novo `mvn clean verify` real** — é o próximo passo
-   imediato depois desta rodada (ver o aviso ⏳ no topo deste README, a
-   seção da Fase 10, e as seções das Fases 5/8 para o detalhe de cada
-   bug). Até essa confirmação chegar, nenhuma das quatro correções desta
-   rodada deve ser tratada como "pronta" — só foi possível revisão manual
-   neste ambiente de pesquisa, já que `mvn` não está disponível aqui
-   (Maven Central bloqueado).
+1. **Confirmar o fix proativo em `InscricaoService.substituirResponsaveis`**
+   (mesmo padrão do Bug real #10, aplicado por analogia sem um teste que
+   o exercite — ver seção da Fase 8) — o único item desta batelada ainda
+   sem confirmação de build real. Um teste que troque o responsável
+   principal de uma inscrição PENDENTE via `atualizarPendente` fecharia
+   essa lacuna.
 2. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
    31) — hoje `authorizeHttpRequests` só distingue autenticado/não
    autenticado, sem checar a role do vínculo `usuario_tenant` (vale para
