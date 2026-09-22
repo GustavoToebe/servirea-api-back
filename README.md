@@ -1819,10 +1819,18 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    e agora também a API do Resend (Fase 11) — todos os três implementados
    a partir de documentação pública, nunca testados contra o serviço real
    neste ambiente de pesquisa.
-4. Terminar a verificação do domínio `servirea.com.br` no painel do Resend
-   (registros MX + TXT/SPF + TXT/DKIM apontados pelo Cloudflare) e então
-   trocar `RESEND_FROM` de `onboarding@resend.dev` para um endereço
-   `@servirea.com.br` — passo manual do usuário, fora deste código.
+4. ⏳ **Em andamento (22/09/2026):** domínio `servirea.com.br` adicionado
+   na Cloudflare (nameservers ainda propagando) e os registros de DNS de
+   verificação do Resend (DKIM TXT + duas SPF CNAME) já foram criados —
+   status "Pending" nos dois painéis, aguardando propagação (o Resend
+   avisa que pode levar de minutos a 48h). **Decidido com o usuário:**
+   `RESEND_FROM` = `contato@servirea.com.br` — já configurado como novo
+   valor padrão em `application-prod.yml`/`ResendProperties` (troca de
+   `onboarding@resend.dev`), mas só funciona de verdade depois que o
+   Resend marcar o domínio como "Verified". Falta: o usuário clicar em
+   "Verify" no painel do Resend assim que a propagação terminar, e então
+   confirmar (por exemplo enviando uma inscrição de teste) que o e-mail
+   chega usando o domínio próprio.
 5. Integrar `DisponibilidadeVoluntario` (Fase 11) como filtro do picker de
    candidatos (seção 49) — depende do próprio endpoint do picker existir
    primeiro no backend Java, o que ainda não aconteceu.

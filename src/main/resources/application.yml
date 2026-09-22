@@ -80,7 +80,10 @@ servire:
   # application-prod.yml troca para "resend" (ResendEmailSender). "api-key"
   # também sem entrada aqui, mesma regra de JWT_SECRET/DB_URL (seção 90) —
   # só via RESEND_API_KEY. "from" tem valor padrão em ResendProperties
-  # (onboarding@resend.dev, domínio de teste do Resend) — ver seu javadoc.
+  # (onboarding@resend.dev, domínio de teste do Resend) só para os
+  # profiles que não sobrescrevem essa chave (dev/test); application-prod.yml
+  # já sobrescreve para contato@servirea.com.br (decidido com o usuário em
+  # 22/09/2026) — ver javadoc de ResendProperties.
 
   # Rate limit do formulário público de inscrição (Fase 8, seção 45) — um
   # limitador em memória, por IP, de janela deslizante. Deliberadamente NÃO

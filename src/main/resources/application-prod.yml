@@ -40,12 +40,21 @@ servire:
   # JWT_SECRET/DB_URL acima) quando provider=resend. "provider" em si
   # aceita override via EMAIL_PROVIDER (ex.: voltar para "log" temporariamente
   # numa indisponibilidade do Resend) — não é segredo, só um interruptor de
-  # comportamento, por isso tem valor padrão mesmo aqui.
+  # comportamento, por isso tem valor padrão mesmo aqui. Mesmo raciocínio
+  # para "from": não é segredo (é o próprio remetente visível ao
+  # destinatário), então tem valor padrão aqui — decidido com o usuário em
+  # 22/09/2026 como contato@servirea.com.br (troca do domínio de teste
+  # onboarding@resend.dev, seção 122 item 16), mas SÓ funciona depois que
+  # o domínio servirea.com.br estiver com status "Verified" no painel do
+  # Resend (DNS ainda propagando no momento desta decisão — ver
+  # "Próximos passos" no README.md); até lá, o Resend rejeita o envio com
+  # esse remetente e RESEND_FROM pode ser sobrescrito via variável de
+  # ambiente para continuar usando onboarding@resend.dev temporariamente.
   email:
     provider: ${EMAIL_PROVIDER:resend}
     resend:
       api-key: ${RESEND_API_KEY}
-      from: ${RESEND_FROM:onboarding@resend.dev}
+      from: ${RESEND_FROM:contato@servirea.com.br}
 
 logging:
   level:
