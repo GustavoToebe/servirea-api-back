@@ -31,11 +31,40 @@ voluntário, tabela de auditoria e provedor de e-mail real, seção
 > `descricoes.getLast()` de `"ajustes fases 7 8 9"` para
 > `"table audit log"` (descrição que o Flyway deriva do nome do arquivo
 > `V026__table_audit_log.sql`). **Nenhum código de produção foi tocado por
-> essa correção** — as cinco funcionalidades da Fase 11 continuam
-> integralmente sem confirmação de build, já que este era o único teste
-> que rodou contra elas (indiretamente, só contando migrations) antes de
-> falhar. Ainda **não confirmado** — aguardando o próximo `mvn clean
-> verify` do usuário.
+> essa correção.**
+>
+> ✅ **Segunda rodada de `mvn clean verify` real da Fase 11 (22/09/2026,
+> 14:08): `BUILD SUCCESS`, `Tests run: 75, Failures: 0, Errors: 0`.**
+> Confirma o fix do Bug real #11. Importante ser preciso sobre o que esse
+> `BUILD SUCCESS` prova e o que **não** prova sobre as cinco
+> funcionalidades da Fase 11 — nenhum teste novo foi escrito nesta rodada
+> (decisão explícita do usuário), então tudo que ficou confirmado foi por
+> efeito colateral dos testes que já existiam:
+> - **Confirmado:** os schemas dos três novos tipos nativos do Postgres
+>   (`presenca_vaga`, `periodo_dia`) e o array `text[]` de
+>   `audit_log.changed_fields` batem com o mapeamento JPA — isso é
+>   garantido porque `ddl-auto: validate` roda em TODA subida de contexto
+>   Spring, e vários testes de integração existentes sobem o contexto.
+>   Também confirmado: o contexto Spring sobe corretamente com os dois
+>   beans concorrentes de `EmailSender` (`LoggingEmailSender`/
+>   `ResendEmailSender`) sob `@ConditionalOnProperty` sem colidir, e com
+>   `@EnableMethodSecurity` ativo. E, como `VoluntarioServiceIntegrationTest`/
+>   `EscalaServiceIntegrationTest`/`InscricaoServiceIntegrationTest` chamam
+>   `criar`/`atualizar`/`aprovar`/etc. — que agora chamam
+>   `AuditLogService.registrar` internamente — fica confirmado que
+>   `registrar()` executa sem erro de SQL (incluindo a escrita na coluna
+>   array) e que os fallbacks defensivos dele (`TenantContext.get()`,
+>   `SecurityContextHolder`, `MDC`, `RequestContextHolder.getRequestAttributes()`
+>   retornando `null` fora de uma requisição HTTP real) não lançam exceção
+>   quando chamados a partir de um teste de serviço puro.
+> - **Ainda NÃO confirmado:** a aplicação real do `@PreAuthorize` em nível
+>   HTTP (nenhum teste `MockMvc`/`TestRestTemplate` chama os controllers
+>   com roles diferentes para checar 200 vs 403); `EscalaService.registrarPresenca`
+>   e todo o fluxo de `DisponibilidadeVoluntarioService`/
+>   `DisponibilidadeVoluntarioController` (nenhum teste existente chama
+>   nenhum dos dois); e `ResendEmailSender` (o profile de teste força
+>   `servire.email.provider: log`, então o bean do Resend nunca é
+>   instanciado nem exercitado).
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -1297,15 +1326,23 @@ métodos, ver item 3 dos "Riscos residuais" da Fase 9 acima).
 Cinco funcionalidades pedidas juntas pelo usuário em 22/09/2026 ("Pode
 fazer todos os itens do 1 ao 5"), **sem testes automatizados novos por
 decisão explícita do usuário** (débito de testes fica para a próxima
-rodada, mesmo padrão já usado nas Fases 6-9). **Nenhum item desta fase foi
-confirmado por um `mvn clean verify` real ainda** — tudo abaixo é revisão
-manual de código, sem acesso a `mvn` neste ambiente de pesquisa (Maven
-Central bloqueado).
+rodada, mesmo padrão já usado nas Fases 6-9).
 
-> 🔴→⏳ **Primeira rodada de build real: `BUILD FAILURE`** por
+> 🔴 **Primeira rodada de build real: `BUILD FAILURE`** por
 > `FlywayMigrationIntegrationTest` desatualizado (**Bug real #11**, teste,
-> não produção) — corrigido, ver aviso no topo deste README. Ainda
-> aguardando reconfirmação.
+> não produção) — corrigido.
+>
+> ✅ **Segunda rodada de build real (22/09/2026, 14:08): `BUILD SUCCESS`,
+> 75 testes, 0 falhas, 0 erros.** Confirma o fix do Bug real #11 e, por
+> efeito colateral dos testes já existentes, confirma que os schemas/
+> mapeamentos JPA novos batem com o banco real e que o contexto Spring
+> sobe corretamente com os beans/`@EnableMethodSecurity` novos — **mas
+> nenhuma linha de negócio nova desta fase foi exercitada por um teste que
+> a chame diretamente** (nenhum teste `MockMvc`/HTTP para `@PreAuthorize`,
+> nenhum teste para `registrarPresenca`/`DisponibilidadeVoluntario`, nenhum
+> teste que ative o `ResendEmailSender`). Ver o aviso completo no topo
+> deste README para o detalhe do que ficou confirmado e do que continua
+> pendente.
 
 ### 1. Roles e permissões reais (seção 31)
 
@@ -1596,25 +1633,24 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
 > **implementados na Fase 11** (ver seção própria acima) — por pedido
 > explícito do usuário, SEM testes automatizados novos ainda (decisão
 > dele: construir as 5 funcionalidades primeiro, testar depois, mesmo
-> padrão já usado nas Fases 6-9). Nada da Fase 11 tem confirmação de build
-> real ainda — é o item 1 novo desta lista, e o mais importante agora.
+> padrão já usado nas Fases 6-9). A Fase 11 já tem um `mvn clean verify`
+> real com `BUILD SUCCESS` (75 testes, 0 falhas, 0 erros), mas isso só
+> confirma schema/contexto Spring/efeito colateral — a lógica de negócio
+> nova continua sem teste direto. Item 1 abaixo é o que resta.
 
-1. **Confirmar a Fase 11 inteira com um `mvn clean verify` real** —
-   nenhuma linha desta fase (permissões, faltas, disponibilidade,
-   auditoria, Resend) foi exercitada por nenhum teste automatizado ainda.
-   Prioridades para a próxima rodada de testes, na ordem em que um bug
-   forçaria a aplicação a nem subir: (a) `EmailConfiguration`/
-   `ResendEmailSender`/`LoggingEmailSender` sendo dois beans concorrentes
-   do MESMO tipo `EmailSender` sob `@ConditionalOnProperty` — o contexto
-   Spring inteiro falha ao subir se as duas condições colidirem (ex.: as
-   duas ativas ao mesmo tempo, ou nenhuma) em qualquer profile, então isso
-   quebraria TODO teste que carrega o contexto, não só os deste módulo;
-   (b) `@PreAuthorize`/`@EnableMethodSecurity` — nenhum teste `MockMvc`/
-   `TestRestTemplate` chama os controllers desta rodada, só os serviços
-   diretamente (que não passam pelo `@PreAuthorize`, aplicado só nos
-   controllers); (c) os três novos tipos nativos do Postgres
-   (`presenca_vaga`, `periodo_dia`) e o array `text[]` de
-   `audit_log.changed_fields` batendo com o mapeamento JPA.
+1. **Escrever testes automatizados que exercitem de fato a lógica nova da
+   Fase 11** — o `BUILD SUCCESS` de 22/09/2026 confirmou que o schema, o
+   contexto Spring e os efeitos colaterais (via `AuditLogService` chamado
+   pelos serviços já testados) funcionam, mas nenhum teste chama
+   diretamente: (a) os controllers via `MockMvc`/`TestRestTemplate` com
+   roles diferentes, para checar que `@PreAuthorize`/`@EnableMethodSecurity`
+   realmente barra quem não tem a `PERM_*` (hoje é só a configuração
+   declarada, nunca exercitada em uma requisição HTTP real); (b)
+   `EscalaService.registrarPresenca`; (c)
+   `DisponibilidadeVoluntarioService`/`DisponibilidadeVoluntarioController`
+   (nenhum teste chama nenhum dos dois, em nenhuma camada); (d)
+   `ResendEmailSender` (o profile de teste força `provider: log`, então
+   esse bean nunca é sequer instanciado nos testes atuais).
 2. Confirmar o fix proativo em `InscricaoService.substituirResponsaveis`
    (mesmo padrão do Bug real #10, aplicado por analogia sem um teste que
    o exercite desde a Fase 8/10) — um teste que troque o responsável
