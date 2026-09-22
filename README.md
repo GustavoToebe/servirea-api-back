@@ -15,6 +15,13 @@ própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 > decisões e riscos residuais). Até essa confirmação chegar, tratar como
 > "implementado, não verificado" — mesma disciplina já seguida nas fases
 > anteriores.
+>
+> A primeira rodada desse build real (22/09/2026, 09:14-09:16) voltou
+> `BUILD FAILURE` (13 testes, 0 falhas, **8 erros**) — **Bug real #6**:
+> faltava o bean `RestClient.Builder`, usado por `SupabaseStorageService`
+> (Fase 7) e `TurnstileService` (Fase 8). Corrigido com a nova classe
+> `RestClientConfiguration` (detalhes na seção da Fase 7 abaixo) — ainda
+> **pendente de reconfirmação** com um novo `mvn clean verify` real.
 
 ## ✅ Fases 2, 3, 4 e 5 com build verificado de verdade (21/09/2026)
 
@@ -659,6 +666,33 @@ produção. Upload de multipart exigiu subir
 `spring.servlet.multipart.max-file-size`/`max-request-size` (padrão do
 Spring Boot é 1 MB, abaixo do limite de 5 MB do bucket) para 6 MB.
 
+### 🐛 Bug real #6 (22/09/2026): `RestClient.Builder` não é auto-configurado só pelo `spring-boot-starter-web`
+
+Confirmado pelo primeiro `mvn clean verify` do usuário depois das Fases
+7/8/9 (22/09/2026, 09:14-09:16): **`BUILD FAILURE`, 13 testes, 0 falhas,
+8 erros** — todos os testes que sobem o contexto Spring inteiro falharam
+com a mesma causa raiz:
+
+```text
+NoSuchBeanDefinitionException: No qualifying bean of type
+'org.springframework.web.client.RestClient$Builder' available
+```
+
+Isso confirma exatamente o risco já apontado na javadoc de
+`SupabaseStorageService`/`TurnstileService` ao escrevê-las: diferente do
+suposto, `spring-boot-starter-web` sozinho **não** auto-configura um bean
+`RestClient.Builder` neste projeto (Spring Boot 4.1.1) — mesma categoria
+de surpresa já vivida com `HibernatePropertiesCustomizer`/
+`spring-boot-starter-flyway` (Fase 5/6), onde uma peça de infraestrutura
+que "vinha de graça" no Boot 3 precisou ser resolvida à mão no Boot 4.1.
+
+**Correção:** nova classe `br.com.servire.api.web.RestClientConfiguration`
+declarando o bean manualmente (`RestClient.builder()`), em vez de depender
+de qual módulo do Boot 4 traz — ou não — essa auto-configuration.
+
+> **⏳ Ainda não reconfirmado com um novo `mvn clean verify` real** — este
+> é o próximo passo imediato.
+
 ### ⚠️ Riscos residuais a verificar no próximo build real
 
 1. **Formato exato da API REST do Supabase Storage.** `SupabaseStorageService`
@@ -670,13 +704,7 @@ Spring Boot é 1 MB, abaixo do limite de 5 MB do bucket) para 6 MB.
    ambiente de pesquisa.** Se o upload/assinatura falhar com um erro de
    formato de request/response, `SupabaseStorageService` é o primeiro
    lugar a checar (tem javadoc detalhado apontando exatamente isso).
-2. **Bean `RestClient.Builder`.** Injetado no construtor de
-   `SupabaseStorageService`/`TurnstileService`, esperado auto-configurado
-   pelo `spring-boot-starter-web` — não foi possível confirmar rodando de
-   verdade neste ambiente. Se o contexto Spring falhar ao subir com "no
-   qualifying bean of type RestClient.Builder", é aqui que se resolve
-   (provável correção: declarar o bean manualmente).
-3. **Upload de foto não participa da transação SQL** — documentado
+2. **Upload de foto não participa da transação SQL** — documentado
    deliberadamente assim (mesmo texto já usado na javadoc de
    `VoluntarioService`): se o commit do banco falhar depois de um upload
    bem-sucedido, fica um arquivo órfão no bucket. Aceitável, não corrigido
@@ -740,10 +768,14 @@ pacote `auditoria/` continua um item futuro do plano mestre, seção 16).
    evitar depender de uma anotação de (de)serialização específica de uma
    versão do Jackson; não foi possível testar contra o Cloudflare de
    verdade neste ambiente.
-3. Mesmo risco de `RestClient.Builder` já listado na Fase 7.
-4. **Nenhum teste automatizado** cobre o fluxo completo de inscrição
+3. **Nenhum teste automatizado** cobre o fluxo completo de inscrição
    pública (rate limit, Turnstile, aprovação, rejeição) — mesma decisão de
    adiar testes já tomada para as Fases 5/6.
+
+> ℹ️ O **Bug real #6** (`RestClient.Builder` não auto-configurado, ver seção
+> da Fase 7 acima) também derrubava `InscricaoService`/`TurnstileService`
+> desta fase — já corrigido pela mesma classe `RestClientConfiguration`,
+> mesma disciplina de "ainda não reconfirmado" até o próximo build real.
 
 ## ⏳ Fase 9 — escalas (seção 9.2/46/47/109 do plano mestre)
 
