@@ -44,27 +44,22 @@ escritos, ver "Próximos passos").
 > aberto): `BUILD SUCCESS`, 13 testes, 0 falhas, 0 erros — segunda
 > confirmação independente, sem qualquer mudança de código.
 
-## ⏳ Fase 6 implementada, ainda NÃO confirmada por build real (22/09/2026)
+## ✅ Fase 6 com build real confirmado (22/09/2026, 08:36)
 
-Todo o código da Fase 6 (voluntários/responsáveis — ver seção dedicada
-abaixo) foi escrito e sincronizado, mas **ainda não existe nenhuma
-execução de `mvn clean verify` do usuário depois dessas mudanças**. Este
-aviso só sai daqui quando isso acontecer (mesma prática usada nas fases
-anteriores).
+`mvn clean verify` do usuário depois de sincronizada: `BUILD SUCCESS`,
+**13 testes, 0 falhas, 0 erros**. Isso confirma, em especial, que o
+mapeamento de `funcoesHabilitadas` (array de ENUM nativo do Postgres —
+ver "Risco residual" na seção da Fase 6 abaixo) subiu o contexto Spring
+sem erro sob `ddl-auto: validate`, que é exatamente o tipo de
+incompatibilidade que só aparece na inicialização real (mesmo padrão dos
+bugs reais #1 e #5). Risco considerado resolvido.
 
-> **Decisão explícita do usuário (22/09/2026):** priorizar ter o sistema
-> funcional o quanto antes; os testes de integração do fluxo de
-> autenticação (Task 17, já pendente desde a Fase 5) e os testes novos que
-> a Fase 6 deveria ganhar (repositório/isolamento para `Voluntario`
-> expandido e para `Responsavel`, seção 80) ficam **deliberadamente
-> adiados para depois**. Isso significa que o `BUILD SUCCESS` que vai
-> confirmar esta fase prova só que o código *compila* e que os 13 testes
-> já existentes continuam passando — não que as regras de negócio novas
-> (responsável principal único, substituição de responsáveis, filtros de
-> busca) estão corretas. Ainda vale a pena rodar o `mvn clean verify` para
-> pegar qualquer erro de mapeamento JPA/Hibernate o quanto antes (é
-> justamente o tipo de erro que só aparece na inicialização real do
-> contexto Spring, como os bugs #1, #3, #5 já mostraram).
+> **Ressalva que continua valendo:** este `BUILD SUCCESS` prova que o
+> código *compila* e que os 13 testes já existentes continuam passando —
+> **não** que as regras de negócio novas (responsável principal único,
+> substituição de responsáveis, filtros de busca) estão corretas, já que
+> nenhum teste novo foi escrito para elas (decisão explícita do usuário
+> de priorizar velocidade, 22/09/2026 — ver "Próximos passos").
 
 ## Decisão de versão: Spring Boot 4.1.1 (não 3.x)
 
@@ -593,7 +588,7 @@ também no javadoc de `VoluntarioController`):
   `vw_voluntario_compromissos`) — depende de `escalas`/`escala_eventos`/
   `escala_vagas`, que só existem no banco, sem entidade JPA ainda (Fase 9).
 
-### ⚠️ Risco residual a confirmar: array de ENUM nativo do Postgres (`funcoesHabilitadas`)
+### ✅ Risco residual confirmado: array de ENUM nativo do Postgres (`funcoesHabilitadas`)
 
 Este é o mapeamento mais arriscado da fase — por isso tinha ficado de
 fora da entidade `Voluntario` mínima desde a Fase 4 (a javadoc antiga já
@@ -608,18 +603,26 @@ with @JdbcType(PostgreSQLEnumJdbcType.class) but works with @Enumerated +
 `@ColumnTransformer(write = "?::funcao_escala[]")` — é a adotada em
 `Voluntario.funcoesHabilitadas`.
 
-**Não foi possível confirmar isso rodando de verdade** — este ambiente de
-pesquisa não tem acesso a um Postgres real nem à versão exata do projeto
-(Hibernate ORM 7.4.5.Final) para testar. Como o projeto usa
-`ddl-auto: validate` (Hibernate confere o mapeamento contra o schema real
-na inicialização), qualquer incompatibilidade aqui derruba o contexto
-Spring já na subida — exatamente como os bugs reais #1 e #5 já mostraram
-acontecer com outros mapeamentos. **Se o próximo `mvn clean verify`
-falhar na inicialização do contexto mencionando `funcoes_habilitadas`,
-`funcao_escala` ou `ARRAY`, este é o primeiro lugar a checar.**
+Não foi possível confirmar isso rodando de verdade no momento em que foi
+escrito — este ambiente de pesquisa não tem acesso a um Postgres real
+nem à versão exata do projeto (Hibernate ORM 7.4.5.Final) para testar.
+Como o projeto usa `ddl-auto: validate` (Hibernate confere o mapeamento
+contra o schema real na inicialização), qualquer incompatibilidade aqui
+derrubaria o contexto Spring já na subida — exatamente como os bugs
+reais #1 e #5 já mostraram acontecer com outros mapeamentos.
 
-**⏳ Ainda não confirmado por nenhum `mvn clean verify`** — fase recém-
-escrita, nenhuma execução do usuário ainda depois destas mudanças.
+**✅ Confirmado pelo `mvn clean verify` do usuário (22/09/2026, 08:36):
+`BUILD SUCCESS`, 13 testes, 0 falhas, 0 erros.** O contexto Spring subiu
+sem erro de schema/tipo nesta coluna — o mapeamento
+`@JdbcTypeCode(SqlTypes.ARRAY)` + `@Enumerated(EnumType.STRING)` +
+`@ColumnTransformer` funciona de verdade contra Hibernate ORM
+7.4.5.Final + Postgres real. Risco encerrado.
+
+**Ressalva que continua valendo:** este `BUILD SUCCESS` confirma que o
+código compila e sobe o contexto corretamente, mas nenhum teste novo
+cobre as regras de negócio da Fase 6 (responsável principal único,
+substituição de responsáveis) — decisão explícita do usuário de adiar
+testes, ver "Próximos passos".
 
 ## Como rodar localmente
 
