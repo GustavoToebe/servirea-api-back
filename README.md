@@ -1819,12 +1819,11 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    e agora também a API do Resend (Fase 11) — todos os três implementados
    a partir de documentação pública, nunca testados contra o serviço real
    neste ambiente de pesquisa. **Turnstile (22/09/2026): widget "Servirea"
-   já criado no painel da Cloudflare**, hostname `servirea.com.br`
-   configurado, modo "Managed" (recomendado). Falta: adicionar `localhost`
-   como segundo hostname do widget (limite é 10, só 1 em uso) para poder
-   testar o formulário público localmente antes de ir para produção, e
-   então de fato submeter uma inscrição de teste para confirmar o formato
-   real da resposta do `siteverify` contra `TurnstileService`. **Nota de
+   já criado no painel da Cloudflare**, hostnames `servirea.com.br` e
+   `localhost` já configurados (2 de 10 disponíveis), modo "Managed"
+   (recomendado). Falta: de fato submeter uma inscrição de teste (local,
+   contra `localhost`) para confirmar o formato real da resposta do
+   `siteverify` contra `TurnstileService`. **Nota de
    segurança:** a secret key desse widget apareceu num print
    compartilhado nesta conversa antes de o widget ter hostname
    configurado — recomendado rotacionar a secret key pelo botão "Rotate
