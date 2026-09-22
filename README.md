@@ -1,11 +1,11 @@
-# Servire API — Fases 2, 3, 4 e 5 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria)
+# Servire API — Fases 2 a 6 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria + voluntários)
 
 Este projeto cobre a **FASE 2** (fundação Spring Boot, seção 102/125), a
 **FASE 3** (modelo SaaS lógico, seção 103/126), a **FASE 4**
-(`TenantContext`/`@TenantId`, seção 104/126) e a **FASE 5** (autenticação
-própria, seção 105/32-36) do `plano_mestre_servire_v2_mvp_baixo_custo.md`,
-antes de migrar qualquer módulo de negócio completo (voluntário, escala,
-inscrição — isso é Fase 6 em diante).
+(`TenantContext`/`@TenantId`, seção 104/126), a **FASE 5** (autenticação
+própria, seção 105/32-36) e a **FASE 6** (voluntários/responsáveis, seção
+37/38/106) do `plano_mestre_servire_v2_mvp_baixo_custo.md`. Escala,
+inscrição e storage de fotos ficam para as Fases 7-9.
 
 ## ✅ Fases 2, 3, 4 e 5 com build verificado de verdade (21/09/2026)
 
@@ -40,6 +40,31 @@ escritos, ver "Próximos passos").
 > dependem de um Postgres via Testcontainers, que exige o Docker rodando.
 > Solução: abrir o Docker Desktop, esperar ele terminar de subir, e rodar
 > `mvn clean verify` de novo. Não precisa de nenhuma mudança de código.
+> **Reconfirmado em seguida** (22/09/2026, 08:14, já com o Docker Desktop
+> aberto): `BUILD SUCCESS`, 13 testes, 0 falhas, 0 erros — segunda
+> confirmação independente, sem qualquer mudança de código.
+
+## ⏳ Fase 6 implementada, ainda NÃO confirmada por build real (22/09/2026)
+
+Todo o código da Fase 6 (voluntários/responsáveis — ver seção dedicada
+abaixo) foi escrito e sincronizado, mas **ainda não existe nenhuma
+execução de `mvn clean verify` do usuário depois dessas mudanças**. Este
+aviso só sai daqui quando isso acontecer (mesma prática usada nas fases
+anteriores).
+
+> **Decisão explícita do usuário (22/09/2026):** priorizar ter o sistema
+> funcional o quanto antes; os testes de integração do fluxo de
+> autenticação (Task 17, já pendente desde a Fase 5) e os testes novos que
+> a Fase 6 deveria ganhar (repositório/isolamento para `Voluntario`
+> expandido e para `Responsavel`, seção 80) ficam **deliberadamente
+> adiados para depois**. Isso significa que o `BUILD SUCCESS` que vai
+> confirmar esta fase prova só que o código *compila* e que os 13 testes
+> já existentes continuam passando — não que as regras de negócio novas
+> (responsável principal único, substituição de responsáveis, filtros de
+> busca) estão corretas. Ainda vale a pena rodar o `mvn clean verify` para
+> pegar qualquer erro de mapeamento JPA/Hibernate o quanto antes (é
+> justamente o tipo de erro que só aparece na inicialização real do
+> contexto Spring, como os bugs #1, #3, #5 já mostraram).
 
 ## Decisão de versão: Spring Boot 4.1.1 (não 3.x)
 
@@ -508,6 +533,94 @@ tinha no Jackson 2.
 da Fase 5 (#4 e #5) estão corrigidos e confirmados — nenhuma ressalva de
 compilação/contexto pendente nesta fase.
 
+## Fase 6 — voluntários e responsáveis (seção 37/38/39/106 do plano mestre)
+
+Primeiro módulo de negócio migrado do Angular/Supabase para o backend
+próprio (seção 83: "RPCs de negócio e regras → migrar para Java"). Baseado
+no levantamento real do Angular atual (`claude/DOCUMENTACAO-COMPLETA-PARA-IA.md`,
+seção 10 — `VoluntariosService`), para reproduzir o mesmo comportamento
+funcional, não redesenhar do zero.
+
+**Entidades:**
+- `Voluntario` (pacote `br.com.servire.api.voluntario`) — até a Fase 5
+  só mapeava 4 colunas (o mínimo para o teste de isolamento); agora mapeia
+  todas as colunas de `voluntarios` (V003): tipo (`COROINHA`/`ACOLITO`/
+  `AMBOS`, ENUM nativo), dados de catequese/eucaristia/crisma, endereço,
+  contato, horário de estudo, observações, autorização de WhatsApp e
+  `funcoesHabilitadas` (array do ENUM nativo `funcao_escala`).
+- `Responsavel` (nova) — mapeia `responsaveis` (V004): parentesco, nome,
+  contato, `principal`. Relação `@OneToMany` bidirecional com `Voluntario`
+  (`cascade = ALL`, `orphanRemoval = true`) — ver por quê em
+  "Regra de responsável principal" abaixo.
+
+**Regra de responsável principal (seção 38):** deve existir exatamente um
+responsável com `principal = true` por voluntário. O banco só impede
+mais de um (índice único parcial `uq_responsavel_principal_por_voluntario`
+em V004) — não impede zero. Quem garante "exatamente um" é
+`VoluntarioService`, validando a lista inteira antes de persistir, dentro
+da mesma transação que grava o voluntário (seção 39: voluntário +
+responsáveis devem ser consistentes juntos). Criar ou atualizar um
+voluntário com zero ou mais de um principal falha com `400 Bad Request`
+antes de tocar no banco.
+
+**Substituição de responsáveis:** `POST`/`PUT /voluntarios` recebem a
+lista COMPLETA de responsáveis desejada — o serviço apaga os antigos e
+grava os novos (`orphanRemoval = true` faz o Hibernate deletar quem sai
+da coleção), reproduzindo o mesmo padrão "apaga tudo e reinsere"
+(`replaceResponsaveis`) que o Angular atual já usa. Não é um PATCH
+incremental.
+
+**Endpoints (todos autenticados — não estão em `ROTAS_PUBLICAS` de
+`SecurityConfig`):**
+
+| Verbo/rota | Uso |
+|---|---|
+| `GET /voluntarios?ativo=&tipo=&nome=` | Lista com filtros opcionais (equivalente a `VoluntariosService.list`/`.active`) |
+| `GET /voluntarios/count?ativo=` | Equivalente a `countByActive` |
+| `GET /voluntarios/{id}` | Detalhe com responsáveis aninhados (equivalente a `getById` com `select('*, responsaveis(*)')`) |
+| `POST /voluntarios` | Cria voluntário + responsáveis numa transação |
+| `PUT /voluntarios/{id}` | Atualiza voluntário + substitui responsáveis |
+| `PATCH /voluntarios/{id}/ativo?ativo=` | Equivalente a `setActive` |
+
+**Deliberadamente fora do escopo desta primeira versão** (documentado
+também no javadoc de `VoluntarioController`):
+- Upload real de foto / signed URL — depende do Storage (Fase 7, seção
+  107). `fotoPath` existe na entidade e na resposta, mas nenhum endpoint
+  escreve nele ainda.
+- Filtro de listagem por `funcoesHabilitadas` (o "picker de candidatos"
+  da seção 49) — só faz sentido junto do módulo de escalas (Fase 9).
+- `GET .../commitments` (histórico de compromissos, view
+  `vw_voluntario_compromissos`) — depende de `escalas`/`escala_eventos`/
+  `escala_vagas`, que só existem no banco, sem entidade JPA ainda (Fase 9).
+
+### ⚠️ Risco residual a confirmar: array de ENUM nativo do Postgres (`funcoesHabilitadas`)
+
+Este é o mapeamento mais arriscado da fase — por isso tinha ficado de
+fora da entidade `Voluntario` mínima desde a Fase 4 (a javadoc antiga já
+avisava disso). Pesquisado em 21-22/09/2026: combinar
+`@JdbcTypeCode(SqlTypes.ARRAY)` com `@JdbcType(PostgreSQLEnumJdbcType.class)`
+tem um bug conhecido no Hibernate 7.x — `ClassCastException` em
+`getJdbcLiteralFormatter`, reportado no fórum oficial do Hibernate ORM
+contra a versão 7.2.1.Final ("PostgreSQL array of enums does not work
+with @JdbcType(PostgreSQLEnumJdbcType.class) but works with @Enumerated +
+@ColumnTransformer"). A solução confirmada nessa mesma thread —
+`@JdbcTypeCode(SqlTypes.ARRAY)` + `@Enumerated(EnumType.STRING)` +
+`@ColumnTransformer(write = "?::funcao_escala[]")` — é a adotada em
+`Voluntario.funcoesHabilitadas`.
+
+**Não foi possível confirmar isso rodando de verdade** — este ambiente de
+pesquisa não tem acesso a um Postgres real nem à versão exata do projeto
+(Hibernate ORM 7.4.5.Final) para testar. Como o projeto usa
+`ddl-auto: validate` (Hibernate confere o mapeamento contra o schema real
+na inicialização), qualquer incompatibilidade aqui derruba o contexto
+Spring já na subida — exatamente como os bugs reais #1 e #5 já mostraram
+acontecer com outros mapeamentos. **Se o próximo `mvn clean verify`
+falhar na inicialização do contexto mencionando `funcoes_habilitadas`,
+`funcao_escala` ou `ARRAY`, este é o primeiro lugar a checar.**
+
+**⏳ Ainda não confirmado por nenhum `mvn clean verify`** — fase recém-
+escrita, nenhuma execução do usuário ainda depois destas mudanças.
+
 ## Como rodar localmente
 
 Requer um PostgreSQL acessível (local, Docker, ou outro) para o profile
@@ -560,7 +673,10 @@ src/main/java/br/com/servire/api/
     AuthService.java, AuthController.java
     dto/   <- LoginRequest, LoginResponse, SelectTenantRequest, RefreshRequest, AccessTokenResponse, ForgotPasswordRequest, ResetPasswordRequest, TenantResumo
   voluntario/
-    Voluntario.java, VoluntarioRepository.java   <- mínima, só para provar isolamento (Fase 6 faz a completa)
+    Voluntario.java, VoluntarioRepository.java, VoluntarioService.java, VoluntarioController.java
+    Responsavel.java, ResponsavelRepository.java
+    TipoVoluntario.java, FuncaoEscala.java
+    dto/   <- VoluntarioRequest, VoluntarioResponse, ResponsavelRequest, ResponsavelResponse
 src/main/resources/
   application.yml, application-dev.yml, application-prod.yml
   logback-spring.xml
@@ -578,26 +694,31 @@ src/test/java/br/com/servire/api/
   tenant/TenantIsolationIntegrationTest.java  <- teste crítico P0 de isolamento (seção 78/79/80)
 ```
 
-`DevFixedTenantFilter` (andaime temporário da Fase 4) foi removido nesta
-fase, substituído por `security/JwtAuthenticationFilter.java` (ver seção
-Fase 5 acima). Ainda não existem pacotes `config/`, `backoffice/`,
-`inscricao/`, `escala/`, `arquivo/`, `billing/`, `auditoria/` da
-estrutura-alvo completa (seção 16 do plano mestre) — eles entram
-progressivamente a partir da Fase 6.
+`DevFixedTenantFilter` (andaime temporário da Fase 4) foi removido na
+Fase 5, substituído por `security/JwtAuthenticationFilter.java`. Ainda
+não existem pacotes `config/`, `backoffice/`, `inscricao/`, `escala/`,
+`arquivo/`, `billing/`, `auditoria/` da estrutura-alvo completa (seção
+16 do plano mestre) — eles entram progressivamente a partir da Fase 7.
 
 ## Próximos passos
 
-1. **Escrever os testes de integração do fluxo de autenticação completo**
-   (login single-tenant/multi-tenant, seleção de paróquia, refresh com
-   rotation, detecção de reuso, logout, Kill Switch em cada um desses
-   pontos, forgot/reset password) — a Fase 5 já tem `BUILD SUCCESS`
-   confirmado (ver seção acima), mas isso cobre só os 13 testes das Fases
-   2-4; o fluxo de autenticação em si ainda não tem nenhum teste
-   automatizado.
-2. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
+> **Decisão explícita do usuário (22/09/2026):** priorizar entregar
+> funcionalidade (Fases 6+) antes de escrever testes automatizados
+> pendentes. Os itens 1 e 2 abaixo continuam sendo dívida técnica
+> reconhecida, não esquecida — só foram conscientemente adiados.
+
+1. **Testes pendentes (adiados de propósito):** integração do fluxo de
+   autenticação completo (login single-tenant/multi-tenant, seleção de
+   paróquia, refresh com rotation, detecção de reuso, logout, Kill Switch,
+   forgot/reset password — Fase 5) e testes de repositório/isolamento
+   para `Voluntario` expandido e `Responsavel` (seção 80 — Fase 6).
+2. Confirmar a Fase 6 com um `mvn clean verify` real (ver aviso ⏳ acima)
+   — em especial o mapeamento de `funcoesHabilitadas` (array de ENUM
+   nativo), o risco residual mais importante desta fase.
+3. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
    31) — hoje `authorizeHttpRequests` só distingue autenticado/não
    autenticado, sem checar a role do vínculo `usuario_tenant`.
-3. Decidir um provedor de e-mail real para substituir `LoggingEmailSender`.
-4. Só depois disso migrar os módulos de negócio completos (voluntário,
-   responsável, inscrição, escala) do Angular/Supabase para cá (Fases
-   6-9).
+4. Storage de fotos (Fase 7, seção 107) — upload real e signed URL para
+   `voluntarios.foto_path`, hoje só um campo de metadado sem escrita.
+5. Decidir um provedor de e-mail real para substituir `LoggingEmailSender`.
+6. Migrar inscrições e escalas do Angular/Supabase para cá (Fases 8-9).
