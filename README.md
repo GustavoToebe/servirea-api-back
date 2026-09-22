@@ -1818,7 +1818,19 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    Supabase Storage (Fase 7), a resposta do Cloudflare Turnstile (Fase 8)
    e agora também a API do Resend (Fase 11) — todos os três implementados
    a partir de documentação pública, nunca testados contra o serviço real
-   neste ambiente de pesquisa.
+   neste ambiente de pesquisa. **Turnstile (22/09/2026): widget "Servirea"
+   já criado no painel da Cloudflare**, hostname `servirea.com.br`
+   configurado, modo "Managed" (recomendado). Falta: adicionar `localhost`
+   como segundo hostname do widget (limite é 10, só 1 em uso) para poder
+   testar o formulário público localmente antes de ir para produção, e
+   então de fato submeter uma inscrição de teste para confirmar o formato
+   real da resposta do `siteverify` contra `TurnstileService`. **Nota de
+   segurança:** a secret key desse widget apareceu num print
+   compartilhado nesta conversa antes de o widget ter hostname
+   configurado — recomendado rotacionar a secret key pelo botão "Rotate
+   Secret Key" do próprio painel (limite: uma rotação a cada 2h, chave
+   antiga continua válida durante a transição) antes de configurá-la de
+   verdade via variável de ambiente.
 4. ⏳ **Em andamento (22/09/2026):** domínio `servirea.com.br` adicionado
    na Cloudflare (nameservers ainda propagando) e os registros de DNS de
    verificação do Resend (DKIM TXT + duas SPF CNAME) já foram criados —
