@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,6 +37,26 @@ class GlobalExceptionHandlerTest {
                 new ConflictException("Somente inscrições pendentes podem ser aprovadas"), request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    /**
+     * Rede de segurança do controle otimista da Fase 9 (seção 47) — ver
+     * javadoc de {@link GlobalExceptionHandler#handleOptimisticLocking}.
+     * {@code EscalaService.atualizar} já faz a checagem explícita de
+     * versão ANTES desse ponto (caminho normal, testado em
+     * {@code EscalaServiceIntegrationTest}); este teste cobre só a rede de
+     * segurança do handler para o caso raro de duas requisições
+     * concorrentes baterem quase ao mesmo tempo.
+     */
+    @Test
+    void objectOptimisticLockingFailureExceptionViraHttp409ComMensagemDeNegocio() {
+        MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/escalas/algum-id");
+        ResponseEntity<ApiError> response = handler.handleOptimisticLocking(
+                new ObjectOptimisticLockingFailureException("Escala", "algum-id"), request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().message()).isEqualTo("A escala foi alterada por outro usuário. Atualize a página.");
     }
 
     @Test

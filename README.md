@@ -1,13 +1,51 @@
-# Servire API — Fases 2 a 9 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria + voluntários + storage + inscrições + escalas)
+# Servire API — Fases 2 a 10 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria + voluntários + storage + inscrições + escalas + multi-tenant real)
 
 Este projeto cobre a **FASE 2** (fundação Spring Boot, seção 102/125), a
 **FASE 3** (modelo SaaS lógico, seção 103/126), a **FASE 4**
 (`TenantContext`/`@TenantId`, seção 104/126), a **FASE 5** (autenticação
 própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 37/38/106), a **FASE 7** (storage de fotos, seção 107), a **FASE 8**
-(inscrições públicas, seção 44/108) e a **FASE 9** (escalas, seção
-46/47/109) do `plano_mestre_servire_v2_mvp_baixo_custo.md`.
+(inscrições públicas, seção 44/108), a **FASE 9** (escalas, seção
+46/47/109) e a **FASE 10** (multi-tenant real, seção 110) do
+`plano_mestre_servire_v2_mvp_baixo_custo.md`.
 
+> ⏳ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
+> pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
+> instrução explícita do usuário — AINDA SEM confirmação de um
+> `mvn clean verify` real.** Nenhum `mvn` local está disponível neste
+> ambiente de pesquisa (Maven Central bloqueado); todo o código novo abaixo
+> foi revisado manualmente, linha por linha, e teve as contagens de
+> argumento de construtor/record checadas por um script auxiliar — mas
+> **nada aqui deve ser tratado como "pronto" até o próximo build real do
+> usuário confirmar.**
+>
+> **O que entrou nesta rodada:**
+> - **Fase 10** (seção 110): suíte de isolamento multi-tenant ampliada em
+>   `TenantIsolationIntegrationTest` cobrindo `Responsavel` (cascata de 1
+>   nível), `Escala`→`EscalaEvento`→`EscalaVaga` (cascata de 3 níveis) e
+>   `Inscricao`+`InscricaoResponsavel` — além do `Voluntario` que já existia
+>   desde a Fase 4. Os itens "criar segundo tenant de teste"/"executar
+>   suíte P0" da seção 110 ficam cobertos por esses testes; "ajustar
+>   índices" já estava satisfeito pela V021 (nenhuma migration nova
+>   necessária — ver seção própria da Fase 10 abaixo); "validar inscrição
+>   pública por slug" fica coberto indiretamente pelo teste de isolamento
+>   de `Inscricao` (cada tenant só é alcançável pelo próprio slug).
+> - **Débito de testes pago** (Fases 5-9, antes conscientemente adiado em
+>   favor de velocidade): `AuthServiceIntegrationTest` (login, seleção de
+>   tenant, refresh/rotação/reuso, esqueci/redefinir senha — Fase 5),
+>   `VoluntarioServiceIntegrationTest` (regras de responsável, "apaga tudo
+>   e reinsere", foto — Fase 6), `SupabaseStorageServiceTest`/
+>   `TurnstileServiceTest`/`InscricaoRateLimiterTest`/
+>   `InscricaoServiceIntegrationTest` (Fases 7/8), `EscalaServiceIntegrationTest`
+>   (transições de estado, controle otimista, "apaga tudo e reinsere" de
+>   eventos — Fase 9), e um teste novo em `GlobalExceptionHandlerTest` para
+>   o handler de `ObjectOptimisticLockingFailureException` (Fase 9).
+> - **Bug real #7** (ver seção da Fase 7 abaixo): encontrado escrevendo
+>   `SupabaseStorageServiceTest`, não por build — as três chamadas HTTP de
+>   `SupabaseStorageService` codificavam a barra (`/`) do caminho do
+>   arquivo como `%2F`, o que teria quebrado toda chamada real ao Supabase
+>   Storage. Corrigido; **também ainda sem confirmação de build real.**
+>
 > ✅ **Fases 7, 8 e 9 com `BUILD SUCCESS` confirmado em 22/09/2026** — por
 > instrução explícita do usuário, as três fases foram feitas juntas, numa
 > única rodada, para só então pedir um build consolidado (ver seção
@@ -701,6 +739,48 @@ de qual módulo do Boot 4 traz — ou não — essa auto-configuration.
 > ✅ **Confirmado corrigido por um novo `mvn clean verify` real** (22/09/2026,
 > 09:24): `BUILD SUCCESS`, 13 testes, 0 falhas, 0 erros.
 
+### 🐛 Bug real #7 (22/09/2026): barra do caminho do arquivo virava `%2F` na URL do Supabase Storage
+
+Encontrado escrevendo `SupabaseStorageServiceTest` (débito técnico de
+testes da Fase 7, pago só agora na Fase 10) — **não** por um `mvn clean
+verify` real, já que essa classe é um teste unitário puro (sem Spring
+context, sem Testcontainers).
+
+Os três métodos de `SupabaseStorageService` (`armazenar`,
+`gerarUrlAssinada`, `excluir`) originalmente montavam a URI assim:
+
+```java
+.uri(properties.baseUrl() + "/storage/v1/object/{bucket}/{caminho}", properties.bucket(), caminho)
+```
+
+tratando `{caminho}` como **uma única variável de template**. O problema:
+`caminho` sempre contém `/` de verdade (ex.: `voluntarioId + "/perfil-" +
+timestamp + extensão`, ver `VoluntarioService#definirFoto`) — e o
+`UriComponentsBuilder` por trás do `RestClient` codifica esse `/` como
+`%2F` ao expandir uma única variável de template, comportamento padrão e
+documentado do Spring (não um bug do Spring em si). Isso teria quebrado
+**toda** chamada real ao Supabase Storage, já que a API espera os
+segmentos separados por `/` de verdade na URL, não `%2F` literal.
+
+**Correção:** embutir `bucket`/`caminho` diretamente na string da URI, sem
+placeholder de template para eles:
+
+```java
+.uri(properties.baseUrl() + "/storage/v1/object/" + properties.bucket() + "/" + caminho)
+```
+
+Seguro porque os dois valores vêm de dados controlados pela própria
+aplicação (nome de bucket fixo em configuração; caminho montado só com
+UUID + sufixo fixo + extensão de uma lista permitida, nunca com conteúdo
+arbitrário do usuário) — não há necessidade de escapar caracteres
+especiais além de preservar as barras como separadoras de verdade.
+
+> ⏳ **Ainda não confirmado por um `mvn clean verify` real** —
+> `SupabaseStorageServiceTest` cobre isso com `MockRestServiceServer` (URL
+> literal esperada com barras, não `%2F`), mas só um teste contra um
+> projeto Supabase de verdade fecharia esse risco por completo (ver
+> "Riscos residuais" abaixo, item 1, que continua de pé).
+
 ### ⚠️ Riscos residuais a verificar no próximo build real
 
 1. **Formato exato da API REST do Supabase Storage.** `SupabaseStorageService`
@@ -717,6 +797,15 @@ de qual módulo do Boot 4 traz — ou não — essa auto-configuration.
    `VoluntarioService`): se o commit do banco falhar depois de um upload
    bem-sucedido, fica um arquivo órfão no bucket. Aceitável, não corrigido
    nesta rodada.
+
+> ✅ **Débito de testes desta fase pago na Fase 10** (22/09/2026):
+> `SupabaseStorageServiceTest` cobre os três endpoints (upload, URL
+> assinada, exclusão best-effort), as validações de arquivo
+> (content-type/tamanho/vazio) e o "falha alto e cedo" de configuração
+> ausente — foi justamente escrevendo esse teste que o **Bug real #7**
+> acima foi encontrado. O item 1 da lista acima (formato real da API
+> Supabase) continua **não verificado** — só um teste contra um projeto
+> Supabase de verdade fecha esse risco.
 
 ## ⏳ Fase 8 — inscrições públicas (seção 21/44/108 do plano mestre)
 
@@ -776,9 +865,18 @@ pacote `auditoria/` continua um item futuro do plano mestre, seção 16).
    evitar depender de uma anotação de (de)serialização específica de uma
    versão do Jackson; não foi possível testar contra o Cloudflare de
    verdade neste ambiente.
-3. **Nenhum teste automatizado** cobre o fluxo completo de inscrição
-   pública (rate limit, Turnstile, aprovação, rejeição) — mesma decisão de
-   adiar testes já tomada para as Fases 5/6.
+3. ~~**Nenhum teste automatizado** cobre o fluxo completo de inscrição
+   pública (rate limit, Turnstile, aprovação, rejeição)~~ — **pago na Fase
+   10** (22/09/2026): `TurnstileServiceTest` (fail-closed em todos os
+   cenários — secret ausente, token vazio, `success: false`, falha HTTP),
+   `InscricaoRateLimiterTest` (janela deslizante por IP, contadores
+   independentes por IP) e `InscricaoServiceIntegrationTest` (rate limit
+   como primeira barreira, slug inexistente/tenant bloqueado tratados
+   igual, exatamente um responsável principal, aprovar/rejeitar,
+   atualização de pendente bloqueada depois de aprovada). Os itens 1 e 2
+   acima (proxy real, formato real do Cloudflare) continuam **não
+   verificados** — nenhum teste automatizado consegue fechar esses dois
+   sem um ambiente de produção/Cloudflare de verdade.
 
 > ℹ️ O **Bug real #6** (`RestClient.Builder` não auto-configurado, ver seção
 > da Fase 7 acima) também derrubava `InscricaoService`/`TurnstileService`
@@ -864,15 +962,91 @@ ainda a definir.
 
 ### ⚠️ Riscos residuais a verificar no próximo build real
 
-1. **Controle otimista nunca testado contra um Postgres real** — nem a
-   checagem explícita de versão em `EscalaService`, nem o
-   `ObjectOptimisticLockingFailureException` como rede de segurança.
-2. Cascata de três níveis tenant-aware (`Escala` → `EscalaEvento` →
-   `EscalaVaga`, todos com `@TenantId` próprio) nunca confirmada rodando —
-   o mecanismo é o mesmo já confirmado para `Voluntario`/`Responsavel`
-   (Fase 6), mas com mais um nível de profundidade.
-3. Nenhum teste automatizado cobre o "apaga tudo e reinsere" de eventos,
-   as transições de estado, nem o controle otimista.
+1. ~~**Controle otimista nunca testado contra um Postgres real**~~ —
+   **coberto na Fase 10** por `EscalaServiceIntegrationTest`
+   (`atualizarComVersaoDivergenteLancaConflictException`, checagem
+   explícita de `EscalaService`) e por
+   `GlobalExceptionHandlerTest.objectOptimisticLockingFailureExceptionViraHttp409ComMensagemDeNegocio`
+   (rede de segurança do `ObjectOptimisticLockingFailureException`) —
+   ambos ainda **sem confirmação de build real**, só revisão manual.
+2. ~~Cascata de três níveis tenant-aware~~ (`Escala` → `EscalaEvento` →
+   `EscalaVaga`) — **coberta na Fase 10** por
+   `TenantIsolationIntegrationTest.tenantNaoDeveEnxergarEscalaComCascataDeTresNiveisDeOutroTenant`,
+   que verifica isolamento nos três níveis (o `Escala` raiz via
+   `EscalaRepository`, `EscalaEvento`/`EscalaVaga` via JPQL direto, já que
+   não existe repositório dedicado para os dois níveis mais profundos).
+3. ~~Nenhum teste automatizado cobre o "apaga tudo e reinsere" de eventos,
+   as transições de estado, nem o controle otimista~~ — **pago na Fase
+   10** por `EscalaServiceIntegrationTest` (6 testes: criação com cascata,
+   substituição de eventos, versão divergente, atualizar fora de
+   RASCUNHO, mesmo voluntário em duas vagas do mesmo evento, e a matriz de
+   transição de estado completa da seção 46/109).
+
+## ⏳ Fase 10 — multi-tenant real (seção 110 do plano mestre)
+
+Feita junto com o pagamento de todo o débito de testes pendente (mesma
+rodada de 22/09/2026, por instrução explícita do usuário — "vamos fazer
+mais a Fase 10 aí fazemos todos os testes pendentes").
+
+**Itens da seção 110 e como cada um foi endereçado nesta rodada:**
+
+1. **Criar segundo tenant de teste / duplicar massa mínima** — cada
+   método de teste em `TenantIsolationIntegrationTest`,
+   `VoluntarioServiceIntegrationTest`, `InscricaoServiceIntegrationTest`,
+   `EscalaServiceIntegrationTest` e `AuthServiceIntegrationTest` cria seu
+   próprio tenant descartável via `TenantRepository.saveAndFlush` — não
+   existe um tenant "B" fixo e compartilhado entre testes (evita
+   contaminação entre métodos, já que nenhuma dessas classes usa rollback
+   automático por teste).
+2. **Validar isolamento** — `TenantIsolationIntegrationTest` ganhou três
+   métodos novos (ver "Riscos residuais" da Fase 9 acima e da Fase 6/8
+   abaixo para o detalhe de cada um): `Responsavel` (cascata de 1 nível),
+   `Escala`→`EscalaEvento`→`EscalaVaga` (cascata de 3 níveis) e
+   `Inscricao`+`InscricaoResponsavel` (cascata de 1 nível) — somados ao
+   teste de `Voluntario` que já existia desde a Fase 4. Todos operam no
+   nível de repositório/Hibernate (não de controller), mesmo espírito do
+   teste original de isolamento P0 (seção 78).
+3. **Executar suíte P0** — a suíte de isolamento (`TenantIsolationIntegrationTest`)
+   agora cobre as sete entidades tenant-aware que existem até a Fase 9;
+   ainda pendente de rodar de fato contra o Postgres real do usuário
+   (ver aviso ⏳ no topo deste README).
+4. **Ajustar índices** — **nenhuma migration nova foi necessária.** A
+   V021 (`add_tenant_id_domain_tables`, Fase 3/4) já cria os índices
+   compostos `(tenant_id, ...)` necessários para as sete tabelas de
+   domínio ao mesmo tempo em que adiciona a própria coluna `tenant_id` —
+   decisão já tomada duas fases atrás, não um item deixado pendente até
+   agora.
+5. **Validar Storage** — `SupabaseStorageServiceTest` (débito da Fase 7,
+   pago nesta rodada) cobre os três endpoints via `MockRestServiceServer`;
+   foi escrevendo esse teste que o **Bug real #7** (ver seção da Fase 7)
+   foi encontrado e corrigido. O formato real da API Supabase continua
+   **não confirmado** contra um projeto de verdade (mesma ressalva já
+   feita na Fase 7).
+6. **Validar inscrição pública por slug** — coberto indiretamente pelo
+   teste de isolamento de `Inscricao` (item 2 acima): dois tenants com
+   slugs distintos, cada um só enxergando a própria inscrição, mais os
+   testes de `InscricaoServiceIntegrationTest` que exercitam
+   `criarPublica` resolvendo o tenant pelo slug (incluindo os casos de
+   slug inexistente e tenant bloqueado, tratados com a mesma mensagem
+   genérica por anti-enumeração).
+
+**Débito de testes de outras fases, pago na mesma rodada** (não fazia
+parte da seção 110 em si, mas foi feito junto por instrução do usuário):
+`AuthServiceIntegrationTest` (Fase 5, 18 métodos — login em todos os
+cenários do Kill Switch, seleção de tenant, refresh com rotação/reuso/
+expiração/tenant sem vínculo, esqueci senha, redefinir senha com token
+válido/já usado), `VoluntarioServiceIntegrationTest` (Fase 6, 8 métodos —
+responsável principal único, "apaga tudo e reinsere", foto via
+`StorageService` mockado), `EscalaServiceIntegrationTest` (Fase 9, 6
+métodos, ver item 3 dos "Riscos residuais" da Fase 9 acima).
+
+> ⏳ **Nada nesta seção deve ser tratado como "pronto"** até um
+> `mvn clean verify` real confirmar que todo esse código novo sequer
+> compila — `mvn` não está disponível neste ambiente de pesquisa (Maven
+> Central bloqueado), então a única verificação possível aqui foi revisão
+> manual linha por linha, mais um script auxiliar para checar contagens de
+> argumento de construtores/records (que já pegou e ajudou a corrigir três
+> bugs reais de contagem de argumento antes mesmo de chegar num build).
 
 ## Como rodar localmente
 
@@ -892,10 +1066,17 @@ mvn spring-boot:run -Dspring-boot.run.profiles=dev
 mvn test
 ```
 
-Os testes de integração (`AbstractIntegrationTest` e suas subclasses)
-precisam de Docker disponível (Testcontainers sobe um Postgres real). Os
-testes puramente unitários (`RequestIdFilterTest`, `GlobalExceptionHandlerTest`)
-não precisam.
+Os testes de integração (`AbstractIntegrationTest` e suas subclasses —
+`TenantIsolationIntegrationTest`, `VoluntarioServiceIntegrationTest`,
+`InscricaoServiceIntegrationTest`, `EscalaServiceIntegrationTest`,
+`AuthServiceIntegrationTest`, `FlywayMigrationIntegrationTest`,
+`ServireApiApplicationTests`) precisam de Docker disponível
+(Testcontainers sobe um Postgres real). Os testes puramente unitários
+(`RequestIdFilterTest`, `GlobalExceptionHandlerTest`,
+`InscricaoRateLimiterTest`, `TurnstileServiceTest`,
+`SupabaseStorageServiceTest` — nenhum destes três últimos toca banco nem
+sobe o Spring context, usam `MockRestServiceServer`/só memória) não
+precisam.
 
 ## Estrutura
 
@@ -960,7 +1141,12 @@ src/test/java/br/com/servire/api/
   ServireApiApplicationTests.java
   migration/FlywayMigrationIntegrationTest.java  <- versão JUnit das checagens de servire-database/local-dev/compare-schema.sql
   web/RequestIdFilterTest.java, GlobalExceptionHandlerTest.java
-  tenant/TenantIsolationIntegrationTest.java  <- teste crítico P0 de isolamento (seção 78/79/80)
+  tenant/TenantIsolationIntegrationTest.java  <- teste crítico P0 de isolamento (seção 78/79/80), ampliado na Fase 10
+  auth/AuthServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 5
+  voluntario/VoluntarioServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 6
+  storage/SupabaseStorageServiceTest.java   <- Fase 10, débito de testes da Fase 7 (achou o Bug real #7)
+  inscricao/TurnstileServiceTest.java, InscricaoRateLimiterTest.java, InscricaoServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 8
+  escala/EscalaServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 9
 ```
 
 `DevFixedTenantFilter` (andaime temporário da Fase 4) foi removido na
@@ -971,38 +1157,36 @@ não existem `config/`, `backoffice/`, `arquivo/`, `billing/`,
 
 ## Próximos passos
 
-> **Decisão explícita do usuário (22/09/2026):** priorizar entregar
-> funcionalidade (Fases 6-9) antes de escrever testes automatizados
-> pendentes. Os itens de teste abaixo continuam sendo dívida técnica
-> reconhecida, não esquecida — só foram conscientemente adiados.
+> **Atualização (22/09/2026):** a decisão anterior de adiar testes em
+> favor de velocidade foi revertida por instrução explícita do usuário —
+> a Fase 10 e todo o débito de testes pendente (item 2 antigo desta lista)
+> foram pagos na mesma rodada (ver seção da Fase 10 acima). O item 1
+> abaixo continua sendo o próximo passo mais urgente, agora para um lote
+> bem maior de código novo.
 
-1. **Confirmar as Fases 7, 8 e 9 com um `mvn clean verify` real** — é o
-   próximo passo imediato depois desta rodada de implementação (ver o
-   aviso ⏳ no topo deste README e os "Riscos residuais" de cada fase
-   acima). Até essa confirmação chegar, nada aqui deve ser tratado como
-   "pronto".
-2. **Testes pendentes (adiados de propósito):** integração do fluxo de
-   autenticação completo (Fase 5); testes de repositório/isolamento para
-   `Voluntario`/`Responsavel` (Fase 6); fluxo completo de inscrição
-   pública — rate limit, Turnstile, aprovação, rejeição (Fase 8);
-   "apaga tudo e reinsere" de eventos, transições de estado e controle
-   otimista de `Escala` (Fase 9).
-3. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
+1. **Confirmar a Fase 10 + todo o débito de testes pago junto com um
+   `mvn clean verify` real** — é o próximo passo imediato depois desta
+   rodada (ver o aviso ⏳ no topo deste README, a seção da Fase 10, e os
+   "Riscos residuais" de cada fase acima). Até essa confirmação chegar,
+   nada desta rodada deve ser tratado como "pronto" — nem sequer que o
+   código compila, já que `mvn` não está disponível neste ambiente de
+   pesquisa.
+2. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
    31) — hoje `authorizeHttpRequests` só distingue autenticado/não
    autenticado, sem checar a role do vínculo `usuario_tenant` (vale para
    todos os módulos, incluindo aprovar/rejeitar inscrição e escalas).
-4. Decidir um provedor de e-mail real para substituir `LoggingEmailSender`.
-5. Desenhar controle de faltas e disponibilidade do voluntário
+3. Decidir um provedor de e-mail real para substituir `LoggingEmailSender`.
+4. Desenhar controle de faltas e disponibilidade do voluntário
    (referenciados pela seção 109, deliberadamente descopados da Fase 9
    nesta rodada — ver seção da Fase 9 acima).
-6. Confirmar de verdade contra um Supabase real: o formato da API REST do
+5. Confirmar de verdade contra um Supabase real: o formato da API REST do
    Storage (Fase 7) e a resposta do Cloudflare Turnstile (Fase 8) — ambos
    implementados a partir de documentação pública, nunca testados contra
    o serviço real neste ambiente de pesquisa.
-7. Tabela de auditoria dedicada (`auditoria/`, seção 16) para
+6. Tabela de auditoria dedicada (`auditoria/`, seção 16) para
    aprovação/rejeição de inscrição — hoje só um log, sem persistência
    própria.
-8. Validar a configuração real do reverse proxy do VPS de produção
+7. Validar a configuração real do reverse proxy do VPS de produção
    (Nginx/Caddy, seção 11/89) quanto a `X-Forwarded-For` — o rate limit da
    Fase 8 depende de esse header vir reescrito pelo proxy, não só
    repassado do cliente.

@@ -1,12 +1,28 @@
 package br.com.servire.api.tenant;
 
 import br.com.servire.api.AbstractIntegrationTest;
+import br.com.servire.api.escala.Escala;
+import br.com.servire.api.escala.EscalaEvento;
+import br.com.servire.api.escala.EscalaRepository;
+import br.com.servire.api.escala.EscalaVaga;
+import br.com.servire.api.escala.TipoEscala;
+import br.com.servire.api.inscricao.Inscricao;
+import br.com.servire.api.inscricao.InscricaoRepository;
+import br.com.servire.api.inscricao.InscricaoResponsavel;
+import br.com.servire.api.voluntario.FuncaoEscala;
+import br.com.servire.api.voluntario.Responsavel;
+import br.com.servire.api.voluntario.ResponsavelRepository;
 import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.voluntario.VoluntarioRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +44,20 @@ import static org.assertj.core.api.Assertions.catchThrowable;
  * pipeline de servlet de uma requisição HTTP real) - o
  * {@link TenantContext} é definido diretamente pelo teste, simulando o
  * que o filtro faria em cada requisição.</p>
+ *
+ * <p><b>Fase 10 (seção 110 do plano mestre — "Multi-tenant real"):</b> os
+ * métodos {@code tenantNaoDeveEnxergar*} abaixo (adicionados em
+ * 22/09/2026) ampliam esta suíte P0 original — que só cobria
+ * {@link Voluntario} — para as sete entidades tenant-aware criadas nas
+ * Fases 6/7/8/9: {@link Responsavel} (cascata de 1 nível a partir de
+ * {@link Voluntario}), {@link Escala}/{@link EscalaEvento}/
+ * {@link EscalaVaga} (cascata de 3 níveis) e {@link Inscricao}/
+ * {@link InscricaoResponsavel} (cascata de 1 nível). Item "3. validar
+ * isolamento" e parte do "4. executar suíte P0" da Fase 10 — os testes
+ * usam entidades diretamente via repositório (não via *Service*), mesmo
+ * espírito do teste original: provar que o próprio Hibernate/
+ * {@code @TenantId} filtra corretamente, sem depender de nenhuma
+ * validação de negócio da camada de serviço.</p>
  */
 class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
@@ -45,6 +75,18 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private VoluntarioRepository voluntarioRepository;
+
+    @Autowired
+    private ResponsavelRepository responsavelRepository;
+
+    @Autowired
+    private EscalaRepository escalaRepository;
+
+    @Autowired
+    private InscricaoRepository inscricaoRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @AfterEach
     void limparTenantContext() {
@@ -106,6 +148,175 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
+    /**
+     * Fase 10 (seção 110): mesma checagem P0 da Fase 4, agora para
+     * {@link Responsavel} — cascata de 1 nível a partir de
+     * {@link Voluntario}. Como {@code Responsavel} só ganhou
+     * {@code @TenantId} depois do bug real corrigido antes da Fase 7 (ver
+     * javadoc de {@link Responsavel}), este é o primeiro teste automatizado
+     * a provar que a correção realmente funciona contra um Postgres real.
+     */
+    @Test
+    void tenantNaoDeveEnxergarResponsavelDeOutroTenant() {
+        UUID tenantA = criarTenant("responsavel-a");
+        UUID tenantB = criarTenant("responsavel-b");
+
+        TenantContext.set(tenantA);
+        Voluntario voluntarioA = new Voluntario("Voluntário A");
+        Responsavel respA = new Responsavel("Mãe", "Responsável A", null, null, null, true);
+        respA.setVoluntario(voluntarioA);
+        voluntarioA.getResponsaveis().add(respA);
+        voluntarioRepository.saveAndFlush(voluntarioA);
+        UUID respAId = voluntarioA.getResponsaveis().get(0).getId();
+        TenantContext.clear();
+
+        TenantContext.set(tenantB);
+        Voluntario voluntarioB = new Voluntario("Voluntário B");
+        Responsavel respB = new Responsavel("Pai", "Responsável B", null, null, null, true);
+        respB.setVoluntario(voluntarioB);
+        voluntarioB.getResponsaveis().add(respB);
+        voluntarioRepository.saveAndFlush(voluntarioB);
+        UUID respBId = voluntarioB.getResponsaveis().get(0).getId();
+        TenantContext.clear();
+
+        TenantContext.set(tenantA);
+        assertThat(responsavelRepository.findAll())
+                .extracting(Responsavel::getNome)
+                .containsExactly("Responsável A");
+        assertThat(responsavelRepository.findById(respBId)).isEmpty();
+        TenantContext.clear();
+
+        TenantContext.set(tenantB);
+        assertThat(responsavelRepository.findAll())
+                .extracting(Responsavel::getNome)
+                .containsExactly("Responsável B");
+        assertThat(responsavelRepository.findById(respAId)).isEmpty();
+        TenantContext.clear();
+    }
+
+    /**
+     * Fase 10 (seção 110): mesma checagem P0, agora para a cascata de TRÊS
+     * níveis {@link Escala} → {@link EscalaEvento} → {@link EscalaVaga}
+     * (Fase 9). Como não existe repositório dedicado para
+     * {@code EscalaEvento}/{@code EscalaVaga} (só são acessados via
+     * navegação a partir de {@code Escala} — ver {@code EscalaRepository}),
+     * a checagem dos dois níveis mais profundos usa JPQL direto via
+     * {@link EntityManager#createQuery} — o filtro {@code @TenantId} do
+     * Hibernate se aplica a QUALQUER consulta JPQL sobre uma entidade
+     * tenant-aware, não só às geradas por Spring Data, então isso ainda
+     * prova o mecanismo do ORM, não uma regra de negócio da camada de
+     * serviço.
+     *
+     * <p><b>Importante — sem {@code @Transactional} aqui de propósito:</b>
+     * o resolver de tenant do Hibernate é consultado UMA VEZ, na abertura
+     * da sessão (seção 18) — {@code @Transactional} no método do teste
+     * abriria uma única sessão para o teste inteiro logo ANTES de o corpo
+     * do método rodar (ou seja, antes até do primeiro
+     * {@code TenantContext.set(tenantA)}), fixando o tenant resolvido para
+     * toda a duração do teste e tornando os {@code TenantContext.set(...)}
+     * seguintes inertes — o oposto do que o teste quer provar. Sem
+     * {@code @Transactional} de teste, cada chamada de repositório
+     * (transacional por si, via {@code SimpleJpaRepository}) abre sua
+     * própria sessão e resolve o tenant correto no momento da chamada —
+     * mesmo padrão já usado (e funcionando) pelos testes de
+     * {@code Voluntario}/{@code Responsavel} acima. As consultas JPQL via
+     * {@link EntityManager} também funcionam sem transação de teste: o
+     * {@code EntityManager} compartilhado do Spring abre uma sessão
+     * temporária só para aquela consulta quando não há transação ativa
+     * (comportamento documentado de {@code SharedEntityManagerCreator}).</p>
+     */
+    @Test
+    void tenantNaoDeveEnxergarEscalaComCascataDeTresNiveisDeOutroTenant() {
+        UUID tenantA = criarTenant("escala-a");
+        UUID tenantB = criarTenant("escala-b");
+
+        TenantContext.set(tenantA);
+        Escala escalaA = new Escala("Escala A", TipoEscala.SEMANAL);
+        EscalaEvento eventoA = new EscalaEvento(LocalDate.of(2026, 10, 4), LocalTime.of(19, 0), "Missa");
+        eventoA.setEscala(escalaA);
+        EscalaVaga vagaA = new EscalaVaga(FuncaoEscala.MISSAL, 1);
+        vagaA.setEvento(eventoA);
+        eventoA.getVagas().add(vagaA);
+        escalaA.getEventos().add(eventoA);
+        escalaRepository.saveAndFlush(escalaA);
+        TenantContext.clear();
+
+        TenantContext.set(tenantB);
+        Escala escalaB = new Escala("Escala B", TipoEscala.SEMANAL);
+        EscalaEvento eventoB = new EscalaEvento(LocalDate.of(2026, 10, 4), LocalTime.of(19, 0), "Missa");
+        eventoB.setEscala(escalaB);
+        EscalaVaga vagaB = new EscalaVaga(FuncaoEscala.CRUZ, 1);
+        vagaB.setEvento(eventoB);
+        eventoB.getVagas().add(vagaB);
+        escalaB.getEventos().add(eventoB);
+        escalaRepository.saveAndFlush(escalaB);
+        TenantContext.clear();
+
+        // Nível 1 (Escala): mesmo mecanismo já provado para Voluntario.
+        TenantContext.set(tenantA);
+        assertThat(escalaRepository.findAll()).extracting(Escala::getTitulo).containsExactly("Escala A");
+        assertThat(escalaRepository.findById(escalaB.getId())).isEmpty();
+
+        // Nível 2 (EscalaEvento) e nível 3 (EscalaVaga) via JPQL direto.
+        List<EscalaEvento> eventosVisiveis = entityManager
+                .createQuery("SELECT ev FROM EscalaEvento ev", EscalaEvento.class).getResultList();
+        assertThat(eventosVisiveis).extracting(EscalaEvento::getId).containsExactly(eventoA.getId());
+
+        List<EscalaVaga> vagasVisiveis = entityManager
+                .createQuery("SELECT vg FROM EscalaVaga vg", EscalaVaga.class).getResultList();
+        assertThat(vagasVisiveis).extracting(EscalaVaga::getFuncao).containsExactly(FuncaoEscala.MISSAL);
+        TenantContext.clear();
+    }
+
+    /**
+     * Fase 10 (seção 110): mesma checagem P0 para {@link Inscricao}/
+     * {@link InscricaoResponsavel} (Fase 8) — inclui a cascata de 1 nível
+     * dos responsáveis da inscrição, mesmo padrão do teste de
+     * {@code Responsavel} acima. Também cobre indiretamente o item "7.
+     * validar inscrição pública por slug" da Fase 10: cada tenant só é
+     * alcançável pelo seu próprio slug (ver
+     * {@code InscricaoService#criarPublica}, que resolve o tenant a partir
+     * do slug do formulário público antes de gravar qualquer coisa) — como
+     * dois tenants distintos aqui têm slugs distintos e cada um só enxerga
+     * a própria inscrição, fica demonstrado que não há vazamento cruzado
+     * possível através dessa rota.
+     *
+     * <p>Sem {@code @Transactional} de teste pelo mesmo motivo explicado na
+     * javadoc de {@link #tenantNaoDeveEnxergarEscalaComCascataDeTresNiveisDeOutroTenant()}.</p>
+     */
+    @Test
+    void tenantNaoDeveEnxergarInscricaoComResponsavelDeOutroTenant() {
+        UUID tenantA = criarTenant("inscricao-a");
+        UUID tenantB = criarTenant("inscricao-b");
+
+        TenantContext.set(tenantA);
+        Inscricao inscricaoA = new Inscricao("Candidato A");
+        InscricaoResponsavel respA = new InscricaoResponsavel("Mãe", "Responsável Insc A", null, null, null, true);
+        respA.setInscricao(inscricaoA);
+        inscricaoA.getResponsaveis().add(respA);
+        inscricaoRepository.saveAndFlush(inscricaoA);
+        TenantContext.clear();
+
+        TenantContext.set(tenantB);
+        Inscricao inscricaoB = new Inscricao("Candidato B");
+        InscricaoResponsavel respB = new InscricaoResponsavel("Pai", "Responsável Insc B", null, null, null, true);
+        respB.setInscricao(inscricaoB);
+        inscricaoB.getResponsaveis().add(respB);
+        inscricaoRepository.saveAndFlush(inscricaoB);
+        TenantContext.clear();
+
+        TenantContext.set(tenantA);
+        assertThat(inscricaoRepository.findAll())
+                .extracting(Inscricao::getNomeCompleto)
+                .containsExactly("Candidato A");
+        assertThat(inscricaoRepository.findById(inscricaoB.getId())).isEmpty();
+
+        List<InscricaoResponsavel> responsaveisVisiveis = entityManager
+                .createQuery("SELECT r FROM InscricaoResponsavel r", InscricaoResponsavel.class).getResultList();
+        assertThat(responsaveisVisiveis).extracting(InscricaoResponsavel::getNome).containsExactly("Responsável Insc A");
+        TenantContext.clear();
+    }
+
     private UUID criarTenantB() {
         // Tenant não é tenant-aware (é a própria raiz da hierarquia,
         // seção 17/27) - não precisa de TenantContext definido para ser
@@ -114,5 +325,13 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
                 new Tenant("TENANT-B-TESTE", "tenant-b-teste-" + UUID.randomUUID(),
                         "Paróquia B (teste de isolamento)", Tenant.Status.ATIVO));
         return tenantB.getId();
+    }
+
+    /** Versão genérica de {@link #criarTenantB()} para os testes da Fase 10, que precisam de dois tenants "descartáveis" por método de teste (nunca reaproveitar o tenant semeado nem tenants de outros testes, já que esta classe não usa rollback automático por teste). */
+    private UUID criarTenant(String rotulo) {
+        Tenant tenant = tenantRepository.saveAndFlush(
+                new Tenant("TENANT-" + rotulo.toUpperCase() + "-TESTE", "tenant-" + rotulo + "-teste-" + UUID.randomUUID(),
+                        "Paróquia de teste (" + rotulo + ")", Tenant.Status.ATIVO));
+        return tenant.getId();
     }
 }

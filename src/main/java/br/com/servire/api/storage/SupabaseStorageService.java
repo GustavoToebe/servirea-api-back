@@ -44,17 +44,31 @@ import java.util.Map;
  * sempre a partir de {@code VoluntarioService}/{@code InscricaoService},
  * nunca exposta direto num controller sem validação de tenant antes).</p>
  *
- * <p><b>Risco residual a verificar no próximo build real:</b> o construtor
- * injeta {@code RestClient.Builder}, que o
- * {@code spring-boot-starter-web} deveria auto-configurar (mesma
- * biblioteca base do Spring MVC, diferente do caso de
- * {@code HibernatePropertiesCustomizer} — ver javadoc de
- * {@code TenantConfiguration} — que precisou de um starter próprio no
- * Boot 4.1). Não foi possível confirmar contra este projeto rodando de
- * verdade neste ambiente de pesquisa; se o contexto do Spring falhar ao
- * subir com "no qualifying bean of type RestClient.Builder", este é o
- * primeiro lugar a checar (a correção provável seria declarar o próprio
- * bean {@code RestClient.Builder} manualmente).</p>
+ * <p><b>Bug real #7 (22/09/2026), encontrado escrevendo
+ * {@code SupabaseStorageServiceTest} (não por build — débito técnico de
+ * testes da Fase 7 pago só agora, na Fase 10):</b> os três métodos
+ * abaixo originalmente montavam a URI com {@code .uri(template,
+ * bucket, caminho)}, tratando {@code {caminho}} como UMA única variável
+ * de template. Como {@code caminho} SEMPRE contém {@code /} (ex.:
+ * {@code voluntarioId + "/perfil-" + timestamp + extensão}, ver
+ * {@code VoluntarioService#definirFoto}), o {@code UriComponentsBuilder}
+ * por trás do {@link RestClient} codifica esse {@code /} como
+ * {@code %2F} ao expandir uma única variável — comportamento padrão e
+ * documentado do Spring, não um bug do Spring em si, mas que quebraria
+ * TODA chamada real ao Supabase Storage (a API do Supabase espera os
+ * segmentos separados por {@code /} de verdade na URL, não
+ * {@code %2F} literal). <b>Corrigido</b> embutindo {@code bucket}/
+ * {@code caminho} diretamente na string da URI (sem placeholder de
+ * template para eles) — como os dois vêm de valores controlados pela
+ * própria aplicação (nome de bucket fixo em configuração; caminho
+ * montado só com UUID + sufixo fixo + extensão de uma lista permitida,
+ * nunca com conteúdo arbitrário do usuário), não há necessidade de
+ * escapar caracteres especiais além de preservar as barras como
+ * separadoras de verdade. <b>Ainda não confirmado por um
+ * {@code mvn clean verify} real</b> — {@code SupabaseStorageServiceTest}
+ * cobre isso com {@code MockRestServiceServer} (URL literal esperada
+ * com barras, não {@code %2F}), mas só um teste contra um projeto
+ * Supabase de verdade fecharia esse risco por completo.</p>
  */
 @Service
 public class SupabaseStorageService implements StorageService {
@@ -75,7 +89,7 @@ public class SupabaseStorageService implements StorageService {
         requireConfigurado();
         try {
             restClient.post()
-                    .uri(properties.baseUrl() + "/storage/v1/object/{bucket}/{caminho}", properties.bucket(), caminho)
+                    .uri(properties.baseUrl() + "/storage/v1/object/" + properties.bucket() + "/" + caminho)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.serviceRoleKey())
                     .header("x-upsert", "true")
                     .contentType(MediaType.parseMediaType(contentType))
@@ -98,7 +112,7 @@ public class SupabaseStorageService implements StorageService {
         requireConfigurado();
         try {
             Map<String, Object> resposta = restClient.post()
-                    .uri(properties.baseUrl() + "/storage/v1/object/sign/{bucket}/{caminho}", properties.bucket(), caminho)
+                    .uri(properties.baseUrl() + "/storage/v1/object/sign/" + properties.bucket() + "/" + caminho)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.serviceRoleKey())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("expiresIn", properties.signedUrlTtl().toSeconds()))
@@ -119,7 +133,7 @@ public class SupabaseStorageService implements StorageService {
         requireConfigurado();
         try {
             restClient.delete()
-                    .uri(properties.baseUrl() + "/storage/v1/object/{bucket}/{caminho}", properties.bucket(), caminho)
+                    .uri(properties.baseUrl() + "/storage/v1/object/" + properties.bucket() + "/" + caminho)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.serviceRoleKey())
                     .retrieve()
                     .toBodilessEntity();
