@@ -5,6 +5,8 @@ import br.com.servire.api.voluntario.dto.ResponsavelRequest;
 import br.com.servire.api.voluntario.dto.VoluntarioRequest;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ResourceNotFoundException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +32,9 @@ public class VoluntarioService {
 
     private final VoluntarioRepository voluntarioRepository;
     private final StorageService storageService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public VoluntarioService(VoluntarioRepository voluntarioRepository, StorageService storageService) {
         this.voluntarioRepository = voluntarioRepository;
@@ -157,6 +162,24 @@ public class VoluntarioService {
      * criar uma lista nova) é o que faz o {@code orphanRemoval = true}
      * de {@link Voluntario#getResponsaveis()} de fato deletar os antigos
      * no flush.
+     *
+     * <p><b>Bug real #10 (seção 106):</b> o {@code entityManager.flush()}
+     * logo depois do {@code clear()} é necessário — sem ele, dentro do
+     * mesmo contexto de persistência o Hibernate podia executar o
+     * {@code INSERT} do novo responsável principal ANTES do
+     * {@code DELETE} do antigo (a ordem de flush do Hibernate não segue a
+     * ordem cronológica das operações na coleção Java, e sim agrupa por
+     * tipo de operação). Com os dois responsáveis "principais" existindo
+     * ao mesmo tempo, mesmo que só por um instante dentro da mesma
+     * transação, a constraint {@code uq_responsavel_principal_por_voluntario}
+     * (índice único parcial, V004) recusava o `INSERT`, com
+     * {@code duplicate key value violates unique constraint}. O
+     * {@code flush()} força os `DELETE`s pendentes a serem enviados ao
+     * banco imediatamente (sem commitar a transação), garantindo que o
+     * responsável principal antigo já não exista mais quando o novo for
+     * inserido — encontrado pelo `mvn clean verify` real da Fase 10
+     * (`VoluntarioServiceIntegrationTest.atualizarSubstituiTodosOsResponsaveisAntigosPelosNovos`),
+     * já com todos os outros bugs desta rodada corrigidos.</p>
      */
     private void substituirResponsaveis(Voluntario voluntario, List<ResponsavelRequest> requests) {
         long principais = requests.stream().filter(ResponsavelRequest::principal).count();
@@ -165,6 +188,7 @@ public class VoluntarioService {
                     "Deve existir exatamente um responsável principal (seção 38 do plano mestre) — recebido: " + principais + ".");
         }
         voluntario.getResponsaveis().clear();
+        entityManager.flush();
         for (ResponsavelRequest r : requests) {
             Responsavel responsavel = new Responsavel(r.parentesco(), r.nome(), r.telefone(), r.celular(), r.email(), r.principal());
             responsavel.setVoluntario(voluntario);

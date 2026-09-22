@@ -13,6 +13,8 @@ import br.com.servire.api.voluntario.VoluntarioRepository;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -40,6 +42,9 @@ public class InscricaoService {
     private final TurnstileService turnstileService;
     private final InscricaoRateLimiter rateLimiter;
     private final TransactionTemplate transactionTemplate;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public InscricaoService(InscricaoRepository inscricaoRepository,
                              VoluntarioRepository voluntarioRepository,
@@ -262,7 +267,28 @@ public class InscricaoService {
                 : funcoesHabilitadas.toArray(new br.com.servire.api.voluntario.FuncaoEscala[0]));
     }
 
-    /** Mesma regra "exatamente um principal" (seção 38) reaplicada aqui — {@link Inscricao} não compartilha entidade com {@link Voluntario}. */
+    /**
+     * Mesma regra "exatamente um principal" (seção 38) reaplicada aqui —
+     * {@link Inscricao} não compartilha entidade com {@link Voluntario}.
+     *
+     * <p><b>Bug real #10 (mesmo mecanismo de {@code VoluntarioService},
+     * seção 106):</b> encontrado por revisão manual proativa depois do
+     * bug idêntico confirmado em {@code VoluntarioService.substituirResponsaveis}
+     * — sem o {@code entityManager.flush()} logo após o {@code clear()},
+     * o Hibernate pode tentar inserir o novo responsável principal ANTES
+     * de deletar o antigo (a ordem de flush do Hibernate agrupa por tipo
+     * de operação, não segue a ordem cronológica da coleção Java),
+     * violando o índice único parcial {@code ux_inscricao_responsavel_principal}
+     * (V009) quando esta chamada é usada para SUBSTITUIR responsáveis de
+     * uma inscrição já existente (via {@link #atualizarPendente}) — não
+     * afeta {@link #criarPublica}, que sempre parte de uma inscrição nova
+     * sem responsáveis antigos para conflitar. Ainda sem um teste
+     * automatizado que exercite essa troca de principal em
+     * {@code atualizarPendente} (só {@code InscricaoServiceIntegrationTest.atualizarPendenteDepoisDeAprovadaLancaConflictException}
+     * toca esse método, e não troca o principal) — corrigido
+     * proativamente por analogia, não por um build real que o tenha
+     * confirmado.</p>
+     */
     private void substituirResponsaveis(Inscricao inscricao, List<InscricaoResponsavelRequest> requests) {
         long principais = requests.stream().filter(InscricaoResponsavelRequest::principal).count();
         if (principais != 1) {
@@ -270,6 +296,7 @@ public class InscricaoService {
                     "Deve existir exatamente um responsável principal (seção 38 do plano mestre) — recebido: " + principais + ".");
         }
         inscricao.getResponsaveis().clear();
+        entityManager.flush();
         for (InscricaoResponsavelRequest r : requests) {
             InscricaoResponsavel responsavel = new InscricaoResponsavel(r.parentesco(), r.nome(), r.telefone(), r.celular(),
                     r.email(), r.principal());
