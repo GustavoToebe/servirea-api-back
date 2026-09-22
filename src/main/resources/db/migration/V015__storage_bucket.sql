@@ -10,8 +10,9 @@
 -- de tratar esta migration como 100% fiel à produção.
 --
 -- DEPENDÊNCIA EXTERNA: storage.buckets / storage.objects são gerenciadas
--- pelo Supabase Storage. Ver local-dev/00-supabase-stubs.sql para o stub
--- usado na validação estrutural local.
+-- pelo Supabase Storage. Ver src/test/resources/testcontainers/supabase-stubs.sql
+-- (caminho corrigido em 22/09/2026, ver nota em V005) e o README.md,
+-- "Como rodar localmente", para o stub usado na validação estrutural local.
 
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (

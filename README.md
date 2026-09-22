@@ -1635,6 +1635,50 @@ export $(cat .env | xargs)
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
+No Windows/PowerShell, o equivalente é (não existe `export $(cat ...)` no
+PowerShell — configure cada variável com `$env:NOME = "valor"`, só válido
+na sessão atual do terminal):
+
+```powershell
+mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
+```
+
+> ⚠️ **Descoberto em 22/09/2026 (primeira vez que `spring-boot:run` foi
+> executado de verdade neste projeto — até então só `mvn clean verify`,
+> que usa Testcontainers):** rodar isso contra um PostgreSQL "limpo"
+> qualquer (ex.: um container Docker novo) FALHA no Flyway, na migration
+> `V005__table_escalas.sql`, com `ERROR: schema "auth" does not exist`.
+> **Não é bug de produção** — é uma dependência externa documentada desde
+> a Fase 1 (`auth.users`/`auth.uid()`, `storage.buckets`/`storage.objects`
+> e os roles `anon`/`authenticated`/`service_role` só existem de verdade
+> num projeto Supabase, nunca num Postgres "limpo"). O que estava
+> **desatualizado** era o comentário nas migrations `V005`/`V013`/`V015`,
+> apontando para um caminho que nunca existiu (`local-dev/00-supabase-stubs.sql`)
+> em vez do caminho real do stub — corrigido nesta mesma rodada.
+>
+> Se você for rodar `spring-boot:run` (não só `mvn clean verify`) contra
+> um Postgres seu (Docker, local, etc.) que não seja o Supabase de
+> produção, suba o banco e aplique o stub ANTES da primeira execução:
+>
+> ```powershell
+> # 1) Sobe um Postgres local descartável (só precisa rodar uma vez)
+> docker run --name servire-dev-db -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=servire_dev -p 5432:5432 -d postgres:16
+>
+> # 2) Aplica o stub que simula o mínimo do Supabase (auth.users, storage.*,
+> #    os três roles) — mesmo arquivo usado pelos testes de integração via
+> #    Testcontainers (AbstractIntegrationTest), aplicado aqui manualmente
+> #    porque spring-boot:run não passa por Testcontainers
+> Get-Content src\test\resources\testcontainers\supabase-stubs.sql | docker exec -i servire-dev-db psql -U postgres -d servire_dev
+>
+> # 3) Só agora rodar a aplicação
+> mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
+> ```
+>
+> Se o Flyway já tiver tentado migrar e falhado antes de você aplicar o
+> stub (como aconteceu nesta descoberta), não tem problema — o Flyway já
+> desfaz a migration que falhou (`Changes successfully rolled back`) e
+> retoma exatamente dali na próxima tentativa.
+
 ## Como rodar os testes
 
 ```bash

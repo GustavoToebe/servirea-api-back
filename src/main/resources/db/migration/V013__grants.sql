@@ -8,7 +8,9 @@
 -- DEPENDÊNCIA EXTERNA: os roles anon / authenticated / service_role são
 -- criados automaticamente por qualquer projeto Supabase. Em um PostgreSQL
 -- "limpo" (local/CI), eles precisam ser criados manualmente antes de rodar
--- esta migration — ver local-dev/00-supabase-stubs.sql.
+-- esta migration — ver src/test/resources/testcontainers/supabase-stubs.sql
+-- (caminho corrigido em 22/09/2026, ver nota em V005) e o README.md,
+-- "Como rodar localmente".
 
 -- Por padrão, revogar de PUBLIC antes de conceder explicitamente (defesa em
 -- profundidade — mesmo que o Supabase já não conceda a PUBLIC por padrão).

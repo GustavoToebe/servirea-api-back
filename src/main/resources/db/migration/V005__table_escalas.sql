@@ -5,8 +5,13 @@
 -- DEPENDÊNCIA EXTERNA: auth.users é gerenciada pelo Supabase Auth, não por
 -- esta migration (não existe em um PostgreSQL "limpo" fora do Supabase).
 -- Para validar este baseline em ambiente local/CI, ver
--- local-dev/00-supabase-stubs.sql, que cria um stub mínimo de auth.users
--- só para permitir a FK e os testes estruturais.
+-- src/test/resources/testcontainers/supabase-stubs.sql (caminho corrigido
+-- em 22/09/2026 — o arquivo nunca existiu em local-dev/, essa referência
+-- estava desatualizada desde que o stub foi movido para os recursos de
+-- teste; ver README.md, "Como rodar localmente", para o comando que
+-- aplica esse stub manualmente antes do `mvn spring-boot:run` contra um
+-- Postgres local vazio), que cria um stub mínimo de auth.users só para
+-- permitir a FK e os testes estruturais.
 
 CREATE TABLE public.escalas (
     id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
