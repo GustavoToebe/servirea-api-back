@@ -173,6 +173,23 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Bug real #12 (22/09/2026, ver README.md): a partir do Spring Boot 4,
+             a autoconfiguration de teste também foi modularizada por tecnologia
+             web, igual ao que já aconteceu com o próprio starter principal
+             (spring-boot-starter-web agora depende de spring-boot-webmvc, não
+             mais embutindo tudo num único jar monolítico). `AutoConfigureMockMvc`
+             (pacote NOVO: org.springframework.boot.webmvc.test.autoconfigure,
+             antes org.springframework.boot.test.autoconfigure.web.servlet) saiu
+             de `spring-boot-test-autoconfigure` para este módulo dedicado —
+             `spring-boot-starter-test` sozinho não traz mais MockMvc para
+             aplicações web. Sem versão própria: gerenciada pelo BOM do Spring
+             Boot 4.1.1, igual às demais dependências deste arquivo sem
+             <version>. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>

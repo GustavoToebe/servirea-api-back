@@ -74,6 +74,33 @@ voluntário, tabela de auditoria e provedor de e-mail real, seção
 > o detalhe de cada um. **Nenhum `mvn clean verify` real rodou ainda sobre
 > esse código de teste novo** — trate como ⏳ até a próxima confirmação do
 > usuário.
+>
+> 🔴 **Terceira rodada de `mvn clean verify` real da Fase 11 (22/09/2026,
+> 14:34), sobre o código de teste novo acima: `COMPILATION ERROR`.**
+> `MethodSecurityIntegrationTest` não compilava —
+> `package org.springframework.boot.test.autoconfigure.web.servlet does not
+> exist` e `cannot find symbol: class AutoConfigureMockMvc`. **Bug real
+> #12 (build/dependência, não lógica de negócio):** a partir do Spring
+> Boot 4, a autoconfiguration de TESTE também foi modularizada por
+> tecnologia web — o mesmo raciocínio que já fez `spring-boot-starter-web`
+> passar a depender de `spring-boot-webmvc` em vez de trazer tudo num jar
+> monolítico. `@AutoConfigureMockMvc` saiu do pacote
+> `org.springframework.boot.test.autoconfigure.web.servlet` (onde vivia
+> até o Spring Boot 3.x) para um pacote e um MÓDULO Maven novos,
+> `org.springframework.boot.webmvc.test.autoconfigure`, no artefato
+> `spring-boot-webmvc-test` — que `spring-boot-starter-test` sozinho não
+> traz mais transitivamente para aplicações web (confirmado contra a
+> documentação oficial/javadoc do Spring Boot 4.1.1 em 22/09/2026, já que
+> não há acesso de rede a repositórios Maven a partir deste ambiente de
+> pesquisa para reproduzir o erro localmente). **Corrigido:** somada a
+> dependência `org.springframework.boot:spring-boot-webmvc-test` (escopo
+> `test`, sem versão própria — gerenciada pelo BOM do
+> `spring-boot-starter-parent:4.1.1`) ao `pom.xml`, e atualizado o import
+> de `MethodSecurityIntegrationTest` para o pacote novo. Nenhuma outra
+> classe deste projeto usava `MockMvc`/`@AutoConfigureMockMvc` antes desta
+> rodada, por isso esse problema nunca tinha aparecido em nenhum build
+> anterior. Ainda **não confirmado** — aguardando o próximo `mvn clean
+> verify` do usuário.
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -1352,6 +1379,18 @@ rodada, mesmo padrão já usado nas Fases 6-9).
 > teste que ative o `ResendEmailSender`). Ver o aviso completo no topo
 > deste README para o detalhe do que ficou confirmado e do que continua
 > pendente.
+>
+> 🔴 **Terceira rodada de build real, sobre os quatro testes escritos numa
+> rodada posterior (22/09/2026, à tarde): `COMPILATION ERROR`** —
+> **Bug real #12**: `@AutoConfigureMockMvc` mudou de pacote/módulo Maven
+> no Spring Boot 4 (modularização por tecnologia web, mesmo raciocínio do
+> `spring-boot-starter-web`/`spring-boot-webmvc`); `spring-boot-starter-test`
+> sozinho não traz mais essa classe. Corrigido somando
+> `spring-boot-webmvc-test` (escopo `test`) ao `pom.xml` e atualizando o
+> import em `MethodSecurityIntegrationTest` para o pacote novo
+> (`org.springframework.boot.webmvc.test.autoconfigure`). Ver o aviso
+> completo no topo deste README. Ainda não confirmado — aguardando o
+> próximo `mvn clean verify` do usuário.
 
 ### 1. Roles e permissões reais (seção 31)
 
