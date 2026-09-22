@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -70,6 +72,56 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .map(v -> new ApiError.FieldError(v.getPropertyPath().toString(), v.getMessage()))
                 .toList();
         return build(HttpStatus.BAD_REQUEST, "Requisição inválida.", request, fieldErrors);
+    }
+
+    /**
+     * <b>Bug real #13 (22/09/2026, ver README.md):</b> sem este handler
+     * explícito, {@link #handleUnexpected} (o catch-all
+     * {@code @ExceptionHandler(Exception.class)} logo abaixo) capturava
+     * {@link AccessDeniedException} primeiro — porque ela é lançada de
+     * DENTRO da invocação do método do controller (pelo proxy AOP de
+     * {@code @EnableMethodSecurity}/{@code @PreAuthorize}), que roda DENTRO
+     * de {@code DispatcherServlet.doDispatch()}, ANTES da exceção
+     * conseguir escapar para a cadeia de filtros onde
+     * {@code ExceptionTranslationFilter}/{@code RestAccessDeniedHandler}
+     * (configurados em {@code SecurityConfig}) esperavam tratá-la. Todo
+     * {@code @PreAuthorize} negado devolvia um 500 genérico
+     * ("Ocorreu um erro inesperado...") em vez do 403 esperado — só
+     * descoberto quando {@code MethodSecurityIntegrationTest} passou a
+     * exercitar {@code @PreAuthorize} de verdade pela primeira vez (nenhum
+     * teste anterior tinha coberto isso, e a suposição documentada até
+     * então — de que {@code ExceptionTranslationFilter} interceptaria essa
+     * exceção "não importa de onde ela vier" — estava incompleta).
+     *
+     * <p>Relançar a exceção aqui faz o
+     * {@code ExceptionHandlerExceptionResolver} do Spring MVC tratar este
+     * handler como "não resolveu" (ele captura qualquer {@code Throwable}
+     * relançado de dentro de um método {@code @ExceptionHandler} e retorna
+     * {@code null} — ver javadoc oficial de
+     * {@code doResolveHandlerMethodException}), permitindo que a exceção
+     * original propague de volta pela cadeia de filtros, onde
+     * {@code ExceptionTranslationFilter} finalmente a intercepta de
+     * verdade e aciona {@code RestAccessDeniedHandler} (403 correto).</p>
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public void handleAccessDenied(AccessDeniedException ex) throws AccessDeniedException {
+        throw ex;
+    }
+
+    /**
+     * Mesmo raciocínio de {@link #handleAccessDenied} — nenhum caminho
+     * atual deste projeto lança {@link AuthenticationException} de dentro
+     * de um controller ({@code authorizeHttpRequests().anyRequest().authenticated()}
+     * já barra requisições não autenticadas na cadeia de filtros, antes de
+     * chegar em qualquer controller), mas este handler existe por
+     * precaução — o mesmo problema aconteceria se algum dia acontecesse
+     * (ex.: uma expressão de {@code @PreAuthorize} que dependa de detalhes
+     * da autenticação). Não confirmado por nenhum teste desta rodada
+     * (nenhum cenário real o exercita ainda).
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public void handleAuthentication(AuthenticationException ex) throws AuthenticationException {
+        throw ex;
     }
 
     @ExceptionHandler(Exception.class)

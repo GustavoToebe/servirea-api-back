@@ -40,6 +40,29 @@ public class DisponibilidadeVoluntarioService {
      * específico); no construtor, como rede de segurança contra qualquer
      * outro chamador futuro que monte a entidade sem passar por este
      * serviço (mesma filosofia de {@link br.com.servire.api.auth.UsuarioTenant}).
+     *
+     * <p><b>Bug real #14 (22/09/2026, ver README.md):</b> usava
+     * {@code disponibilidadeRepository.save(...)} em vez de
+     * {@code saveAndFlush(...)} — {@code save()} de uma entidade nova só
+     * chama {@code entityManager.persist(...)}, que agenda o {@code INSERT}
+     * sem necessariamente enviá-lo ao banco na hora; com
+     * {@code FlushMode.AUTO} (padrão), o Hibernate pode adiar esse flush
+     * até o COMMIT da transação — que só acontece depois que este método
+     * (e seu {@code try/catch}) já retornou. Resultado: o índice único
+     * parcial {@code ux_disponibilidade_recorrente}/{@code ux_disponibilidade_pontual}
+     * (V025) violado no banco virava um {@code DataIntegrityViolationException}
+     * cru pro cliente (500 genérico), nunca o {@code ConflictException} (409)
+     * que este método tenta garantir — o {@code catch} nunca disparava,
+     * porque a exceção só aparecia DEPOIS do método já ter retornado
+     * normalmente. Mesma categoria de problema (timing de flush do
+     * Hibernate) já documentada no Bug real #10
+     * ({@code VoluntarioService.substituirResponsaveis}, seção 106), só
+     * que lá era um {@code DELETE} atrasado, aqui é um {@code INSERT}.
+     * Corrigido trocando para {@code saveAndFlush(...)}, que força o
+     * {@code INSERT} (e portanto a violação de constraint, se houver) a
+     * acontecer sincronamente, dentro do {@code try}. Encontrado só agora
+     * porque nenhum teste anterior chamava {@code criar} duas vezes com o
+     * mesmo dia/período para o mesmo voluntário.</p>
      */
     @Transactional
     public DisponibilidadeVoluntario criar(UUID voluntarioId, DisponibilidadeVoluntarioRequest request) {
@@ -51,7 +74,7 @@ public class DisponibilidadeVoluntarioService {
         DisponibilidadeVoluntario disponibilidade = new DisponibilidadeVoluntario(
                 voluntario, request.diaSemana(), request.data(), request.periodo(), request.observacao());
         try {
-            return disponibilidadeRepository.save(disponibilidade);
+            return disponibilidadeRepository.saveAndFlush(disponibilidade);
         } catch (DataIntegrityViolationException e) {
             throw new ConflictException(
                     "Já existe uma disponibilidade cadastrada para este mesmo dia/data e período.");

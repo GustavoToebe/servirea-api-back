@@ -99,8 +99,52 @@ voluntário, tabela de auditoria e provedor de e-mail real, seção
 > de `MethodSecurityIntegrationTest` para o pacote novo. Nenhuma outra
 > classe deste projeto usava `MockMvc`/`@AutoConfigureMockMvc` antes desta
 > rodada, por isso esse problema nunca tinha aparecido em nenhum build
-> anterior. Ainda **não confirmado** — aguardando o próximo `mvn clean
-> verify` do usuário.
+> anterior.
+>
+> 🔴 **Quarta rodada de `mvn clean verify` real da Fase 11 (22/09/2026,
+> 14:45), depois do fix de compilação: `BUILD FAILURE`, `Tests run: 104,
+> Failures: 6, Errors: 0`.** Dois problemas novos, os dois de PRODUÇÃO
+> (não de teste) — e os dois só existem porque, pela primeira vez, um
+> teste automatizado realmente exercitou o caminho onde eles viviam:
+>
+> **Bug real #13 (`GlobalExceptionHandler`, segurança/UX):**
+> `@PreAuthorize` negado sempre devolvia **500** ("Ocorreu um erro
+> inesperado...") em vez do **403** documentado — em produção, desde que
+> a Fase 11 introduziu `@PreAuthorize`. Causa raiz: `AccessDeniedException`
+> é lançada de DENTRO da invocação do método do controller (pelo proxy AOP
+> de `@EnableMethodSecurity`), que roda DENTRO de
+> `DispatcherServlet.doDispatch()` — o `@ExceptionHandler(Exception.class)`
+> genérico de `GlobalExceptionHandler` capturava essa exceção ANTES dela
+> conseguir escapar pela cadeia de filtros até `ExceptionTranslationFilter`/
+> `RestAccessDeniedHandler` (a suposição documentada em `SecurityConfig` —
+> de que esse handler capturaria a exceção "não importa de onde ela
+> vier" — estava incompleta). Corrigido com dois `@ExceptionHandler`
+> explícitos e mais específicos (`AccessDeniedException`/
+> `AuthenticationException`) que apenas relançam a exceção — isso faz o
+> `ExceptionHandlerExceptionResolver` do Spring MVC tratar como "não
+> resolvido" e deixar a exceção original propagar de volta à cadeia de
+> filtros, onde `RestAccessDeniedHandler` finalmente a intercepta de
+> verdade. Detalhe completo no javadoc de
+> `GlobalExceptionHandler#handleAccessDenied`.
+>
+> **Bug real #14 (`DisponibilidadeVoluntarioService.criar`, produção):**
+> a duplicata de disponibilidade (mesmo voluntário/dia/período) devolvia
+> um 500 cru (`DataIntegrityViolationException`) em vez do 409
+> `ConflictException` documentado. Causa raiz: `save()` de uma entidade
+> nova só agenda o `INSERT` via `entityManager.persist(...)` — com
+> `FlushMode.AUTO`, o Hibernate pode adiar o flush físico até o COMMIT da
+> transação, que só acontece DEPOIS do método (e do seu `try/catch`) já
+> ter retornado, então o `catch (DataIntegrityViolationException)` nunca
+> disparava. Mesma categoria de bug já documentada no Bug real #10
+> (`VoluntarioService.substituirResponsaveis`, um `DELETE` atrasado; aqui é
+> um `INSERT`). Corrigido trocando `save(...)` por `saveAndFlush(...)`.
+>
+> Ambos só foram encontrados porque os testes escritos nesta rodada
+> (`MethodSecurityIntegrationTest` e
+> `DisponibilidadeVoluntarioServiceIntegrationTest`) foram os PRIMEIROS a
+> exercitar, respectivamente, uma negação real de `@PreAuthorize` e uma
+> segunda chamada duplicada a `criar`. Corrigidos; ainda **não
+> confirmados** — aguardando o próximo `mvn clean verify` do usuário.
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -1389,8 +1433,21 @@ rodada, mesmo padrão já usado nas Fases 6-9).
 > `spring-boot-webmvc-test` (escopo `test`) ao `pom.xml` e atualizando o
 > import em `MethodSecurityIntegrationTest` para o pacote novo
 > (`org.springframework.boot.webmvc.test.autoconfigure`). Ver o aviso
-> completo no topo deste README. Ainda não confirmado — aguardando o
-> próximo `mvn clean verify` do usuário.
+> completo no topo deste README.
+>
+> 🔴 **Quarta rodada de build real, depois do fix de compilação:
+> `BUILD FAILURE`, 6 testes falhando.** Dois bugs reais de PRODUÇÃO — não
+> de teste — encontrados pela primeira vez porque os testes desta rodada
+> foram os primeiros a exercitar esses caminhos: **Bug real #13**
+> (`@PreAuthorize` negado devolvia 500 em vez de 403 — o
+> `@ExceptionHandler(Exception.class)` genérico capturava
+> `AccessDeniedException` antes dela chegar em
+> `RestAccessDeniedHandler`) e **Bug real #14**
+> (`DisponibilidadeVoluntarioService.criar` devolvia 500 cru em vez de 409
+> numa duplicata — `save()` não força o `INSERT` a tempo do `try/catch`
+> pegar a violação de constraint). Ver o aviso completo no topo deste
+> README para o detalhe de cada um. Corrigidos; ainda não confirmados —
+> aguardando o próximo `mvn clean verify` do usuário.
 
 ### 1. Roles e permissões reais (seção 31)
 

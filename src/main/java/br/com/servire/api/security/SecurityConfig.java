@@ -54,12 +54,21 @@ import java.util.List;
  * mapeada em {@link RolePermissoes}; os controllers checam só a permissão
  * (ex.: {@code @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")}),
  * nunca a role diretamente. Uma {@code AccessDeniedException} lançada por
- * {@code @PreAuthorize} é capturada pelo MESMO
- * {@link RestAccessDeniedHandler} já configurado abaixo para
- * {@code authorizeHttpRequests} — o {@code ExceptionTranslationFilter} do
- * Spring Security intercepta essa exceção não importa de onde ela vier
- * dentro da cadeia de filtros, incluindo de dentro da invocação do método
- * do controller.</p>
+ * {@code @PreAuthorize} acaba tratada pelo MESMO {@link RestAccessDeniedHandler}
+ * já configurado abaixo para {@code authorizeHttpRequests} — mas isso NÃO
+ * é automático (correção de 22/09/2026, ver Bug real #13 no README.md):
+ * como essa exceção é lançada de DENTRO da invocação do método do
+ * controller (pelo proxy AOP de {@code @EnableMethodSecurity}), o
+ * {@code @ExceptionHandler(Exception.class)} genérico de
+ * {@code GlobalExceptionHandler} a capturava PRIMEIRO (roda dentro de
+ * {@code DispatcherServlet.doDispatch()}, antes da exceção conseguir
+ * escapar para a cadeia de filtros onde o {@code ExceptionTranslationFilter}
+ * vive) — só chega de fato no {@code ExceptionTranslationFilter} porque
+ * {@code GlobalExceptionHandler} tem handlers explícitos para
+ * {@code AccessDeniedException}/{@code AuthenticationException} que
+ * apenas relançam a exceção. Ver javadoc de
+ * {@code GlobalExceptionHandler#handleAccessDenied} para o detalhe
+ * completo do mecanismo.</p>
  */
 @Configuration
 @EnableWebSecurity
