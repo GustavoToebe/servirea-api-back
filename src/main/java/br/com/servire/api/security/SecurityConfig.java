@@ -3,6 +3,7 @@ package br.com.servire.api.security;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -45,9 +46,24 @@ import java.util.List;
  * <p><b>Sessão stateless:</b> nenhuma sessão HTTP é criada ou usada -
  * toda autenticação é resolvida a cada requisição por
  * {@link JwtAuthenticationFilter}, a partir do access token.</p>
+ *
+ * <p><b>Roles e permissões (seção 31, Fase 11):</b>
+ * {@code @EnableMethodSecurity} liga o suporte a {@code @PreAuthorize} nos
+ * métodos dos controllers — {@code JwtAuthenticationFilter} concede tanto
+ * {@code ROLE_<role>} quanto um {@code PERM_<permissão>} por permissão
+ * mapeada em {@link RolePermissoes}; os controllers checam só a permissão
+ * (ex.: {@code @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")}),
+ * nunca a role diretamente. Uma {@code AccessDeniedException} lançada por
+ * {@code @PreAuthorize} é capturada pelo MESMO
+ * {@link RestAccessDeniedHandler} já configurado abaixo para
+ * {@code authorizeHttpRequests} — o {@code ExceptionTranslationFilter} do
+ * Spring Security intercepta essa exceção não importa de onde ela vier
+ * dentro da cadeia de filtros, incluindo de dentro da invocação do método
+ * do controller.</p>
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @EnableConfigurationProperties(SecurityProperties.class)
 public class SecurityConfig {
 

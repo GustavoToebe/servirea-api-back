@@ -5,6 +5,7 @@ import br.com.servire.api.voluntario.dto.VoluntarioRequest;
 import br.com.servire.api.voluntario.dto.VoluntarioResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +31,10 @@ import java.util.UUID;
  * <p>{@code POST .../foto} e {@code GET .../foto-url} foram somados na
  * Fase 7 (Storage, seção 107) — o resto do módulo é da Fase 6.</p>
  *
+ * <p><b>Permissões (seção 31, Fase 11):</b> leitura exige
+ * {@code VOLUNTARIO_READ}; escrita (criar/atualizar/ativar-desativar/foto)
+ * exige {@code VOLUNTARIO_WRITE} — ver {@link br.com.servire.api.security.RolePermissoes}.</p>
+ *
  * <p><b>Deliberadamente fora do escopo desta versão</b> (a documentar em
  * "Próximos passos" até serem implementados):</p>
  * <ul>
@@ -54,6 +59,7 @@ public class VoluntarioController {
         this.voluntarioService = voluntarioService;
     }
 
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
     @GetMapping
     public List<VoluntarioResponse> listar(@RequestParam(required = false) Boolean ativo,
                                             @RequestParam(required = false) TipoVoluntario tipo,
@@ -61,37 +67,44 @@ public class VoluntarioController {
         return voluntarioService.buscar(ativo, tipo, nome).stream().map(VoluntarioResponse::de).toList();
     }
 
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
     @GetMapping("/count")
     public long contar(@RequestParam boolean ativo) {
         return voluntarioService.contarPorAtivo(ativo);
     }
 
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
     @GetMapping("/{id}")
     public VoluntarioResponse buscarPorId(@PathVariable UUID id) {
         return VoluntarioResponse.de(voluntarioService.buscarPorId(id));
     }
 
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
     @PostMapping
     public ResponseEntity<VoluntarioResponse> criar(@RequestBody @Valid VoluntarioRequest request) {
         Voluntario criado = voluntarioService.criar(request);
         return ResponseEntity.ok(VoluntarioResponse.de(criado));
     }
 
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
     @PutMapping("/{id}")
     public VoluntarioResponse atualizar(@PathVariable UUID id, @RequestBody @Valid VoluntarioRequest request) {
         return VoluntarioResponse.de(voluntarioService.atualizar(id, request));
     }
 
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
     @PatchMapping("/{id}/ativo")
     public VoluntarioResponse alterarAtivo(@PathVariable UUID id, @RequestParam boolean ativo) {
         return VoluntarioResponse.de(voluntarioService.setAtivo(id, ativo));
     }
 
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
     @PostMapping("/{id}/foto")
     public VoluntarioResponse enviarFoto(@PathVariable UUID id, @RequestParam("foto") MultipartFile foto) {
         return VoluntarioResponse.de(voluntarioService.definirFoto(id, foto));
     }
 
+    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
     @GetMapping("/{id}/foto-url")
     public FotoUrlResponse obterUrlFoto(@PathVariable UUID id) {
         return new FotoUrlResponse(voluntarioService.obterUrlFoto(id));

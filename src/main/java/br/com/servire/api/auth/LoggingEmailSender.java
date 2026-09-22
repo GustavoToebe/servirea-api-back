@@ -2,33 +2,42 @@ package br.com.servire.api.auth;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
  * Implementação-placeholder de {@link EmailSender}: só loga o link em vez
  * de enviar e-mail de verdade.
  *
- * <p><b>Decisão de escopo (Fase 5, 21/09/2026):</b> nenhum provedor de
- * e-mail (SES, SendGrid, SMTP de terceiro etc.) foi decidido com o usuário
- * até agora — decidir isso não é uma decisão técnica que este projeto deva
- * tomar sozinho. Em vez de travar o endpoint {@code POST
+ * <p><b>Decisão de escopo (Fase 5, 21/09/2026 — SUPERADA na Fase 11, ver
+ * abaixo):</b> nenhum provedor de e-mail tinha sido decidido com o usuário
+ * até então — decidir isso não era uma decisão técnica que este projeto
+ * devesse tomar sozinho. Em vez de travar o endpoint {@code POST
  * /auth/forgot-password} esperando essa decisão, ou inventar uma
  * integração com um provedor específico sem confirmação, o fluxo inteiro
  * (geração de token, expiração, uso único) foi implementado e testado de
  * verdade — só a "última milha" (o e-mail chegar de fato na caixa de
- * entrada do usuário) fica como esta implementação-placeholder,
+ * entrada do usuário) ficou como esta implementação-placeholder,
  * substituível depois só trocando o bean sem tocar em
  * {@code PasswordResetTokenService}/{@code AuthController}.</p>
+ *
+ * <p><b>Fase 11 (22/09/2026):</b> o provedor FOI decidido (Cloudflare + Resend,
+ * ver {@link ResendEmailSender}) — esta classe continua existindo como o
+ * bean padrão para dev/test ({@code @ConditionalOnProperty(...,
+ * matchIfMissing = true)}: ativa quando {@code servire.email.provider} é
+ * {@code log} OU está ausente), evitando que rodar a aplicação localmente
+ * ou os testes de integração disparem e-mails de verdade sem essa troca
+ * explícita de configuração. Em produção, {@code application-prod.yml}
+ * define {@code servire.email.provider: resend}, desativando este bean e
+ * ativando {@link ResendEmailSender} no lugar.</p>
  *
  * <p><b>Cuidado ao usar em qualquer ambiente compartilhado:</b> o link
  * (que contém o token de reset em texto puro) só é logado em nível DEBUG
  * — nunca em INFO — porque a seção 58 do plano mestre proíbe logar token
- * em log de aplicação. Mesmo em DEBUG, isto não deve rodar em produção com
- * usuários reais antes de existir um {@link EmailSender} de verdade: até
- * lá, qualquer pessoa com acesso ao log do servidor consegue redefinir a
- * senha de qualquer usuário.</p>
+ * em log de aplicação.</p>
  */
 @Component
+@ConditionalOnProperty(prefix = "servire.email", name = "provider", havingValue = "log", matchIfMissing = true)
 public class LoggingEmailSender implements EmailSender {
 
     private static final Logger log = LoggerFactory.getLogger(LoggingEmailSender.class);

@@ -1,5 +1,6 @@
 package br.com.servire.api.escala;
 
+import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.escala.dto.EscalaEventoRequest;
 import br.com.servire.api.escala.dto.EscalaRequest;
 import br.com.servire.api.escala.dto.EscalaVagaRequest;
@@ -17,17 +18,24 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Regras de negócio de escalas (Fase 9, seção 46/47/109 do plano mestre).
+ * Regras de negócio de escalas (Fase 9, seção 46/47/109 do plano mestre;
+ * controle de faltas — {@link #registrarPresenca} — somado na Fase 11,
+ * seção 131.5 item 11).
  */
 @Service
 public class EscalaService {
 
     private final EscalaRepository escalaRepository;
+    private final EscalaVagaRepository escalaVagaRepository;
     private final VoluntarioRepository voluntarioRepository;
+    private final AuditLogService auditLogService;
 
-    public EscalaService(EscalaRepository escalaRepository, VoluntarioRepository voluntarioRepository) {
+    public EscalaService(EscalaRepository escalaRepository, EscalaVagaRepository escalaVagaRepository,
+                          VoluntarioRepository voluntarioRepository, AuditLogService auditLogService) {
         this.escalaRepository = escalaRepository;
+        this.escalaVagaRepository = escalaVagaRepository;
         this.voluntarioRepository = voluntarioRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +57,9 @@ public class EscalaService {
         escala.setObservacao(request.observacao());
         escala.setCreatedBy(usuarioIdCriador);
         substituirEventos(escala, request.eventos());
-        return escalaRepository.save(escala);
+        escala = escalaRepository.save(escala);
+        auditLogService.registrar("CRIACAO", "ESCALA", escala.getId(), null);
+        return escala;
     }
 
     /**
@@ -83,6 +93,8 @@ public class EscalaService {
         escala.setMes(request.mes());
         escala.setObservacao(request.observacao());
         substituirEventos(escala, request.eventos());
+        auditLogService.registrar("ATUALIZACAO", "ESCALA", escala.getId(),
+                List.of("titulo", "tipo", "ano", "mes", "observacao", "eventos"));
         return escala;
     }
 
@@ -93,6 +105,7 @@ public class EscalaService {
             throw new ConflictException("Só é possível finalizar uma escala em RASCUNHO.");
         }
         escala.setStatus(StatusEscala.FINALIZADA);
+        auditLogService.registrar("FINALIZACAO", "ESCALA", id, List.of("status"));
         return escala;
     }
 
@@ -103,6 +116,7 @@ public class EscalaService {
             throw new ConflictException("Esta escala já está cancelada.");
         }
         escala.setStatus(StatusEscala.CANCELADA);
+        auditLogService.registrar("CANCELAMENTO", "ESCALA", id, List.of("status"));
         return escala;
     }
 
@@ -114,6 +128,7 @@ public class EscalaService {
             throw new ConflictException("Esta escala já está em RASCUNHO.");
         }
         escala.setStatus(StatusEscala.RASCUNHO);
+        auditLogService.registrar("REABERTURA", "ESCALA", id, List.of("status"));
         return escala;
     }
 
@@ -125,6 +140,30 @@ public class EscalaService {
             throw new ConflictException("Só é possível excluir uma escala CANCELADA.");
         }
         escalaRepository.delete(escala);
+        auditLogService.registrar("EXCLUSAO", "ESCALA", id, null);
+    }
+
+    /**
+     * Controle de faltas (Fase 11, seção 131.5 item 11): marca a presença
+     * do voluntário alocado numa vaga específica, depois do evento
+     * acontecer. Duas regras de negócio, ambas falhando alto e cedo:
+     * não faz sentido marcar presença/falta numa vaga sem voluntário
+     * alocado, nem numa escala já {@code CANCELADA} (o evento nem deveria
+     * ter ocorrido de verdade).
+     */
+    @Transactional
+    public EscalaVaga registrarPresenca(UUID vagaId, Presenca presenca) {
+        EscalaVaga vaga = escalaVagaRepository.findById(vagaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vaga não encontrada."));
+        if (vaga.getVoluntario() == null) {
+            throw new BadRequestException("Esta vaga não tem voluntário alocado — não há presença para registrar.");
+        }
+        if (vaga.getEvento().getEscala().getStatus() == StatusEscala.CANCELADA) {
+            throw new ConflictException("Não é possível registrar presença numa escala CANCELADA.");
+        }
+        vaga.setPresenca(presenca);
+        auditLogService.registrar("PRESENCA_REGISTRADA", "ESCALA_VAGA", vagaId, List.of("presenca"));
+        return vaga;
     }
 
     /**

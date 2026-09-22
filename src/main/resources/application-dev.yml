@@ -38,6 +38,13 @@ servire:
     service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
   turnstile:
     secret-key: ${TURNSTILE_SECRET_KEY:}
+  # E-mail (Fase 11): "log" por padrão em dev — LoggingEmailSender só loga
+  # o link em DEBUG, nenhum e-mail real sai daqui sem EMAIL_PROVIDER=resend
+  # exportado explicitamente (e, nesse caso, RESEND_API_KEY também).
+  email:
+    provider: ${EMAIL_PROVIDER:log}
+    resend:
+      api-key: ${RESEND_API_KEY:}
 
 logging:
   level:

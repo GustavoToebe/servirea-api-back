@@ -32,6 +32,14 @@ servire:
     service-role-key: ""
   turnstile:
     secret-key: ""
+  # E-mail (Fase 11): fixo em "log" nos testes — nenhum teste automatizado
+  # desta rodada deve chamar a API real do Resend (mesma regra de
+  # Storage/Turnstile acima). Diferente de dev, aqui NÃO é
+  # "${EMAIL_PROVIDER:log}" — é um valor fixo, para uma variável de
+  # ambiente exportada por engano na máquina de quem roda os testes nunca
+  # poder trocar isso.
+  email:
+    provider: log
 
 logging:
   level:

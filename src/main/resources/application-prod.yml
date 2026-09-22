@@ -35,6 +35,17 @@ servire:
     service-role-key: ${SUPABASE_SERVICE_ROLE_KEY}
   turnstile:
     secret-key: ${TURNSTILE_SECRET_KEY}
+  # E-mail (Fase 11, seção 32/58) — Resend por padrão em produção;
+  # RESEND_API_KEY é obrigatório (sem valor padrão, mesma regra de
+  # JWT_SECRET/DB_URL acima) quando provider=resend. "provider" em si
+  # aceita override via EMAIL_PROVIDER (ex.: voltar para "log" temporariamente
+  # numa indisponibilidade do Resend) — não é segredo, só um interruptor de
+  # comportamento, por isso tem valor padrão mesmo aqui.
+  email:
+    provider: ${EMAIL_PROVIDER:resend}
+    resend:
+      api-key: ${RESEND_API_KEY}
+      from: ${RESEND_FROM:onboarding@resend.dev}
 
 logging:
   level:

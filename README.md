@@ -1,4 +1,4 @@
-# Servire API — Fases 2 a 10 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria + voluntários + storage + inscrições + escalas + multi-tenant real)
+# Servire API — Fases 2 a 11 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria + voluntários + storage + inscrições + escalas + multi-tenant real + permissões/faltas/disponibilidade/auditoria/e-mail)
 
 Este projeto cobre a **FASE 2** (fundação Spring Boot, seção 102/125), a
 **FASE 3** (modelo SaaS lógico, seção 103/126), a **FASE 4**
@@ -6,8 +6,19 @@ Este projeto cobre a **FASE 2** (fundação Spring Boot, seção 102/125), a
 própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 37/38/106), a **FASE 7** (storage de fotos, seção 107), a **FASE 8**
 (inscrições públicas, seção 44/108), a **FASE 9** (escalas, seção
-46/47/109) e a **FASE 10** (multi-tenant real, seção 110) do
-`plano_mestre_servire_v2_mvp_baixo_custo.md`.
+46/47/109), a **FASE 10** (multi-tenant real, seção 110) e a **FASE 11**
+(roles/permissões reais, controle de faltas, disponibilidade do
+voluntário, tabela de auditoria e provedor de e-mail real, seção
+31/59/122/131.5) do `plano_mestre_servire_v2_mvp_baixo_custo.md`.
+
+> ⏳ **Fase 11 (22/09/2026) — AINDA NÃO CONFIRMADA por `mvn clean verify`
+> real.** Cinco funcionalidades implementadas nesta rodada, por pedido
+> explícito do usuário ("Pode fazer todos os itens do 1 ao 5"), sem testes
+> automatizados novos ainda (decisão explícita do usuário: "vamos
+> desenvolver umas 4 ou 5 coisas e aí implementamos os testes dessa novas
+> funcionalidades" — o débito de testes desta fase fica para a próxima
+> rodada). Ver seção própria "Fase 11" abaixo para o detalhe de cada uma
+> e "Próximos passos" para o que falta confirmar.
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -1264,6 +1275,177 @@ métodos, ver item 3 dos "Riscos residuais" da Fase 9 acima).
 > analogia ao Bug real #10) em `InscricaoService.substituirResponsaveis`
 > (seção da Fase 8) — ver "Próximos passos" abaixo.
 
+## ⏳ Fase 11 — permissões, faltas, disponibilidade, auditoria e e-mail real (seção 31/59/122/131.5)
+
+Cinco funcionalidades pedidas juntas pelo usuário em 22/09/2026 ("Pode
+fazer todos os itens do 1 ao 5"), **sem testes automatizados novos por
+decisão explícita do usuário** (débito de testes fica para a próxima
+rodada, mesmo padrão já usado nas Fases 6-9). **Nenhum item desta fase foi
+confirmado por um `mvn clean verify` real ainda** — tudo abaixo é revisão
+manual de código, sem acesso a `mvn` neste ambiente de pesquisa (Maven
+Central bloqueado).
+
+### 1. Roles e permissões reais (seção 31)
+
+Até a Fase 10, `SecurityConfig` só distinguia autenticado/não autenticado
+(`anyRequest().authenticated()`) — a role do vínculo `usuario_tenant`
+(`ADMIN`/`COORDENADOR`/`VISUALIZADOR`) já existia e ia parar no JWT desde
+a Fase 5, mas nenhum endpoint checava nada além de "tem token válido".
+
+Implementado:
+- `security/Permissao.java` — as 7 permissões conceituais da seção 31
+  (`VOLUNTARIO_READ/WRITE`, `ESCALA_READ/WRITE`, `INSCRICAO_READ/APPROVE`,
+  `CONFIG_WRITE`).
+- `security/RolePermissoes.java` — o mapeamento `role -> permissions`
+  (critério de bom senso documentado no javadoc da classe, já que a seção
+  31 não detalha o mapeamento exato): `ADMIN` tem todas; `COORDENADOR` tem
+  todas menos `CONFIG_WRITE`; `VISUALIZADOR` só as `*_READ`.
+- `JwtAuthenticationFilter` agora concede uma `GrantedAuthority`
+  `PERM_<permissão>` por permissão da role, além do `ROLE_<role>` que já
+  existia.
+- `SecurityConfig` ganhou `@EnableMethodSecurity` (liga `@PreAuthorize`).
+- `VoluntarioController`, `EscalaController` e `InscricaoController`
+  ganharam `@PreAuthorize("hasAuthority('PERM_...')")` em cada método —
+  leitura exige a permissão `*_READ`, escrita exige `*_WRITE` (ou
+  `INSCRICAO_APPROVE`, já que a seção 31 não define uma `INSCRICAO_WRITE`
+  própria — decisão documentada no javadoc de `InscricaoController`).
+- `CONFIG_WRITE` fica definida mas sem nenhum endpoint que a use ainda —
+  não existe um controller de configurações do tenant no backend Java.
+
+**Risco residual:** uma `AccessDeniedException` de `@PreAuthorize` deveria
+cair no mesmo `RestAccessDeniedHandler` já usado por
+`authorizeHttpRequests` (comportamento padrão documentado do
+`ExceptionTranslationFilter` do Spring Security) — **não confirmado contra
+uma chamada HTTP real** (nenhum teste `MockMvc`/`TestRestTemplate` exercita
+os controllers desta rodada, só os serviços diretamente).
+
+### 2. Controle de faltas (seção 122 item 11 / 131.5)
+
+Coluna `presenca` (não uma tabela própria — decisão explícita, ver
+comentário da migration V024) somada a `escala_vagas`, com um novo tipo
+nativo do Postgres `presenca_vaga` (`PENDENTE`/`PRESENTE`/`FALTOU`).
+
+- `escala/Presenca.java` — a enum.
+- `EscalaVaga.getPresenca()`/`setPresenca()`.
+- `EscalaVagaRepository` — novo, acesso direto a uma vaga (antes só existia
+  via cascata a partir de `Escala`).
+- `EscalaService.registrarPresenca(vagaId, presenca)` — recusa (400) marcar
+  presença numa vaga sem voluntário alocado, e recusa (409) numa escala já
+  `CANCELADA`.
+- Endpoint: `PATCH /escalas/vagas/{vagaId}/presenca`, exige
+  `ESCALA_WRITE`.
+
+### 3. Disponibilidade do voluntário (seção 122 item 12 / 131.5)
+
+Nova entidade tenant-aware `disponibilidade_voluntario` (migration V025),
+sub-recurso de voluntário: `dia_semana` (recorrente, ex. "toda quarta") OU
+`data` (exceção pontual) — nunca os dois, nunca nenhum (CHECK no banco +
+validação em `DisponibilidadeVoluntarioService.criar`) — mais `periodo`
+(`MANHA`/`TARDE`/`NOITE`, novo tipo nativo `periodo_dia`).
+
+- `voluntario/Periodo.java`, `DisponibilidadeVoluntario.java`,
+  `DisponibilidadeVoluntarioRepository.java`,
+  `DisponibilidadeVoluntarioService.java`,
+  `DisponibilidadeVoluntarioController.java`.
+- Endpoints: `GET/POST /voluntarios/{voluntarioId}/disponibilidades`,
+  `DELETE /voluntarios/{voluntarioId}/disponibilidades/{id}` — exigem
+  `VOLUNTARIO_READ`/`VOLUNTARIO_WRITE` (a seção 31 não define uma
+  permissão própria para este sub-recurso).
+
+**Deliberadamente fora do escopo desta rodada:** integração com o picker
+de candidatos (seção 49) — o endpoint do picker em si ainda não existe no
+backend Java, então não há o que filtrar por disponibilidade ainda. Fica
+para quando o picker for implementado.
+
+### 4. Tabela de auditoria (seção 59)
+
+Novo pacote `audit/` — `AuditLog.java`, `AuditLogRepository.java`,
+`AuditLogService.java`, `AuditLogController.java` (migration V026).
+`changed_fields` usa um array nativo `text[]` (não `jsonb` como o exemplo
+da seção 59 sugere) — mesma informação, mapeamento JPA mais simples (ver
+comentário da migration V026).
+
+`AuditLogService.registrar(acao, entidade, entidadeId, changedFields)` é
+chamado explicitamente (nunca via AOP genérico) a partir de
+`VoluntarioService`, `EscalaService` e `InscricaoService`, depois de cada
+mudança relevante (criação, atualização, ativação/desativação, foto,
+finalizar/cancelar/reabrir/excluir escala, registrar presença, aprovar/
+rejeitar inscrição). `changedFields` para os métodos de "atualização
+completa" (ex. `VoluntarioService.atualizar`) é a lista FIXA de campos que
+aquele tipo de requisição é capaz de alterar, não um diff de verdade
+contra o estado anterior — simplificação deliberada, documentada no
+javadoc de cada método, que ainda cumpre o objetivo da seção 59 de nunca
+duplicar o conteúdo pessoal em si.
+
+Tenant/usuário/requestId são lidos de `TenantContext`/
+`SecurityContextHolder`/MDC (já garantidos setados por quem chama); IP é
+lido via `RequestContextHolder` de dentro do próprio `AuditLogService` —
+uma exceção deliberada ao padrão do resto do projeto de receber
+IP/metadados explicitamente por parâmetro (ver javadoc da classe para o
+porquê: retrofitar IP por parâmetro em toda a cadeia de 3 serviços seria
+bem mais invasivo para um dado "nice to have" de auditoria).
+
+Endpoint de consulta: `GET /audit-log` (filtros opcionais `entidade` +
+`entidadeId`), restrito a `hasRole('ADMIN')` diretamente (não a uma
+permissão conceitual — a seção 31 não define uma permissão própria de
+auditoria).
+
+**Risco residual:** nenhum teste exercita a gravação de auditoria em nenhum
+cenário — todo esse fluxo (inclusive o `RequestContextHolder` dentro de
+`AuditLogService`, que só funciona de verdade dentro de uma requisição
+HTTP real) está **sem qualquer confirmação de build**.
+
+### 5. Provedor de e-mail real: Cloudflare (DNS) + Resend (envio)
+
+Decisão tomada com o usuário em 22/09/2026 (proposta do próprio usuário,
+"A Combinação Ideal (Custo R$ 0,00)", validada contra a documentação
+pública do Resend antes de implementar — endpoint, formato de autenticação
+e limites do free tier conferem). Domínio `servirea.com.br` (seção 122
+item 16) **registrado em 22/09/2026** (confirmado pelo usuário, print do
+painel do registro.br) — a verificação desse domínio no painel do Resend
+(apontando o DNS pelo Cloudflare: registros MX + TXT/SPF + TXT/DKIM) é um
+passo manual do usuário, feito fora deste código, ainda pendente.
+
+- `auth/ResendProperties.java`, `EmailConfiguration.java`,
+  `ResendEmailSender.java`, `EmailException.java`.
+- `ResendEmailSender implements EmailSender`, chamando
+  `POST https://api.resend.com/emails` via `RestClient` (mesmo padrão de
+  `SupabaseStorageService`/`TurnstileService` — sem o SDK dedicado
+  `resend-java`, que o usuário cogitou mas foi descartado por já bastar uma
+  chamada HTTP direta).
+- `LoggingEmailSender` (stub da Fase 5) continua existindo, agora atrás de
+  `@ConditionalOnProperty(servire.email.provider=log, matchIfMissing=true)`
+  — é o bean padrão em dev/test, então rodar a aplicação localmente ou os
+  testes de integração nunca dispara e-mail de verdade sem trocar
+  `EMAIL_PROVIDER=resend` explicitamente.
+- `application-prod.yml` passa a usar `servire.email.provider: resend` por
+  padrão (override-ável via `EMAIL_PROVIDER`, ex. para voltar a "log" numa
+  indisponibilidade do Resend). `RESEND_API_KEY` é obrigatório em produção
+  (sem valor padrão, mesma regra de `JWT_SECRET`/`DB_URL`). `from` tem
+  valor padrão `onboarding@resend.dev` (domínio de teste do próprio
+  Resend, só entrega para o e-mail dono da conta) até `RESEND_FROM` ser
+  trocado para um endereço `@servirea.com.br` depois da verificação do
+  domínio estar pronta.
+
+> ⚠️ **Segurança operacional:** a API key do Resend que o usuário colou no
+> chat desta sessão (`re_WUReeCvS_...`) **não foi gravada em nenhum
+> arquivo do repositório** — só é referenciada aqui como
+> `${RESEND_API_KEY}` (variável de ambiente). Como essa chave passou por
+> uma conversa de chat, o ideal é o usuário revogá-la e gerar uma nova no
+> painel do Resend antes de configurar `RESEND_API_KEY` de verdade em
+> produção (rotação de segredo que passou por um canal não pensado para
+> segredos — mesma prudência da seção 90 do plano mestre, aplicada aqui
+> por analogia).
+
+**Riscos residuais:**
+- Formato exato da API do Resend **não confirmado** contra uma chamada
+  real de dentro deste ambiente de pesquisa (sem acesso de rede ao Resend
+  aqui) — mesma ressalva já feita para Supabase Storage/Turnstile nas
+  Fases 7/8.
+- Verificação do domínio `servirea.com.br` no painel do Resend ainda não
+  fechada pelo usuário — até lá, `RESEND_FROM` precisa continuar
+  `onboarding@resend.dev`.
+
 ## Como rodar localmente
 
 Requer um PostgreSQL acessível (local, Docker, ou outro) para o profile
@@ -1314,19 +1496,24 @@ src/main/java/br/com/servire/api/
     JwtService.java, JwtAuthenticationFilter.java, AuthenticatedUser.java
     OpaqueTokenGenerator.java
     RestAuthenticationEntryPoint.java, RestAccessDeniedHandler.java
+    Permissao.java, RolePermissoes.java   <- Fase 11
   auth/
     Usuario.java, UsuarioRepository.java
     UsuarioTenant.java, UsuarioTenantId.java, UsuarioTenantRepository.java
     RefreshToken.java, RefreshTokenRepository.java, RefreshTokenService.java
     PasswordResetToken.java, PasswordResetTokenRepository.java, PasswordResetTokenService.java
-    EmailSender.java, LoggingEmailSender.java   <- stub, ver seção Fase 5 acima
+    EmailSender.java, LoggingEmailSender.java   <- stub (bean padrão dev/test desde a Fase 11)
+    ResendProperties.java, EmailConfiguration.java, ResendEmailSender.java, EmailException.java   <- Fase 11
     AuthService.java, AuthController.java
     dto/   <- LoginRequest, LoginResponse, SelectTenantRequest, RefreshRequest, AccessTokenResponse, ForgotPasswordRequest, ResetPasswordRequest, TenantResumo
   voluntario/
     Voluntario.java, VoluntarioRepository.java, VoluntarioService.java, VoluntarioController.java
     Responsavel.java, ResponsavelRepository.java
     TipoVoluntario.java, FuncaoEscala.java
-    dto/   <- VoluntarioRequest, VoluntarioResponse, ResponsavelRequest, ResponsavelResponse, FotoUrlResponse
+    Periodo.java, DisponibilidadeVoluntario.java, DisponibilidadeVoluntarioRepository.java,
+    DisponibilidadeVoluntarioService.java, DisponibilidadeVoluntarioController.java   <- Fase 11
+    dto/   <- VoluntarioRequest, VoluntarioResponse, ResponsavelRequest, ResponsavelResponse, FotoUrlResponse,
+              DisponibilidadeVoluntarioRequest, DisponibilidadeVoluntarioResponse (Fase 11)
   storage/   <- Fase 7
     StorageProperties.java, StorageConfiguration.java
     StorageService.java (interface), SupabaseStorageService.java, StorageException.java
@@ -1339,9 +1526,13 @@ src/main/java/br/com/servire/api/
     dto/   <- InscricaoPublicaRequest, InscricaoAtualizarRequest, InscricaoRejeitarRequest, InscricaoResponse,
               InscricaoResponsavelRequest, InscricaoResponsavelResponse
   escala/   <- Fase 9
-    Escala.java, EscalaEvento.java, EscalaVaga.java, EscalaRepository.java
-    TipoEscala.java, StatusEscala.java, EscalaService.java, EscalaController.java
-    dto/   <- EscalaRequest, EscalaEventoRequest, EscalaVagaRequest, EscalaResponse, EscalaEventoResponse, EscalaVagaResponse
+    Escala.java, EscalaEvento.java, EscalaVaga.java, EscalaRepository.java, EscalaVagaRepository.java (Fase 11)
+    TipoEscala.java, StatusEscala.java, Presenca.java (Fase 11), EscalaService.java, EscalaController.java
+    dto/   <- EscalaRequest, EscalaEventoRequest, EscalaVagaRequest, EscalaResponse, EscalaEventoResponse,
+              EscalaVagaResponse, PresencaRequest (Fase 11)
+  audit/   <- Fase 11 (seção 59)
+    AuditLog.java, AuditLogRepository.java, AuditLogService.java, AuditLogController.java
+    dto/   <- AuditLogResponse
 src/main/resources/
   application.yml, application-dev.yml, application-prod.yml
   logback-spring.xml
@@ -1352,6 +1543,9 @@ src/main/resources/
     V021.sql        <- tenant_id + FKs compostas nas 7 tabelas de domínio (Fase 3/4)
     V022.sql        <- password_reset_token (Fase 5)
     V023.sql        <- repontar FKs auth.users -> usuario + escalas.version (Fases 7/8/9)
+    V024.sql        <- escala_vagas.presenca (Fase 11, controle de faltas)
+    V025.sql        <- disponibilidade_voluntario (Fase 11)
+    V026.sql        <- audit_log (Fase 11)
 src/test/java/br/com/servire/api/
   AbstractIntegrationTest.java  <- Testcontainers + stub Supabase
   ServireApiApplicationTests.java
@@ -1367,45 +1561,60 @@ src/test/java/br/com/servire/api/
 
 `DevFixedTenantFilter` (andaime temporário da Fase 4) foi removido na
 Fase 5, substituído por `security/JwtAuthenticationFilter.java`. Os
-pacotes `storage/`, `inscricao/` e `escala/` entraram na Fase 7/8/9. Ainda
-não existem `config/`, `backoffice/`, `arquivo/`, `billing/`,
-`auditoria/` da estrutura-alvo completa (seção 16 do plano mestre).
+pacotes `storage/`, `inscricao/` e `escala/` entraram na Fase 7/8/9; o
+pacote `audit/` (nome próprio deste projeto para a `auditoria/` da
+estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
+`backoffice/`, `arquivo/`, `billing/` da estrutura-alvo completa.
 
 ## Próximos passos
 
-> **Atualização (22/09/2026):** a decisão anterior de adiar testes em
-> favor de velocidade foi revertida por instrução explícita do usuário —
-> a Fase 10 e todo o débito de testes pendente (item 2 antigo desta lista)
-> foram pagos na mesma rodada, e **agora confirmados com `BUILD SUCCESS`
-> real: 75 testes, 0 falhas, 0 erros** (ver aviso no topo do README e
-> seção da Fase 10). Três bugs reais de produção (#8, #9, #10) e três
-> correções de teste foram encontrados e corrigidos ao longo de três
-> rodadas de build. O item 1 antigo desta lista (confirmar com um build
-> real) está feito — o que resta é o fix proativo em `InscricaoService`
-> (item 1 abaixo) e o resto da dívida técnica já conhecida.
+> **Atualização (22/09/2026):** os itens antigos 2 ("roles/permissões de
+> verdade"), 3 ("decidir provedor de e-mail"), 4 ("desenhar faltas e
+> disponibilidade") e 6 ("tabela de auditoria dedicada") desta lista foram
+> **implementados na Fase 11** (ver seção própria acima) — por pedido
+> explícito do usuário, SEM testes automatizados novos ainda (decisão
+> dele: construir as 5 funcionalidades primeiro, testar depois, mesmo
+> padrão já usado nas Fases 6-9). Nada da Fase 11 tem confirmação de build
+> real ainda — é o item 1 novo desta lista, e o mais importante agora.
 
-1. **Confirmar o fix proativo em `InscricaoService.substituirResponsaveis`**
+1. **Confirmar a Fase 11 inteira com um `mvn clean verify` real** —
+   nenhuma linha desta fase (permissões, faltas, disponibilidade,
+   auditoria, Resend) foi exercitada por nenhum teste automatizado ainda.
+   Prioridades para a próxima rodada de testes, na ordem em que um bug
+   forçaria a aplicação a nem subir: (a) `EmailConfiguration`/
+   `ResendEmailSender`/`LoggingEmailSender` sendo dois beans concorrentes
+   do MESMO tipo `EmailSender` sob `@ConditionalOnProperty` — o contexto
+   Spring inteiro falha ao subir se as duas condições colidirem (ex.: as
+   duas ativas ao mesmo tempo, ou nenhuma) em qualquer profile, então isso
+   quebraria TODO teste que carrega o contexto, não só os deste módulo;
+   (b) `@PreAuthorize`/`@EnableMethodSecurity` — nenhum teste `MockMvc`/
+   `TestRestTemplate` chama os controllers desta rodada, só os serviços
+   diretamente (que não passam pelo `@PreAuthorize`, aplicado só nos
+   controllers); (c) os três novos tipos nativos do Postgres
+   (`presenca_vaga`, `periodo_dia`) e o array `text[]` de
+   `audit_log.changed_fields` batendo com o mapeamento JPA.
+2. Confirmar o fix proativo em `InscricaoService.substituirResponsaveis`
    (mesmo padrão do Bug real #10, aplicado por analogia sem um teste que
-   o exercite — ver seção da Fase 8) — o único item desta batelada ainda
-   sem confirmação de build real. Um teste que troque o responsável
+   o exercite desde a Fase 8/10) — um teste que troque o responsável
    principal de uma inscrição PENDENTE via `atualizarPendente` fecharia
-   essa lacuna.
-2. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
-   31) — hoje `authorizeHttpRequests` só distingue autenticado/não
-   autenticado, sem checar a role do vínculo `usuario_tenant` (vale para
-   todos os módulos, incluindo aprovar/rejeitar inscrição e escalas).
-3. Decidir um provedor de e-mail real para substituir `LoggingEmailSender`.
-4. Desenhar controle de faltas e disponibilidade do voluntário
-   (referenciados pela seção 109, deliberadamente descopados da Fase 9
-   nesta rodada — ver seção da Fase 9 acima).
-5. Confirmar de verdade contra um Supabase real: o formato da API REST do
-   Storage (Fase 7) e a resposta do Cloudflare Turnstile (Fase 8) — ambos
-   implementados a partir de documentação pública, nunca testados contra
-   o serviço real neste ambiente de pesquisa.
-6. Tabela de auditoria dedicada (`auditoria/`, seção 16) para
-   aprovação/rejeição de inscrição — hoje só um log, sem persistência
-   própria.
-7. Validar a configuração real do reverse proxy do VPS de produção
+   essa lacuna. Pode ser pago na mesma rodada do item 1.
+3. Confirmar de verdade contra um serviço real: o formato da API REST do
+   Supabase Storage (Fase 7), a resposta do Cloudflare Turnstile (Fase 8)
+   e agora também a API do Resend (Fase 11) — todos os três implementados
+   a partir de documentação pública, nunca testados contra o serviço real
+   neste ambiente de pesquisa.
+4. Terminar a verificação do domínio `servirea.com.br` no painel do Resend
+   (registros MX + TXT/SPF + TXT/DKIM apontados pelo Cloudflare) e então
+   trocar `RESEND_FROM` de `onboarding@resend.dev` para um endereço
+   `@servirea.com.br` — passo manual do usuário, fora deste código.
+5. Integrar `DisponibilidadeVoluntario` (Fase 11) como filtro do picker de
+   candidatos (seção 49) — depende do próprio endpoint do picker existir
+   primeiro no backend Java, o que ainda não aconteceu.
+6. Validar a configuração real do reverse proxy do VPS de produção
    (Nginx/Caddy, seção 11/89) quanto a `X-Forwarded-For` — o rate limit da
    Fase 8 depende de esse header vir reescrito pelo proxy, não só
    repassado do cliente.
+7. **Segurança operacional:** revogar/rotacionar a API key do Resend que
+   foi colada no chat desta sessão (`re_WUReeCvS_...`) e gerar uma nova
+   antes de configurar `RESEND_API_KEY` em produção — ver aviso na seção
+   da Fase 11 acima.

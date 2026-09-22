@@ -41,6 +41,10 @@ import java.util.UUID;
  * {@code @UniqueConstraint} porque {@code ddl-auto: validate} não exige
  * isso para bater (só valida colunas/tipos mapeados), e a validação de
  * negócio equivalente fica em {@link EscalaService}.</p>
+ *
+ * <p>{@code presenca} foi somado na Fase 11 (controle de faltas, seção
+ * 131.5 item 11, migration V024) — mapeia o tipo nativo
+ * {@code presenca_vaga}, mesmo padrão de {@code funcao} acima.</p>
  */
 @Entity
 @Table(name = "escala_vagas")
@@ -69,6 +73,11 @@ public class EscalaVaga {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voluntario_id")
     private Voluntario voluntario;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false)
+    private Presenca presenca = Presenca.PENDENTE;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
@@ -120,6 +129,14 @@ public class EscalaVaga {
 
     public void setVoluntario(Voluntario voluntario) {
         this.voluntario = voluntario;
+    }
+
+    public Presenca getPresenca() {
+        return presenca;
+    }
+
+    public void setPresenca(Presenca presenca) {
+        this.presenca = presenca;
     }
 
     public Instant getCreatedAt() {

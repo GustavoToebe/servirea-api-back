@@ -1,5 +1,6 @@
 package br.com.servire.api.inscricao;
 
+import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.inscricao.dto.InscricaoAtualizarRequest;
 import br.com.servire.api.inscricao.dto.InscricaoPublicaRequest;
 import br.com.servire.api.inscricao.dto.InscricaoResponsavelRequest;
@@ -41,6 +42,7 @@ public class InscricaoService {
     private final StorageService storageService;
     private final TurnstileService turnstileService;
     private final InscricaoRateLimiter rateLimiter;
+    private final AuditLogService auditLogService;
     private final TransactionTemplate transactionTemplate;
 
     @PersistenceContext
@@ -52,6 +54,7 @@ public class InscricaoService {
                              StorageService storageService,
                              TurnstileService turnstileService,
                              InscricaoRateLimiter rateLimiter,
+                             AuditLogService auditLogService,
                              PlatformTransactionManager transactionManager) {
         this.inscricaoRepository = inscricaoRepository;
         this.voluntarioRepository = voluntarioRepository;
@@ -59,6 +62,7 @@ public class InscricaoService {
         this.storageService = storageService;
         this.turnstileService = turnstileService;
         this.rateLimiter = rateLimiter;
+        this.auditLogService = auditLogService;
         // Ver javadoc de criarPublica: precisamos abrir a transação só
         // DEPOIS de TenantContext.set(...), então não dá pra usar
         // @Transactional (que abriria a sessão do Hibernate na entrada do
@@ -142,6 +146,10 @@ public class InscricaoService {
             String caminhoSalvo = storageService.armazenar(caminho, conteudo, foto.getContentType());
             inscricao.setFotoPath(caminhoSalvo);
         }
+        // Sem usuário autenticado (formulário público, seção 44) —
+        // AuditLogService.registrar grava userId nulo automaticamente
+        // (ver seu javadoc).
+        auditLogService.registrar("CRIACAO", "INSCRICAO", inscricao.getId(), null);
         return inscricao;
     }
 
@@ -166,6 +174,10 @@ public class InscricaoService {
                 request.telefone(), request.celular(), request.email(), request.horarioEstudo(),
                 request.observacoes(), request.autorizaWhatsapp(), request.funcoesHabilitadas());
         substituirResponsaveis(inscricao, request.responsaveis());
+        auditLogService.registrar("ATUALIZACAO", "INSCRICAO", inscricao.getId(),
+                List.of("nomeCompleto", "dataNascimento", "tipo", "etapaCatequese", "eucaristiaAno", "crismaAno",
+                        "rua", "numero", "bairro", "telefone", "celular", "email", "horarioEstudo", "observacoes",
+                        "autorizaWhatsapp", "funcoesHabilitadas", "responsaveis"));
         return inscricao;
     }
 
@@ -177,10 +189,12 @@ public class InscricaoService {
      * {@code inscricoes_aprovada_ck}, V008, exige que os três campos de
      * auditoria estejam preenchidos juntos).
      *
-     * <p>Sem tabela de auditoria dedicada ainda (só um item futuro do
-     * plano mestre, seção 16 — pacote {@code auditoria/}) — por ora a
-     * aprovação/rejeição só fica registrada nos próprios campos de
-     * {@code inscricoes} e neste log; ver README/plano mestre.</p>
+     * <p><b>Tabela de auditoria dedicada (Fase 11, seção 59):</b> dois
+     * registros são gravados aqui — a criação do voluntário (entidade
+     * {@code VOLUNTARIO}) e a aprovação da inscrição em si (entidade
+     * {@code INSCRICAO}) — além dos próprios campos de auditoria já
+     * existentes em {@code inscricoes} ({@code aprovado_por}/
+     * {@code data_aprovacao}), que continuam preenchidos como sempre.</p>
      */
     @Transactional
     public Inscricao aprovar(UUID id, UUID usuarioIdAprovador) {
@@ -212,11 +226,13 @@ public class InscricaoService {
             voluntario.getResponsaveis().add(responsavel);
         }
         voluntario = voluntarioRepository.save(voluntario);
+        auditLogService.registrar("CRIACAO", "VOLUNTARIO", voluntario.getId(), null);
 
         inscricao.setStatus(StatusInscricao.APROVADA);
         inscricao.setVoluntarioId(voluntario.getId());
         inscricao.setDataAprovacao(Instant.now());
         inscricao.setAprovadoPor(usuarioIdAprovador);
+        auditLogService.registrar("APROVACAO", "INSCRICAO", inscricao.getId(), List.of("status"));
         return inscricao;
     }
 
@@ -232,6 +248,7 @@ public class InscricaoService {
         inscricao.setDataRejeicao(Instant.now());
         inscricao.setRejeitadoPor(usuarioIdRejeitador);
         inscricao.setMotivoRejeicao(motivo);
+        auditLogService.registrar("REJEICAO", "INSCRICAO", id, List.of("status", "motivoRejeicao"));
         return inscricao;
     }
 

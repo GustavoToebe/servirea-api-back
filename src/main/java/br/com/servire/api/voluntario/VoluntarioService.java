@@ -1,5 +1,6 @@
 package br.com.servire.api.voluntario;
 
+import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.voluntario.dto.ResponsavelRequest;
 import br.com.servire.api.voluntario.dto.VoluntarioRequest;
@@ -30,15 +31,24 @@ import java.util.UUID;
 @Service
 public class VoluntarioService {
 
+    /** Campos cobertos por {@link VoluntarioRequest}/{@link #aplicarCampos} — usado só para popular {@code changedFields} da auditoria (seção 59), ver javadoc de {@link #atualizar}. */
+    private static final List<String> CAMPOS_ATUALIZAVEIS = List.of(
+            "nomeCompleto", "dataNascimento", "tipo", "ativo", "etapaCatequese", "eucaristiaAno", "crismaAno",
+            "rua", "numero", "bairro", "telefone", "celular", "email", "horarioEstudo", "observacoes",
+            "autorizaWhatsapp", "funcoesHabilitadas", "responsaveis");
+
     private final VoluntarioRepository voluntarioRepository;
     private final StorageService storageService;
+    private final AuditLogService auditLogService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public VoluntarioService(VoluntarioRepository voluntarioRepository, StorageService storageService) {
+    public VoluntarioService(VoluntarioRepository voluntarioRepository, StorageService storageService,
+                              AuditLogService auditLogService) {
         this.voluntarioRepository = voluntarioRepository;
         this.storageService = storageService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -62,21 +72,36 @@ public class VoluntarioService {
         Voluntario voluntario = new Voluntario(request.nomeCompleto());
         aplicarCampos(voluntario, request);
         substituirResponsaveis(voluntario, request.responsaveis());
-        return voluntarioRepository.save(voluntario);
+        voluntario = voluntarioRepository.save(voluntario);
+        auditLogService.registrar("CRIACAO", "VOLUNTARIO", voluntario.getId(), null);
+        return voluntario;
     }
 
+    /**
+     * {@code changedFields} da auditoria (seção 59) registra a lista FIXA
+     * de campos que {@link VoluntarioRequest}/{@link #aplicarCampos} cobrem
+     * ({@link #CAMPOS_ATUALIZAVEIS}), não um diff de verdade contra o
+     * estado anterior — simplificação deliberada (evita ter que capturar um
+     * snapshot do voluntário antes de aplicar as mudanças só para comparar
+     * campo a campo depois); ainda cumpre o objetivo da seção 59 de não
+     * duplicar o conteúdo pessoal em si, só nomeia os campos que ESTE tipo
+     * de requisição é capaz de alterar.
+     */
     @Transactional
     public Voluntario atualizar(UUID id, VoluntarioRequest request) {
         Voluntario voluntario = buscarPorId(id);
         aplicarCampos(voluntario, request);
         substituirResponsaveis(voluntario, request.responsaveis());
-        return voluntarioRepository.save(voluntario);
+        voluntario = voluntarioRepository.save(voluntario);
+        auditLogService.registrar("ATUALIZACAO", "VOLUNTARIO", voluntario.getId(), CAMPOS_ATUALIZAVEIS);
+        return voluntario;
     }
 
     @Transactional
     public Voluntario setAtivo(UUID id, boolean ativo) {
         Voluntario voluntario = buscarPorId(id);
         voluntario.setAtivo(ativo);
+        auditLogService.registrar(ativo ? "ATIVACAO" : "DESATIVACAO", "VOLUNTARIO", id, List.of("ativo"));
         return voluntario;
     }
 
@@ -105,6 +130,7 @@ public class VoluntarioService {
         }
         String caminhoSalvo = storageService.armazenar(caminho, conteudo, foto.getContentType());
         voluntario.setFotoPath(caminhoSalvo);
+        auditLogService.registrar("FOTO_ATUALIZADA", "VOLUNTARIO", id, List.of("fotoPath"));
         return voluntario;
     }
 

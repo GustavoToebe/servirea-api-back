@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -88,8 +89,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         TenantContext.set(usuario.tenantId());
         MDC.put(MDC_KEY, usuario.tenantId().toString());
         try {
-            List<GrantedAuthority> authorities =
-                    List.of(new SimpleGrantedAuthority("ROLE_" + usuario.role().name()));
+            List<GrantedAuthority> authorities = autoridadesDe(usuario);
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(usuario, null, authorities);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -142,5 +142,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return Optional.of(new AuthenticatedUser(claims.usuarioId(), claims.tenantId(), claims.role()));
+    }
+
+    /**
+     * Monta as {@link GrantedAuthority} do usuário autenticado (seção 31 do
+     * plano mestre): {@code ROLE_<role>} (mantida por compatibilidade — não
+     * é mais usada por nenhum {@code @PreAuthorize} desta rodada, mas
+     * continua disponível para {@code hasRole(...)} caso um endpoint futuro
+     * precise checar a role diretamente) mais um {@code PERM_<permissão>}
+     * por permissão concedida pelo {@link RolePermissoes mapeamento
+     * role -> permissions} — é esta segunda lista que os controllers
+     * checam via {@code hasAuthority("PERM_...")}.
+     */
+    private List<GrantedAuthority> autoridadesDe(AuthenticatedUser usuario) {
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.role().name()));
+        for (Permissao permissao : RolePermissoes.de(usuario.role())) {
+            authorities.add(new SimpleGrantedAuthority("PERM_" + permissao.name()));
+        }
+        return authorities;
     }
 }
