@@ -29,6 +29,15 @@ servire:
       allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://localhost:4200}
+  # Storage/Turnstile (Fases 7/8) em dev: vazios por padrão — upload de
+  # foto/validação anti-robô real só funciona se SUPABASE_URL/
+  # SUPABASE_SERVICE_ROLE_KEY/TURNSTILE_SECRET_KEY forem exportados no
+  # ambiente antes de rodar (nunca hardcoded aqui — seção 90).
+  storage:
+    base-url: ${SUPABASE_URL:}
+    service-role-key: ${SUPABASE_SERVICE_ROLE_KEY:}
+  turnstile:
+    secret-key: ${TURNSTILE_SECRET_KEY:}
 
 logging:
   level:

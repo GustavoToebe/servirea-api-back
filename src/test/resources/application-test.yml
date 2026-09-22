@@ -23,6 +23,15 @@ servire:
       allowed-origins: http://localhost:4200
   frontend:
     base-url: http://localhost:4200
+  # Storage/Turnstile (Fases 7/8): vazios nos testes — nenhum teste
+  # automatizado desta rodada exercita upload real nem validação real do
+  # Turnstile (seção "próximos passos" do README/plano mestre: testes
+  # ficaram deliberadamente para depois).
+  storage:
+    base-url: ""
+    service-role-key: ""
+  turnstile:
+    secret-key: ""
 
 logging:
   level:

@@ -1,5 +1,6 @@
 package br.com.servire.api.voluntario;
 
+import br.com.servire.api.voluntario.dto.FotoUrlResponse;
 import br.com.servire.api.voluntario.dto.VoluntarioRequest;
 import br.com.servire.api.voluntario.dto.VoluntarioResponse;
 import jakarta.validation.Valid;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,19 +27,21 @@ import java.util.UUID;
  * {@code SecurityConfig}, então cai na regra padrão
  * {@code anyRequest().authenticated()}).
  *
- * <p><b>Deliberadamente fora do escopo desta primeira versão</b> (a
- * documentar em "Próximos passos" até serem implementados):</p>
+ * <p>{@code POST .../foto} e {@code GET .../foto-url} foram somados na
+ * Fase 7 (Storage, seção 107) — o resto do módulo é da Fase 6.</p>
+ *
+ * <p><b>Deliberadamente fora do escopo desta versão</b> (a documentar em
+ * "Próximos passos" até serem implementados):</p>
  * <ul>
- *   <li>Upload real de foto e geração de signed URL — depende do módulo
- *   de Storage (Fase 7, seção 107); por enquanto {@code fotoPath} só é
- *   lido, nunca escrito por aqui.</li>
  *   <li>Filtro de listagem por {@code funcoes_habilitadas} (o "picker de
  *   candidatos" da seção 49) — só faz sentido junto do módulo de escalas
  *   (Fase 9, seção 109).</li>
  *   <li>{@code GET .../commitments} (histórico de compromissos do
  *   voluntário, view {@code vw_voluntario_compromissos}) — depende de
- *   {@code escalas}/{@code escala_eventos}/{@code escala_vagas}, que só
- *   existem no banco, ainda sem entidade JPA (Fase 9).</li>
+ *   {@code escalas}/{@code escala_eventos}/{@code escala_vagas}; mesmo já
+ *   existindo entidade JPA para elas a partir da Fase 9, este endpoint
+ *   específico não foi implementado nesta rodada (ver README/plano
+ *   mestre).</li>
  * </ul>
  */
 @RestController
@@ -81,5 +85,15 @@ public class VoluntarioController {
     @PatchMapping("/{id}/ativo")
     public VoluntarioResponse alterarAtivo(@PathVariable UUID id, @RequestParam boolean ativo) {
         return VoluntarioResponse.de(voluntarioService.setAtivo(id, ativo));
+    }
+
+    @PostMapping("/{id}/foto")
+    public VoluntarioResponse enviarFoto(@PathVariable UUID id, @RequestParam("foto") MultipartFile foto) {
+        return VoluntarioResponse.de(voluntarioService.definirFoto(id, foto));
+    }
+
+    @GetMapping("/{id}/foto-url")
+    public FotoUrlResponse obterUrlFoto(@PathVariable UUID id) {
+        return new FotoUrlResponse(voluntarioService.obterUrlFoto(id));
     }
 }

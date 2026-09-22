@@ -30,6 +30,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Total atualizado de 21 para 22 em 21/09/2026: V022 (Fase 5, seção
  * 105/32) somou a tabela {@code password_reset_token}, necessária para o
  * fluxo de "esqueci minha senha".</p>
+ *
+ * <p>Total atualizado de 22 para 23 em 22/09/2026: V023 (Fases 7/8/9,
+ * seção 106-109) repontou as FKs {@code escalas.created_by}/
+ * {@code inscricoes.aprovado_por}/{@code inscricoes.rejeitado_por} de
+ * {@code auth.users} para {@code public.usuario}, e somou
+ * {@code escalas.version} para controle otimista (seção 47).</p>
  */
 class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
 
@@ -41,8 +47,8 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // Não fixamos o formato exato da string de versão que o Flyway grava
         // (ex.: se normaliza "001" para "1" ou mantém os zeros à esquerda) —
         // o que importa é que as migrations rodaram e nenhuma falhou.
-        // Total atualizado de 21 para 22 em 21/09/2026: V022 (Fase 5, seção
-        // 105/32) somou a tabela password_reset_token ao baseline V001-V021.
+        // Total atualizado de 22 para 23 em 22/09/2026: V023 (Fases 7/8/9)
+        // somou o ajuste de FKs + escalas.version ao baseline V001-V022.
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -51,10 +57,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(22);
-        assertThat(sucesso).isEqualTo(22);
+        assertThat(total).isEqualTo(23);
+        assertThat(sucesso).isEqualTo(23);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("table password reset token");
+        assertThat(descricoes.getLast()).isEqualTo("ajustes fases 7 8 9");
     }
 
     @Test

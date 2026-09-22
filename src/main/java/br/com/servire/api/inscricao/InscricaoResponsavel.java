@@ -1,4 +1,4 @@
-package br.com.servire.api.voluntario;
+package br.com.servire.api.inscricao;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,39 +15,28 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Responsável legal de um voluntário (seção 38/106 do plano mestre) —
- * mapeia {@code responsaveis} (V004 + coluna {@code tenant_id} acrescentada
- * depois por V021).
+ * Responsável informado no formulário público de inscrição (Fase 8, seção
+ * 108 do plano mestre) — mapeia {@code inscricao_responsaveis} (V009 +
+ * {@code tenant_id} de V021). Mesmo formato de {@link
+ * br.com.servire.api.voluntario.Responsavel}, mas para uma
+ * {@link Inscricao} em vez de um {@code Voluntario} — os dois viram linhas
+ * de {@code responsaveis} de verdade só quando a inscrição é aprovada (ver
+ * {@link InscricaoService#aprovar}).
  *
- * <p><b>Bug real encontrado por revisão de schema (não por build) durante o
- * planejamento das Fases 7/8/9, em 22/09/2026:</b> esta classe foi escrita
- * na Fase 6 olhando só a migração V004 original, que não tinha
- * {@code tenant_id}. Uma releitura de {@code V021__add_tenant_id_domain_tables.sql}
- * mostrou que {@code responsaveis} TAMBÉM recebeu uma coluna
- * {@code tenant_id NOT NULL} própria (com FK composta tenant-aware para
- * {@code voluntarios}), junto com {@code escalas}/{@code escala_eventos}/
- * {@code escala_vagas}/{@code inscricoes}/{@code inscricao_responsaveis}. A
- * entidade, sem mapear essa coluna, não foi pega pelo
- * {@code ddl-auto: validate} do Fase 6 (que só falha se uma coluna MAPEADA
- * divergir do banco — não se a entidade simplesmente ignorar uma coluna
- * NOT NULL existente) — o erro só apareceria em tempo de execução, como uma
- * violação de NOT NULL, no primeiro INSERT real em {@code responsaveis}
- * (primeiro POST/PUT em {@code /voluntarios}, ou na aprovação de inscrição
- * da Fase 8). Corrigido aqui, antes de qualquer build real acusar o
- * problema, adicionando {@code @TenantId} — mesmo padrão de
- * {@link Voluntario#tenantId}.</p>
+ * <p>Diferente de {@code Responsavel} (V004, sem {@code updated_at}),
+ * {@code inscricao_responsaveis} TEM coluna {@code updated_at} com
+ * trigger (V009) — mapeada aqui como {@code insertable=false,
+ * updatable=false}, gerida só pelo banco.</p>
  *
- * <p>Cada voluntário pode ter vários responsáveis, mas deve existir
- * exatamente um com {@code principal=true}; essa regra NÃO é reforçada
- * aqui na entidade (o banco só garante, via
- * {@code uq_responsavel_principal_por_voluntario}, que não pode haver MAIS
- * de um principal — não que tenha pelo menos um) — quem garante "exatamente
- * um" é {@link VoluntarioService}, na mesma transação que grava o
- * voluntário (seção 39).</p>
+ * <p>Já nasce com {@code @TenantId} correto (diferente de
+ * {@code Responsavel}, cujo bug de {@code tenant_id} ausente só foi
+ * corrigido depois de já commitado — ver javadoc de {@code Responsavel})
+ * porque esta classe foi escrita depois de reler {@code V021} por
+ * completo.</p>
  */
 @Entity
-@Table(name = "responsaveis")
-public class Responsavel {
+@Table(name = "inscricao_responsaveis")
+public class InscricaoResponsavel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -58,8 +47,8 @@ public class Responsavel {
     private UUID tenantId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "voluntario_id", nullable = false)
-    private Voluntario voluntario;
+    @JoinColumn(name = "inscricao_id", nullable = false)
+    private Inscricao inscricao;
 
     @Column(nullable = false)
     private String parentesco;
@@ -79,11 +68,14 @@ public class Responsavel {
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
-    protected Responsavel() {
+    @Column(name = "updated_at", insertable = false, updatable = false)
+    private Instant updatedAt;
+
+    protected InscricaoResponsavel() {
         // JPA
     }
 
-    public Responsavel(String parentesco, String nome, String telefone, String celular, String email, boolean principal) {
+    public InscricaoResponsavel(String parentesco, String nome, String telefone, String celular, String email, boolean principal) {
         this.parentesco = parentesco;
         this.nome = nome;
         this.telefone = telefone;
@@ -100,12 +92,12 @@ public class Responsavel {
         return tenantId;
     }
 
-    public Voluntario getVoluntario() {
-        return voluntario;
+    public Inscricao getInscricao() {
+        return inscricao;
     }
 
-    public void setVoluntario(Voluntario voluntario) {
-        this.voluntario = voluntario;
+    public void setInscricao(Inscricao inscricao) {
+        this.inscricao = inscricao;
     }
 
     public String getParentesco() {
@@ -158,5 +150,9 @@ public class Responsavel {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 }

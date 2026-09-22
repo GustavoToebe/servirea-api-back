@@ -26,6 +26,14 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
 
+  # Upload de foto (Fase 7, seção 107) — o padrão do Spring Boot é 1 MB,
+  # bem abaixo do limite de 5 MB do bucket "voluntarios-fotos" (V015);
+  # 6 MB dá margem para o multipart/form-data em torno do arquivo em si.
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 6MB
+
 # Autenticação própria (Fase 5, seção 32/105). "jwt.secret" propositalmente
 # NÃO tem valor padrão aqui — só em application-dev.yml/application-test.yml
 # (segredo fixo, só para desenvolvimento/teste) e via variável de ambiente
@@ -45,6 +53,35 @@ servire:
   # registrado — valor de dev/test em application-dev.yml/application-test.yml;
   # em produção vem de FRONTEND_BASE_URL sem valor padrão (application-prod.yml,
   # mesma regra de DB_URL/JWT_SECRET, seção 90).
+
+  # Storage (Fase 7, seção 107). base-url/service-role-key propositalmente
+  # SEM entrada aqui — mesma regra de JWT_SECRET/DB_URL (seção 90): nunca
+  # versionar segredo/endpoint de produção. application-dev.yml/
+  # application-test.yml dão um valor de desenvolvimento (upload real
+  # nesses ambientes falha alto e cedo via
+  # SupabaseStorageService.requireConfigurado, nunca silenciosamente);
+  # application-prod.yml exige SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY sem
+  # valor padrão (falha a subida se ausente).
+  storage:
+    bucket: voluntarios-fotos
+    signed-url-ttl: PT1H
+    max-file-size-bytes: 5242880
+    allowed-mime-types: image/jpeg,image/png,image/webp,image/heic
+
+  # Turnstile (Fase 8, seção 44) — anti-robô no formulário público de
+  # inscrição. secret-key também sem entrada aqui, mesma regra acima — o
+  # TurnstileService falha fechado (recusa a inscrição) se estiver vazio,
+  # nunca deixa passar sem validar.
+
+  # Rate limit do formulário público de inscrição (Fase 8, seção 45) — um
+  # limitador em memória, por IP, de janela deslizante. Deliberadamente NÃO
+  # usa Bucket4j/Redis (seção 45 só lista Bucket4j como UMA opção possível,
+  # e desaconselha introduzir Redis) — funciona só para uma única instância
+  # da aplicação; ver ressalva no README/plano mestre.
+  rate-limit:
+    inscricao-publica:
+      max-tentativas: 5
+      janela: PT1H
 
 server:
   port: ${PORT:8080}

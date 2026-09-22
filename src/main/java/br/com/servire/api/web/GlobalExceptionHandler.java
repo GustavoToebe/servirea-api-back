@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -44,6 +45,23 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ApiError> handleApiException(ApiException ex, HttpServletRequest request) {
         log.warn("Erro de negócio tratado: status={} message={}", ex.getStatus(), ex.getMessage());
         return build(ex.getStatus(), ex.getMessage(), request, null);
+    }
+
+    /**
+     * Rede de segurança do controle otimista de {@code Escala} (Fase 9,
+     * seção 47) — {@code EscalaService.atualizar} já faz uma checagem
+     * explícita de versão antes de mudar qualquer coisa (path normal),
+     * mas se duas requisições concorrentes passarem por aquela checagem
+     * quase ao mesmo tempo, é o próprio {@code @Version} do Hibernate que
+     * detecta o conflito no flush, lançando esta exceção (o Spring Data
+     * já embrulha o {@code OptimisticLockException} nativo do Hibernate
+     * nesta). Mesma mensagem de negócio dos dois caminhos, para o cliente
+     * nunca ver diferença.
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiError> handleOptimisticLocking(ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+        log.warn("Conflito de edição concorrente (controle otimista): {}", ex.getMessage());
+        return build(HttpStatus.CONFLICT, "A escala foi alterada por outro usuário. Atualize a página.", request, null);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)

@@ -1,12 +1,16 @@
 package br.com.servire.api.voluntario;
 
+import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.voluntario.dto.ResponsavelRequest;
 import br.com.servire.api.voluntario.dto.VoluntarioRequest;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,9 +29,11 @@ import java.util.UUID;
 public class VoluntarioService {
 
     private final VoluntarioRepository voluntarioRepository;
+    private final StorageService storageService;
 
-    public VoluntarioService(VoluntarioRepository voluntarioRepository) {
+    public VoluntarioService(VoluntarioRepository voluntarioRepository, StorageService storageService) {
         this.voluntarioRepository = voluntarioRepository;
+        this.storageService = storageService;
     }
 
     @Transactional(readOnly = true)
@@ -67,6 +73,59 @@ public class VoluntarioService {
         Voluntario voluntario = buscarPorId(id);
         voluntario.setAtivo(ativo);
         return voluntario;
+    }
+
+    /**
+     * Envia a foto do voluntário para o Storage (Fase 7, seção 107) e
+     * grava o caminho retornado em {@code foto_path}. O arquivo em si NÃO
+     * participa da transação SQL (é uma chamada HTTP ao Supabase Storage,
+     * não algo que o rollback do banco desfaz) — por isso o upload
+     * acontece ANTES de qualquer escrita no banco: se o Storage falhar,
+     * nada muda no voluntário; se o upload funcionar mas o commit da
+     * transação falhar depois, fica um arquivo órfão no bucket (aceitável,
+     * documentado — pior cenário é bem menos grave que o inverso).
+     */
+    @Transactional
+    public Voluntario definirFoto(UUID id, MultipartFile foto) {
+        Voluntario voluntario = buscarPorId(id);
+        if (foto == null || foto.isEmpty()) {
+            throw new BadRequestException("Nenhum arquivo de foto enviado.");
+        }
+        String caminho = voluntario.getId() + "/perfil-" + System.currentTimeMillis() + extensaoDe(foto);
+        byte[] conteudo;
+        try {
+            conteudo = foto.getBytes();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
+        }
+        String caminhoSalvo = storageService.armazenar(caminho, conteudo, foto.getContentType());
+        voluntario.setFotoPath(caminhoSalvo);
+        return voluntario;
+    }
+
+    @Transactional(readOnly = true)
+    public String obterUrlFoto(UUID id) {
+        Voluntario voluntario = buscarPorId(id);
+        if (voluntario.getFotoPath() == null) {
+            throw new ResourceNotFoundException("Voluntário não possui foto cadastrada.");
+        }
+        return storageService.gerarUrlAssinada(voluntario.getFotoPath());
+    }
+
+    private String extensaoDe(MultipartFile foto) {
+        String nomeOriginal = foto.getOriginalFilename();
+        if (nomeOriginal != null && nomeOriginal.contains(".")) {
+            return nomeOriginal.substring(nomeOriginal.lastIndexOf('.'));
+        }
+        // contentType pode vir nulo (cliente não setou) — switch sobre
+        // String nula lançaria NullPointerException, por isso o
+        // String.valueOf() abaixo (nunca nulo, cai no "default").
+        return switch (String.valueOf(foto.getContentType())) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            case "image/heic" -> ".heic";
+            default -> ".jpg";
+        };
     }
 
     private void aplicarCampos(Voluntario voluntario, VoluntarioRequest request) {

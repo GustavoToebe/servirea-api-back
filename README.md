@@ -1,11 +1,20 @@
-# Servire API — Fases 2 a 6 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria + voluntários)
+# Servire API — Fases 2 a 9 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria + voluntários + storage + inscrições + escalas)
 
 Este projeto cobre a **FASE 2** (fundação Spring Boot, seção 102/125), a
 **FASE 3** (modelo SaaS lógico, seção 103/126), a **FASE 4**
 (`TenantContext`/`@TenantId`, seção 104/126), a **FASE 5** (autenticação
-própria, seção 105/32-36) e a **FASE 6** (voluntários/responsáveis, seção
-37/38/106) do `plano_mestre_servire_v2_mvp_baixo_custo.md`. Escala,
-inscrição e storage de fotos ficam para as Fases 7-9.
+própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
+37/38/106), a **FASE 7** (storage de fotos, seção 107), a **FASE 8**
+(inscrições públicas, seção 44/108) e a **FASE 9** (escalas, seção
+46/47/109) do `plano_mestre_servire_v2_mvp_baixo_custo.md`.
+
+> ⏳ **Fases 7, 8 e 9 implementadas em 22/09/2026, ainda SEM confirmação de
+> `mvn clean verify` real** — por instrução explícita do usuário, as três
+> fases foram feitas juntas, numa única rodada, para só então pedir um
+> build consolidado (ver seção própria de cada fase abaixo para detalhes,
+> decisões e riscos residuais). Até essa confirmação chegar, tratar como
+> "implementado, não verificado" — mesma disciplina já seguida nas fases
+> anteriores.
 
 ## ✅ Fases 2, 3, 4 e 5 com build verificado de verdade (21/09/2026)
 
@@ -624,6 +633,206 @@ cobre as regras de negócio da Fase 6 (responsável principal único,
 substituição de responsáveis) — decisão explícita do usuário de adiar
 testes, ver "Próximos passos".
 
+## ⏳ Fase 7 — storage de fotos (seção 107 do plano mestre)
+
+Upload/leitura de foto de voluntário/inscrição via Supabase Storage,
+chamado diretamente por `RestClient` (não pelo SDK/protocolo S3 completo —
+decisão deliberada de manter a stack enxuta, seção 15).
+
+**Entidades/classes novas** (pacote `br.com.servire.api.storage`):
+`StorageProperties` (`bucket`, `base-url`, `service-role-key`,
+`signed-url-ttl`, `max-file-size-bytes`, `allowed-mime-types` — valores
+padrão iguais aos já confirmados em produção para `voluntarios-fotos`,
+V015: privado, 5 MB, jpeg/png/webp/heic), `StorageService` (interface) +
+`SupabaseStorageService` (implementação), `StorageException`.
+
+**Endpoints novos em `VoluntarioController`:** `POST /voluntarios/{id}/foto`
+(multipart) grava a foto e atualiza `foto_path`; `GET
+/voluntarios/{id}/foto-url` devolve uma URL assinada temporária (o bucket é
+privado). `InscricaoService` (Fase 8) reusa o mesmo `StorageService` para a
+foto do formulário público.
+
+**Configuração:** `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` sem valor
+padrão em `application.yml` (mesma regra de `JWT_SECRET`/`DB_URL`, seção
+90) — vazios em dev/test, obrigatórios via variável de ambiente em
+produção. Upload de multipart exigiu subir
+`spring.servlet.multipart.max-file-size`/`max-request-size` (padrão do
+Spring Boot é 1 MB, abaixo do limite de 5 MB do bucket) para 6 MB.
+
+### ⚠️ Riscos residuais a verificar no próximo build real
+
+1. **Formato exato da API REST do Supabase Storage.** `SupabaseStorageService`
+   usa três endpoints (`POST /storage/v1/object/{bucket}/{caminho}` para
+   upload com header `x-upsert: true`, `POST /storage/v1/object/sign/{bucket}/{caminho}`
+   para gerar URL assinada, `DELETE /storage/v1/object/{bucket}/{caminho}`
+   para excluir) baseados na documentação pública do Supabase Storage —
+   **não foi possível confirmar contra um projeto Supabase real neste
+   ambiente de pesquisa.** Se o upload/assinatura falhar com um erro de
+   formato de request/response, `SupabaseStorageService` é o primeiro
+   lugar a checar (tem javadoc detalhado apontando exatamente isso).
+2. **Bean `RestClient.Builder`.** Injetado no construtor de
+   `SupabaseStorageService`/`TurnstileService`, esperado auto-configurado
+   pelo `spring-boot-starter-web` — não foi possível confirmar rodando de
+   verdade neste ambiente. Se o contexto Spring falhar ao subir com "no
+   qualifying bean of type RestClient.Builder", é aqui que se resolve
+   (provável correção: declarar o bean manualmente).
+3. **Upload de foto não participa da transação SQL** — documentado
+   deliberadamente assim (mesmo texto já usado na javadoc de
+   `VoluntarioService`): se o commit do banco falhar depois de um upload
+   bem-sucedido, fica um arquivo órfão no bucket. Aceitável, não corrigido
+   nesta rodada.
+
+## ⏳ Fase 8 — inscrições públicas (seção 21/44/108 do plano mestre)
+
+Formulário público de auto-inscrição (`/public/{tenantSlug}/inscricoes`),
+com fila de aprovação/rejeição interna.
+
+**Entidades novas** (pacote `br.com.servire.api.inscricao`): `Inscricao`
+(espelha quase todos os campos de `Voluntario` + campos de auditoria de
+aprovação/rejeição, `StatusInscricao` ENUM nativo PENDENTE/APROVADA/
+REJEITADA) e `InscricaoResponsavel` (mesmo formato de `Responsavel`, mas
+para uma inscrição). Mesma regra "exatamente um responsável principal"
+(seção 38) reaplicada em `InscricaoService`.
+
+**Barreiras do endpoint público, nesta ordem** (a mais barata primeiro):
+1. **Rate limit por IP** (`InscricaoRateLimiter`) — em memória, janela
+   deslizante, 5 tentativas/hora por padrão
+   (`servire.rate-limit.inscricao-publica`). Deliberadamente **sem**
+   Bucket4j/Redis (seção 45 só lista Bucket4j como uma opção possível, e
+   desaconselha Redis nesta fase) — funciona corretamente com uma única
+   instância da aplicação (o cenário atual do VPS); não escala
+   horizontalmente sem um repensar.
+2. **Cloudflare Turnstile** (`TurnstileService`, seção 44) — **falha
+   fechado de propósito**: se `servire.turnstile.secret-key` estiver vazio,
+   se o token do cliente vier vazio, se a chamada ao Cloudflare falhar, ou
+   se a resposta disser `success: false`, a inscrição é sempre recusada.
+   Nunca existe um caminho que deixa passar sem validar.
+3. Resolução do tenant pelo slug + checagem de Kill Switch (`tenant.status`
+   ATIVO/TRIAL) — mesma regra da seção 28, reaplicada aqui porque o
+   formulário público não passa por `JwtAuthenticationFilter`
+   (`InscricaoService.criarPublica` é a única classe de negócio do projeto
+   que chama `TenantContext.set`/`clear` diretamente, imitando o filtro).
+
+**Endpoints:**
+
+| Verbo/rota | Autenticação | Uso |
+|---|---|---|
+| `POST /public/{tenantSlug}/inscricoes` | Nenhuma | `multipart/form-data`: parte `dados` (JSON) + parte `foto` opcional |
+| `GET /inscricoes?status=` | Autenticado | Fila de aprovação |
+| `GET /inscricoes/{id}` | Autenticado | Detalhe |
+| `PUT /inscricoes/{id}` | Autenticado | Edita uma inscrição ainda PENDENTE |
+| `POST /inscricoes/{id}/aprovar` | Autenticado | Cria o `Voluntario` de verdade + copia responsáveis, vincula `inscricao.voluntario_id` |
+| `POST /inscricoes/{id}/rejeitar` | Autenticado | Exige `motivo` (CHECK `inscricoes_rejeitada_ck`, V008) |
+
+**Deliberadamente fora do escopo desta versão:** tabela de auditoria
+dedicada para aprovação/rejeição (só um log, sem persistência própria —
+pacote `auditoria/` continua um item futuro do plano mestre, seção 16).
+
+### ⚠️ Riscos residuais a verificar no próximo build real
+
+1. **`X-Forwarded-For` sem reverse proxy confirmado.** O rate limit lê esse
+   header antes de cair para `getRemoteAddr()` — só é confiável se o
+   Nginx/Caddy do VPS de produção **reescrever** (não só repassar) esse
+   header; não foi possível confirmar a configuração exata do deploy
+   real neste ambiente de pesquisa (checklist de deploy, seção 11/89).
+2. **Formato da resposta do Cloudflare Turnstile** — `TurnstileService` lê
+   a resposta como `Map<String,Object>` e olha só o campo `success`, para
+   evitar depender de uma anotação de (de)serialização específica de uma
+   versão do Jackson; não foi possível testar contra o Cloudflare de
+   verdade neste ambiente.
+3. Mesmo risco de `RestClient.Builder` já listado na Fase 7.
+4. **Nenhum teste automatizado** cobre o fluxo completo de inscrição
+   pública (rate limit, Turnstile, aprovação, rejeição) — mesma decisão de
+   adiar testes já tomada para as Fases 5/6.
+
+## ⏳ Fase 9 — escalas (seção 9.2/46/47/109 do plano mestre)
+
+Escalas de serviço (semanal/mensal), com eventos (missas) e vagas
+(funções a preencher por voluntário).
+
+**Entidades novas** (pacote `br.com.servire.api.escala`): `Escala`
+(`TipoEscala` ENUM nativo SEMANAL/MENSAL, `StatusEscala` ENUM nativo
+RASCUNHO/FINALIZADA/CANCELADA, `@Version` para controle otimista),
+`EscalaEvento` (data/horário/celebração), `EscalaVaga` (reaproveita o
+mesmo `FuncaoEscala` da Fase 6, posição, voluntário opcional).
+
+**Comportamento preservado deliberadamente:** `PUT /escalas/{id}` continua
+"apaga todos os eventos/vagas e reinsere" (mesmo padrão do Angular atual,
+já documentado assim desde a migration V006) — `EscalaService` implementa
+isso via `clear()` + reinserção na coleção gerenciada pelo Hibernate
+(`orphanRemoval = true`), nunca SQL nativo (Native Query Gate, seção 81:
+qualquer `nativeQuery=true`/JDBC direto numa tabela tenant-aware bypassa o
+filtro automático do `@TenantId`).
+
+**Controle otimista (seção 47):** `Escala.version` (`@Version`, coluna
+nova de V023 — não existia antes). `EscalaService.atualizar` faz uma
+checagem explícita comparando a versão recebida no payload com a versão
+atual no banco, devolvendo `409 CONFLICT` com a mensagem "A escala foi
+alterada por outro usuário. Atualize a página." — e o próprio
+`@Version` do Hibernate fica como rede de segurança contra uma corrida de
+verdade entre duas requisições concorrentes (`GlobalExceptionHandler`
+ganhou um handler para `ObjectOptimisticLockingFailureException` com a
+mesma mensagem).
+
+**Transições de estado:** `POST /escalas/{id}/finalizar` (só de
+RASCUNHO), `POST /escalas/{id}/cancelar` (de RASCUNHO ou FINALIZADA),
+`POST /escalas/{id}/reabrir` (de FINALIZADA ou CANCELADA, volta para
+RASCUNHO), `DELETE /escalas/{id}` (só permitido se CANCELADA — regra
+explícita do plano mestre). Edição (`PUT`) só é permitida em RASCUNHO —
+uma escala FINALIZADA precisa ser reaberta antes de editar.
+
+**Endpoints:**
+
+| Verbo/rota | Uso |
+|---|---|
+| `GET /escalas?tipo=&status=&ano=&mes=` | Lista com filtros |
+| `GET /escalas/{id}` | Detalhe com eventos/vagas aninhados |
+| `POST /escalas` | Cria (RASCUNHO) |
+| `PUT /escalas/{id}` | Substitui eventos/vagas (controle otimista) |
+| `POST /escalas/{id}/finalizar` \| `/cancelar` \| `/reabrir` | Transições de estado |
+| `DELETE /escalas/{id}` | Só se CANCELADA |
+
+**Migration nova:** `V023__ajustes_fases_7_8_9.sql` — repontou as FKs
+`escalas.created_by`/`inscricoes.aprovado_por`/`inscricoes.rejeitado_por`,
+que ainda apontavam para `auth.users` (Supabase Auth, em remoção
+progressiva, seção 32/83), para `public.usuario` (a identidade de ator
+própria da aplicação desde a Fase 5); e somou `escalas.version` para o
+controle otimista acima. `FlywayMigrationIntegrationTest` atualizado de 22
+para 23 migrations.
+
+**Bug real encontrado por revisão de schema (não por build), corrigido
+antes de qualquer build real acusar o problema:** durante o planejamento
+conjunto das Fases 7/8/9, uma releitura completa de
+`V021__add_tenant_id_domain_tables.sql` revelou que a entidade
+`Responsavel` (Fase 6) tinha sido escrita olhando só a migration V004
+original — sem saber que V021 (Fase 3/4, anterior à própria Fase 6) já
+tinha acrescentado `tenant_id NOT NULL` a `responsaveis`. A entidade,
+sem mapear essa coluna, não foi pega pelo `ddl-auto: validate` do build da
+Fase 6 (esse modo só falha se uma coluna MAPEADA divergir do banco — não
+se a entidade ignorar uma coluna existente) — o erro só apareceria em
+tempo de execução, como violação de NOT NULL, no primeiro INSERT real em
+`responsaveis`. Corrigido agora, adicionando `@TenantId` a `Responsavel`
+(mesmo padrão de `Voluntario`/`Inscricao`/etc.) — ver javadoc da classe
+para o relato completo.
+
+**Deliberadamente fora do escopo desta versão** (referenciado pela seção
+109, itens do documento técnico): controle de faltas e disponibilidade do
+voluntário — não foram desenhados a tempo nesta rodada conjunta das Fases
+7/8/9; ficam para uma próxima iteração, com entidades/campos próprios
+ainda a definir.
+
+### ⚠️ Riscos residuais a verificar no próximo build real
+
+1. **Controle otimista nunca testado contra um Postgres real** — nem a
+   checagem explícita de versão em `EscalaService`, nem o
+   `ObjectOptimisticLockingFailureException` como rede de segurança.
+2. Cascata de três níveis tenant-aware (`Escala` → `EscalaEvento` →
+   `EscalaVaga`, todos com `@TenantId` próprio) nunca confirmada rodando —
+   o mecanismo é o mesmo já confirmado para `Voluntario`/`Responsavel`
+   (Fase 6), mas com mais um nível de profundidade.
+3. Nenhum teste automatizado cobre o "apaga tudo e reinsere" de eventos,
+   as transições de estado, nem o controle otimista.
+
 ## Como rodar localmente
 
 Requer um PostgreSQL acessível (local, Docker, ou outro) para o profile
@@ -679,7 +888,22 @@ src/main/java/br/com/servire/api/
     Voluntario.java, VoluntarioRepository.java, VoluntarioService.java, VoluntarioController.java
     Responsavel.java, ResponsavelRepository.java
     TipoVoluntario.java, FuncaoEscala.java
-    dto/   <- VoluntarioRequest, VoluntarioResponse, ResponsavelRequest, ResponsavelResponse
+    dto/   <- VoluntarioRequest, VoluntarioResponse, ResponsavelRequest, ResponsavelResponse, FotoUrlResponse
+  storage/   <- Fase 7
+    StorageProperties.java, StorageConfiguration.java
+    StorageService.java (interface), SupabaseStorageService.java, StorageException.java
+  inscricao/   <- Fase 8
+    Inscricao.java, InscricaoRepository.java, InscricaoResponsavel.java, InscricaoResponsavelRepository.java
+    StatusInscricao.java, InscricaoService.java
+    PublicInscricaoController.java, InscricaoController.java
+    TurnstileProperties.java, TurnstileService.java
+    RateLimitProperties.java, InscricaoRateLimiter.java, InscricaoConfiguration.java
+    dto/   <- InscricaoPublicaRequest, InscricaoAtualizarRequest, InscricaoRejeitarRequest, InscricaoResponse,
+              InscricaoResponsavelRequest, InscricaoResponsavelResponse
+  escala/   <- Fase 9
+    Escala.java, EscalaEvento.java, EscalaVaga.java, EscalaRepository.java
+    TipoEscala.java, StatusEscala.java, EscalaService.java, EscalaController.java
+    dto/   <- EscalaRequest, EscalaEventoRequest, EscalaVagaRequest, EscalaResponse, EscalaEventoResponse, EscalaVagaResponse
 src/main/resources/
   application.yml, application-dev.yml, application-prod.yml
   logback-spring.xml
@@ -689,6 +913,7 @@ src/main/resources/
     V020.sql        <- seed do tenant inicial (placeholder de nome)
     V021.sql        <- tenant_id + FKs compostas nas 7 tabelas de domínio (Fase 3/4)
     V022.sql        <- password_reset_token (Fase 5)
+    V023.sql        <- repontar FKs auth.users -> usuario + escalas.version (Fases 7/8/9)
 src/test/java/br/com/servire/api/
   AbstractIntegrationTest.java  <- Testcontainers + stub Supabase
   ServireApiApplicationTests.java
@@ -698,30 +923,45 @@ src/test/java/br/com/servire/api/
 ```
 
 `DevFixedTenantFilter` (andaime temporário da Fase 4) foi removido na
-Fase 5, substituído por `security/JwtAuthenticationFilter.java`. Ainda
-não existem pacotes `config/`, `backoffice/`, `inscricao/`, `escala/`,
-`arquivo/`, `billing/`, `auditoria/` da estrutura-alvo completa (seção
-16 do plano mestre) — eles entram progressivamente a partir da Fase 7.
+Fase 5, substituído por `security/JwtAuthenticationFilter.java`. Os
+pacotes `storage/`, `inscricao/` e `escala/` entraram na Fase 7/8/9. Ainda
+não existem `config/`, `backoffice/`, `arquivo/`, `billing/`,
+`auditoria/` da estrutura-alvo completa (seção 16 do plano mestre).
 
 ## Próximos passos
 
 > **Decisão explícita do usuário (22/09/2026):** priorizar entregar
-> funcionalidade (Fases 6+) antes de escrever testes automatizados
-> pendentes. Os itens 1 e 2 abaixo continuam sendo dívida técnica
+> funcionalidade (Fases 6-9) antes de escrever testes automatizados
+> pendentes. Os itens de teste abaixo continuam sendo dívida técnica
 > reconhecida, não esquecida — só foram conscientemente adiados.
 
-1. **Testes pendentes (adiados de propósito):** integração do fluxo de
-   autenticação completo (login single-tenant/multi-tenant, seleção de
-   paróquia, refresh com rotation, detecção de reuso, logout, Kill Switch,
-   forgot/reset password — Fase 5) e testes de repositório/isolamento
-   para `Voluntario` expandido e `Responsavel` (seção 80 — Fase 6).
-2. Confirmar a Fase 6 com um `mvn clean verify` real (ver aviso ⏳ acima)
-   — em especial o mapeamento de `funcoesHabilitadas` (array de ENUM
-   nativo), o risco residual mais importante desta fase.
+1. **Confirmar as Fases 7, 8 e 9 com um `mvn clean verify` real** — é o
+   próximo passo imediato depois desta rodada de implementação (ver o
+   aviso ⏳ no topo deste README e os "Riscos residuais" de cada fase
+   acima). Até essa confirmação chegar, nada aqui deve ser tratado como
+   "pronto".
+2. **Testes pendentes (adiados de propósito):** integração do fluxo de
+   autenticação completo (Fase 5); testes de repositório/isolamento para
+   `Voluntario`/`Responsavel` (Fase 6); fluxo completo de inscrição
+   pública — rate limit, Turnstile, aprovação, rejeição (Fase 8);
+   "apaga tudo e reinsere" de eventos, transições de estado e controle
+   otimista de `Escala` (Fase 9).
 3. Roles/permissões de verdade aplicadas a endpoints de negócio (seção
    31) — hoje `authorizeHttpRequests` só distingue autenticado/não
-   autenticado, sem checar a role do vínculo `usuario_tenant`.
-4. Storage de fotos (Fase 7, seção 107) — upload real e signed URL para
-   `voluntarios.foto_path`, hoje só um campo de metadado sem escrita.
-5. Decidir um provedor de e-mail real para substituir `LoggingEmailSender`.
-6. Migrar inscrições e escalas do Angular/Supabase para cá (Fases 8-9).
+   autenticado, sem checar a role do vínculo `usuario_tenant` (vale para
+   todos os módulos, incluindo aprovar/rejeitar inscrição e escalas).
+4. Decidir um provedor de e-mail real para substituir `LoggingEmailSender`.
+5. Desenhar controle de faltas e disponibilidade do voluntário
+   (referenciados pela seção 109, deliberadamente descopados da Fase 9
+   nesta rodada — ver seção da Fase 9 acima).
+6. Confirmar de verdade contra um Supabase real: o formato da API REST do
+   Storage (Fase 7) e a resposta do Cloudflare Turnstile (Fase 8) — ambos
+   implementados a partir de documentação pública, nunca testados contra
+   o serviço real neste ambiente de pesquisa.
+7. Tabela de auditoria dedicada (`auditoria/`, seção 16) para
+   aprovação/rejeição de inscrição — hoje só um log, sem persistência
+   própria.
+8. Validar a configuração real do reverse proxy do VPS de produção
+   (Nginx/Caddy, seção 11/89) quanto a `X-Forwarded-For` — o rate limit da
+   Fase 8 depende de esse header vir reescrito pelo proxy, não só
+   repassado do cliente.
