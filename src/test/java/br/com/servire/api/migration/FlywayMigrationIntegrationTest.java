@@ -1,13 +1,13 @@
 package br.com.servire.api.migration;
 
-import br.com.servire.api.AbstractIntegrationTest;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import br.com.servire.api.AbstractIntegrationTest;
 
 /**
  * Porta para JUnit das asserções estruturais que já tinham sido validadas
