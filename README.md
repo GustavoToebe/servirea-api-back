@@ -12,10 +12,11 @@ própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
 > instrução explícita do usuário — CONFIRMADO com `mvn clean verify` real:
-> `BUILD SUCCESS`, 75 testes, 0 falhas, 0 erros.** Foram necessárias três
-> rodadas reais de build até chegar aqui — ver o histórico completo logo
-> abaixo — encontrando e corrigindo **três bugs reais de produção (#8, #9
-> e #10)** e três correções de teste ao longo do caminho. Nenhum `mvn`
+> `BUILD SUCCESS`, 75 testes, 0 falhas, 0 erros — reconfirmado numa quarta
+> rodada independente.** Foram necessárias quatro rodadas reais de build
+> até chegar aqui — ver o histórico completo logo abaixo — encontrando e
+> corrigindo **três bugs reais de produção (#8, #9 e #10)** e três
+> correções de teste ao longo do caminho. Nenhum `mvn`
 > local está disponível neste ambiente de pesquisa (Maven Central
 > bloqueado); toda correção foi feita por revisão manual a partir dos
 > logs completos que o usuário enviou depois de cada rodada.
@@ -46,6 +47,14 @@ própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 >    75 classes/métodos de teste da Fase 10 + débito de testes das Fases
 >    5-9 confirmados de verdade contra um Postgres real — ver seção da
 >    Fase 10 abaixo para o detalhamento completo.
+> 4. ✅ **Quarta rodada (22/09/2026, 13:15) — reconfirmação independente,
+>    direto do terminal do usuário: `BUILD SUCCESS`, `Tests run: 75,
+>    Failures: 0, Errors: 0`.** A terceira rodada acima usou a correção do
+>    Bug real #10 tal como aplicada por outra IA (ver nota de autoria
+>    abaixo); esta quarta rodada já roda com essa correção reformatada no
+>    padrão do projeto e com o fix proativo em
+>    `InscricaoService.substituirResponsaveis` — confirmando que nenhuma
+>    das duas mudanças quebrou nada.
 >
 > **Nota sobre a autoria da correção do Bug real #10:** o usuário aplicou
 > essa correção com ajuda de outra IA (por ter esgotado o limite de uso
