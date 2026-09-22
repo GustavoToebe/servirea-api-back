@@ -8,20 +8,28 @@ própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
 (inscrições públicas, seção 44/108) e a **FASE 9** (escalas, seção
 46/47/109) do `plano_mestre_servire_v2_mvp_baixo_custo.md`.
 
-> ⏳ **Fases 7, 8 e 9 implementadas em 22/09/2026, ainda SEM confirmação de
-> `mvn clean verify` real** — por instrução explícita do usuário, as três
-> fases foram feitas juntas, numa única rodada, para só então pedir um
-> build consolidado (ver seção própria de cada fase abaixo para detalhes,
-> decisões e riscos residuais). Até essa confirmação chegar, tratar como
-> "implementado, não verificado" — mesma disciplina já seguida nas fases
-> anteriores.
+> ✅ **Fases 7, 8 e 9 com `BUILD SUCCESS` confirmado em 22/09/2026** — por
+> instrução explícita do usuário, as três fases foram feitas juntas, numa
+> única rodada, para só então pedir um build consolidado (ver seção
+> própria de cada fase abaixo para detalhes e decisões).
 >
-> A primeira rodada desse build real (22/09/2026, 09:14-09:16) voltou
-> `BUILD FAILURE` (13 testes, 0 falhas, **8 erros**) — **Bug real #6**:
-> faltava o bean `RestClient.Builder`, usado por `SupabaseStorageService`
-> (Fase 7) e `TurnstileService` (Fase 8). Corrigido com a nova classe
-> `RestClientConfiguration` (detalhes na seção da Fase 7 abaixo) — ainda
-> **pendente de reconfirmação** com um novo `mvn clean verify` real.
+> A primeira rodada desse build real (09:14-09:16) voltou `BUILD FAILURE`
+> (13 testes, 0 falhas, **8 erros**) — **Bug real #6**: faltava o bean
+> `RestClient.Builder`, usado por `SupabaseStorageService` (Fase 7) e
+> `TurnstileService` (Fase 8). Corrigido com a nova classe
+> `RestClientConfiguration` (detalhes na seção da Fase 7 abaixo). **Uma
+> segunda rodada (09:24) confirmou o `BUILD SUCCESS`: 13 testes, 0
+> falhas, 0 erros** — Bug real #6 está corrigido de verdade.
+>
+> ⚠️ **Isso confirma que o contexto Spring sobe e os 13 testes existentes
+> continuam passando — não confirma o comportamento funcional das Fases
+> 7/8/9 em si**, já que nenhum teste automatizado novo cobre o storage, as
+> inscrições públicas ou as escalas (débito técnico assumido, seção
+> "Próximos passos"). Os riscos residuais de cada fase (formato real da
+> API do Supabase Storage, resposta do Cloudflare Turnstile,
+> confiabilidade de `X-Forwarded-For` em produção, controle otimista das
+> escalas sob concorrência real) continuam **não verificados** — ver as
+> seções de cada fase abaixo.
 
 ## ✅ Fases 2, 3, 4 e 5 com build verificado de verdade (21/09/2026)
 
@@ -690,8 +698,8 @@ que "vinha de graça" no Boot 3 precisou ser resolvida à mão no Boot 4.1.
 declarando o bean manualmente (`RestClient.builder()`), em vez de depender
 de qual módulo do Boot 4 traz — ou não — essa auto-configuration.
 
-> **⏳ Ainda não reconfirmado com um novo `mvn clean verify` real** — este
-> é o próximo passo imediato.
+> ✅ **Confirmado corrigido por um novo `mvn clean verify` real** (22/09/2026,
+> 09:24): `BUILD SUCCESS`, 13 testes, 0 falhas, 0 erros.
 
 ### ⚠️ Riscos residuais a verificar no próximo build real
 
@@ -774,8 +782,9 @@ pacote `auditoria/` continua um item futuro do plano mestre, seção 16).
 
 > ℹ️ O **Bug real #6** (`RestClient.Builder` não auto-configurado, ver seção
 > da Fase 7 acima) também derrubava `InscricaoService`/`TurnstileService`
-> desta fase — já corrigido pela mesma classe `RestClientConfiguration`,
-> mesma disciplina de "ainda não reconfirmado" até o próximo build real.
+> desta fase — corrigido pela mesma classe `RestClientConfiguration` e
+> **confirmado** pelo `mvn clean verify` de 22/09/2026 09:24 (`BUILD
+> SUCCESS`, 0 erros).
 
 ## ⏳ Fase 9 — escalas (seção 9.2/46/47/109 do plano mestre)
 
