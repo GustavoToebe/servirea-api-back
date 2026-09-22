@@ -239,6 +239,39 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         TenantContext.clear();
     }
 
+    /**
+     * Fecha a lacuna documentada no javadoc de
+     * {@link InscricaoService#substituirResponsaveis} — o fix proativo
+     * (mesmo mecanismo do Bug real #10) nunca tinha sido exercitado por um
+     * teste que realmente TROCA o responsável principal de uma inscrição
+     * já existente via {@code atualizarPendente}. Sem o
+     * {@code entityManager.flush()} entre o {@code clear()} e os novos
+     * {@code INSERT}s, o Hibernate poderia tentar inserir o novo principal
+     * antes de apagar o antigo, violando o índice único parcial
+     * {@code ux_inscricao_responsavel_principal} (V009) — este teste
+     * passar confirma que isso não acontece mais.
+     */
+    @Test
+    void atualizarPendenteTrocandoOResponsavelPrincipalNaoLancaConflictException() {
+        Tenant tenant = criarTenant("trocar-principal");
+
+        TenantContext.set(tenant.getId());
+        Inscricao inscricao = inscricaoComResponsavelPrincipal("Candidato Troca de Principal");
+
+        InscricaoAtualizarRequest request = new InscricaoAtualizarRequest(
+                inscricao.getNomeCompleto(), null, TipoVoluntario.COROINHA,
+                null, null, null, null, null, null, null, null, null, null, null,
+                false, List.of(),
+                List.of(new InscricaoResponsavelRequest("Pai", "Novo Responsável Principal", null, null, null, true)));
+
+        Inscricao atualizada = inscricaoService.atualizarPendente(inscricao.getId(), request);
+
+        assertThat(atualizada.getResponsaveis()).hasSize(1);
+        assertThat(atualizada.getResponsaveis().get(0).getNome()).isEqualTo("Novo Responsável Principal");
+        assertThat(atualizada.getResponsaveis().get(0).isPrincipal()).isTrue();
+        TenantContext.clear();
+    }
+
     private Inscricao inscricaoComResponsavelPrincipal(String nome) {
         Inscricao inscricao = new Inscricao(nome);
         InscricaoResponsavel responsavel = new InscricaoResponsavel("Mãe", "Responsável de " + nome, null, null, null, true);

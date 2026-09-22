@@ -1805,11 +1805,15 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
      HTTP (500, 401) vira `EmailException` — nunca engolida. Continua sem
      confirmação contra a API real do Resend (nenhum acesso de rede a
      serviços externos a partir deste ambiente de pesquisa).
-2. Confirmar o fix proativo em `InscricaoService.substituirResponsaveis`
-   (mesmo padrão do Bug real #10, aplicado por analogia sem um teste que
-   o exercite desde a Fase 8/10) — um teste que troque o responsável
-   principal de uma inscrição PENDENTE via `atualizarPendente` fecharia
-   essa lacuna. Pode ser pago na mesma rodada do item 1.
+2. ⏳ **Teste escrito (22/09/2026) — ainda sem confirmação de `mvn clean
+   verify` real:** `InscricaoServiceIntegrationTest.atualizarPendenteTrocandoOResponsavelPrincipalNaoLancaConflictException`
+   troca o responsável principal de uma inscrição PENDENTE via
+   `atualizarPendente` e confirma que isso não lança `ConflictException`
+   — fecha a lacuna do fix proativo em
+   `InscricaoService.substituirResponsaveis` (mesmo padrão do Bug real
+   #10, aplicado por analogia desde a Fase 8/10, nunca antes exercitado
+   por um teste que trocasse o principal). Trate como ⏳ até o usuário
+   confirmar com um `mvn clean verify` real.
 3. Confirmar de verdade contra um serviço real: o formato da API REST do
    Supabase Storage (Fase 7), a resposta do Cloudflare Turnstile (Fase 8)
    e agora também a API do Resend (Fase 11) — todos os três implementados
