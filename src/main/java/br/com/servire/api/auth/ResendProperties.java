@@ -22,15 +22,13 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * já sobrescreve para {@code contato@servirea.com.br} (decidido com o
  * usuário em 22/09/2026).
  *
- * <p><b>Ressalva (22/09/2026):</b> {@code contato@servirea.com.br} só
- * funciona de verdade depois que o domínio {@code servirea.com.br}
- * (seção 122 item 16, registrado em 22/09/2026) estiver com status
- * VERIFICADO no painel do Resend — o usuário já criou os registros de DNS
- * (DKIM + SPF) pela Cloudflare, mas a propagação ainda estava pendente no
- * momento desta decisão (ver "Próximos passos" no README.md). Até a
- * verificação terminar, o Resend rejeita o envio com esse remetente; para
- * continuar testando enquanto isso, sobrescrever {@code RESEND_FROM} de
- * volta para {@code onboarding@resend.dev} via variável de ambiente.</p>
+ * <p><b>Domínio verificado (23/09/2026):</b> {@code servirea.com.br}
+ * (seção 122 item 16) está "Verified" no painel do Resend desde 23/09/2026
+ * 00:25, e um envio real com {@code contato@servirea.com.br} chegou no
+ * Gmail com SPF, DKIM e DMARC em PASS (ver "Próximos passos" no README.md).
+ * {@code onboarding@resend.dev} continua como padrão só aqui no record, para
+ * dev/test; se o domínio perder a verificação, sobrescrever
+ * {@code RESEND_FROM} de volta para ele via variável de ambiente.</p>
  */
 @ConfigurationProperties(prefix = "servire.email.resend")
 public record ResendProperties(

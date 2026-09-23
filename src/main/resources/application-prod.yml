@@ -44,12 +44,9 @@ servire:
   # para "from": não é segredo (é o próprio remetente visível ao
   # destinatário), então tem valor padrão aqui — decidido com o usuário em
   # 22/09/2026 como contato@servirea.com.br (troca do domínio de teste
-  # onboarding@resend.dev, seção 122 item 16), mas SÓ funciona depois que
-  # o domínio servirea.com.br estiver com status "Verified" no painel do
-  # Resend (DNS ainda propagando no momento desta decisão — ver
-  # "Próximos passos" no README.md); até lá, o Resend rejeita o envio com
-  # esse remetente e RESEND_FROM pode ser sobrescrito via variável de
-  # ambiente para continuar usando onboarding@resend.dev temporariamente.
+  # onboarding@resend.dev, seção 122 item 16). Domínio servirea.com.br
+  # "Verified" no Resend e envio real confirmado em 23/09/2026 (SPF, DKIM
+  # e DMARC em PASS no Gmail — ver "Próximos passos" no README.md).
   email:
     provider: ${EMAIL_PROVIDER:resend}
     resend:

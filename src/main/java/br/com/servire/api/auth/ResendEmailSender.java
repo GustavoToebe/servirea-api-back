@@ -33,23 +33,19 @@ import java.util.Map;
  * 22/09/2026 — confirmada contra o próprio código de exemplo Java que o
  * usuário copiou do painel do Resend):</b> {@code POST
  * https://api.resend.com/emails}, header {@code Authorization: Bearer
- * <api-key>}, corpo JSON {@code {"from", "to", "subject", "html"}}. Não
- * foi possível confirmar contra uma chamada real de dentro deste ambiente
- * de pesquisa (sem acesso de rede ao Resend aqui) — <b>ainda não
- * confirmado por um {@code mvn clean verify}/teste manual real</b>; se o
- * próximo envio de verdade (via {@code POST /auth/forgot-password} com
- * {@code EMAIL_PROVIDER=resend}) acusar erro de formato de request/
+ * <api-key>}, corpo JSON {@code {"from", "to", "subject", "html"}}.
+ * <b>Confirmado contra a API real</b> via {@code POST /auth/forgot-password}
+ * em 22/09/2026 (com {@code onboarding@resend.dev}) e em 23/09/2026 (com o
+ * domínio próprio). Se um envio futuro acusar erro de formato de request/
  * resposta, este é o primeiro lugar a checar.</p>
  *
- * <p><b>Domínio de remetente ({@code from}):</b> até o domínio
- * {@code servirea.com.br} (seção 122 item 16, registrado em 22/09/2026)
- * estar VERIFICADO no painel do Resend (passo manual do usuário, apontando
- * o DNS pelo Cloudflare — MX + TXT/SPF + TXT/DKIM, ver README/plano
- * mestre), {@code servire.email.resend.from} precisa continuar apontando
- * para {@code onboarding@resend.dev} (domínio de teste do próprio Resend,
- * que só entrega para o e-mail dono da conta) — nunca para um endereço
- * {@code @servirea.com.br} ainda não verificado (o Resend recusaria o
- * envio).</p>
+ * <p><b>Domínio de remetente ({@code from}):</b> {@code servirea.com.br}
+ * (seção 122 item 16) foi verificado no painel do Resend em 23/09/2026
+ * (DNS pelo Cloudflare: DKIM {@code resend._domainkey} + CNAMEs
+ * {@code send}/{@code rsend} do Resend). Um envio real de
+ * {@code POST /auth/forgot-password} com {@code contato@servirea.com.br}
+ * chegou no Gmail com SPF, DKIM e DMARC em PASS, e o Return-Path saiu em
+ * {@code rsend.servirea.com.br}; ver "Próximos passos" no README.md.</p>
  */
 @Service
 @ConditionalOnProperty(prefix = "servire.email", name = "provider", havingValue = "resend")

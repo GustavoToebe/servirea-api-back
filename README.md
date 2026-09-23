@@ -156,10 +156,10 @@ voluntário, tabela de auditoria e provedor de e-mail real, seção
 > confirmadas de verdade contra um Postgres real** — nenhuma ressalva de
 > build pendente nesta fase. Ver "Próximos passos" para os itens que
 > continuam fora do alcance de qualquer `mvn clean verify` agora são
-> sobretudo o reverse proxy (`X-Forwarded-For`) e o envio pelo domínio
-> próprio. Turnstile, Supabase Storage e Resend (remetente de teste
-> `onboarding@resend.dev`) já foram confirmados ponta a ponta em
-> 22/09/2026 — ver "Próximos passos" item 3.
+> sobretudo o reverse proxy (`X-Forwarded-For`). Turnstile, Supabase
+> Storage e Resend já foram confirmados ponta a ponta em 22/09/2026, e o
+> envio pelo domínio próprio (`contato@servirea.com.br`) em 23/09/2026 —
+> ver "Próximos passos" itens 3 e 4.
 
 > ✅ **Fase 10 (multi-tenant real) + todo o débito de testes automatizados
 > pendente (Fases 5-9), feitos juntos numa única rodada em 22/09/2026, por
@@ -1725,7 +1725,8 @@ e limites do free tier conferem). Domínio `servirea.com.br` (seção 122
 item 16) **registrado em 22/09/2026** (confirmado pelo usuário, print do
 painel do registro.br) — a verificação desse domínio no painel do Resend
 (apontando o DNS pelo Cloudflare: registros MX + TXT/SPF + TXT/DKIM) é um
-passo manual do usuário, feito fora deste código, ainda pendente.
+passo manual do usuário, feito fora deste código — **concluído em
+23/09/2026** ("Próximos passos" item 4).
 
 - `auth/ResendProperties.java`, `EmailConfiguration.java`,
   `ResendEmailSender.java`, `EmailException.java`.
@@ -1763,9 +1764,9 @@ passo manual do usuário, feito fora deste código, ainda pendente.
   real de dentro deste ambiente de pesquisa (sem acesso de rede ao Resend
   aqui) — mesma ressalva já feita para Supabase Storage/Turnstile nas
   Fases 7/8.
-- Verificação do domínio `servirea.com.br` no painel do Resend ainda não
-  fechada pelo usuário — até lá, `RESEND_FROM` precisa continuar
-  `onboarding@resend.dev`.
+- ~~Verificação do domínio `servirea.com.br` no painel do Resend ainda não
+  fechada~~ — **fechada em 23/09/2026**, envio com `contato@servirea.com.br`
+  confirmado ("Próximos passos" item 4).
 
 ## Como rodar localmente
 
@@ -2008,8 +2009,8 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
 3. Confirmar de verdade contra um serviço real: o formato da API REST do
    Supabase Storage (Fase 7), a resposta do Cloudflare Turnstile (Fase 8)
    e a API do Resend (Fase 11) — **os três fechados em 22/09/2026**
-   (Resend ainda só com `onboarding@resend.dev`; o domínio próprio
-   espera o DNS).
+   (Resend com o domínio próprio `contato@servirea.com.br` confirmado em
+   23/09/2026 — ver item 4).
 
    ✅ **Turnstile — CONFIRMADO de verdade em 22/09/2026, primeira das três
    integrações externas a ser validada ponta a ponta.** Widget "Servirea"
@@ -2063,21 +2064,35 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    arquivo local e mantinha o `LoggingEmailSender` (mesmo padrão do
    Storage) — removido. Dois `servire:` no YAML local também apagavam
    o bloco de cima; tem que ser um único `servire:` com `storage` +
-   `email`. **Ainda não confirmado:** envio com
-   `contato@servirea.com.br` (espera Verify no Resend). **Rotacionar**
-   a API key `re_` que vazou no chat.
-4. ⏳ **Em andamento (22/09/2026):** domínio `servirea.com.br` adicionado
-   na Cloudflare (nameservers ainda propagando) e os registros de DNS de
-   verificação do Resend (DKIM TXT + duas SPF CNAME) já foram criados —
-   status "Pending" nos dois painéis, aguardando propagação (o Resend
-   avisa que pode levar de minutos a 48h). **Decidido com o usuário:**
-   `RESEND_FROM` = `contato@servirea.com.br` — já configurado como novo
-   valor padrão em `application-prod.yml`/`ResendProperties` (troca de
-   `onboarding@resend.dev`), mas só funciona de verdade depois que o
-   Resend marcar o domínio como "Verified". Falta: o usuário clicar em
-   "Verify" no painel do Resend assim que a propagação terminar, e então
-   confirmar (por exemplo enviando uma inscrição de teste) que o e-mail
-   chega usando o domínio próprio.
+   `email`. Envio com `contato@servirea.com.br` confirmado em 23/09/2026
+   (item 4). **Rotacionar** a API key `re_` que vazou no chat.
+4. ✅ **Domínio próprio no Resend — CONFIRMADO em 23/09/2026.**
+   `servirea.com.br` ficou "Verified" no Resend (região São Paulo,
+   `sa-east-1`) em 23/09/2026 00:25. `POST /auth/forgot-password` com
+   profile `dev`, `provider: resend` e `from: contato@servirea.com.br` em
+   `application-dev-local.yml` devolveu 202, e o e-mail chegou no Gmail
+   do dono da conta em 1 segundo com **SPF, DKIM e DMARC em PASS**
+   (Return-Path `rsend.servirea.com.br`, DKIM `d=servirea.com.br
+   s=resend`, envio feito via Amazon SES `sa-east-1`). Passou inclusive
+   com o DMARC ainda em `p=reject`.
+   DNS no Cloudflare, estado final:
+   - DKIM `resend._domainkey` TXT e CNAMEs `send`/`rsend` → `*.forge.rmta.net`
+     (criados pelo Resend; o SPF do envio é verificado no `rsend`, não na raiz).
+   - SPF da raiz `v=spf1 ~all`: nada além do Resend envia como
+     `@servirea.com.br`. **Não** precisa de `include:resend.com`, apesar
+     da sugestão do assistente do Cloudflare.
+   - DMARC `_dmarc`: `v=DMARC1; p=none; rua=mailto:...@dmarc-reports.cloudflare.net`
+     (relatórios no DMARC Management do Cloudflare). Começa em `none` de
+     propósito; subir para `p=quarantine` depois de 2 a 4 semanas de
+     relatórios limpos.
+   - MX nulo (`.`) na raiz: `contato@servirea.com.br` **não recebe**
+     e-mail (respostas voltam com erro). Para receber, ativar o Email
+     Routing do Cloudflare encaminhando para o Gmail.
+   - Configuração do domínio no Resend: tracking de abertura/clique
+     **desligado** (reescreveria o link de reset) e TLS "Opportunistic".
+   O "Warning" do Cloudflare no DKIM (chave de 1024 bits do Resend) e o
+   "Fail" do BIMI (exige DMARC `quarantine`/`reject` + certificado pago)
+   são esperados.
 5. ✅ **Picker de candidatos (seção 49) — CONFIRMADO em 22/09/2026 19:13**
    (`BUILD SUCCESS`, 117 testes). `GET /escalas/{eventoId}/candidatos?funcao=`
    + filtro de `DisponibilidadeVoluntario` (ver seção da Fase 9).
