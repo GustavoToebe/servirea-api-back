@@ -1,0 +1,100 @@
+# CLAUDE.md — servire-api
+
+Backend Java do **Servire** (SaaS multi-tenant de gestão paroquial: voluntários/coroinhas,
+escalas de missa, inscrições públicas). Substitui aos poucos o acesso direto do front
+Angular ao Supabase. Idioma do código, comentários, mensagens de erro e commits: **português**.
+
+- Referência de produto/arquitetura: `plano_mestre_servire_v2_mvp_baixo_custo.md` (~4000 linhas).
+  O código cita "seção N" desse arquivo o tempo todo — use `grep -n "^# N\." ` para achar.
+- Histórico de fases, decisões e bugs reais (#1–#17): `README.md`. Atenção: a numeração
+  de "Fase 11" do README (permissões/faltas/disponibilidade/auditoria/e-mail) **não** é a
+  "FASE 11 — Backoffice" da seção 111 do plano mestre.
+
+## Stack
+Java 21 · Spring Boot **4.1.1** (Spring Framework 7, Security 7, Jakarta EE 11) · Hibernate 7.4 ·
+PostgreSQL 16 (Supabase em prod) · Flyway · JJWT 0.13 · Testcontainers 2.x · Maven (sem wrapper).
+Virtual Threads ligadas; Spring MVC síncrono (nada de WebFlux).
+
+## Comandos
+```powershell
+mvn clean verify                                              # build + todos os testes (precisa do Docker Desktop aberto)
+mvn test -Dtest=VoluntarioServiceIntegrationTest              # uma classe
+mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
+```
+`spring-boot:run` contra um Postgres limpo exige aplicar antes
+`src/test/resources/testcontainers/supabase-stubs.sql` (schemas `auth`/`storage` e roles do Supabase);
+ver "Como rodar localmente" no README. Segredos locais de dev ficam em
+`application-dev-local.yml` (raiz, gitignorado, importado pelo profile `dev`).
+
+## Pacotes (`src/main/java/br/com/servire/api/`)
+| Pacote | Conteúdo |
+|---|---|
+| `web/` | `GlobalExceptionHandler`, `ApiError`, hierarquia `ApiException` (`BadRequest`/`Conflict`/`Forbidden`/`ResourceNotFound`/`Unauthorized`/`TooManyRequests`), `RequestIdFilter` (MDC `requestId`), `RestClientConfiguration` |
+| `tenant/` | `Tenant` (global), `TenantContext` (ThreadLocal), `ServireCurrentTenantIdentifierResolver`, `TenantConfiguration`, `GET/PUT /tenant` |
+| `security/` | `SecurityConfig`, `JwtAuthenticationFilter`, `JwtService`, `Permissao` + `RolePermissoes`, handlers 401/403 |
+| `auth/` | `Usuario`, `UsuarioTenant` (role ADMIN/COORDENADOR/VISUALIZADOR), refresh token, reset de senha, `EmailSender` (`LoggingEmailSender` / `ResendEmailSender`), `/auth/**` |
+| `voluntario/` | `Voluntario`, `Responsavel`, `DisponibilidadeVoluntario`, `/voluntarios/**` |
+| `escala/` | `Escala` → `EscalaEvento` → `EscalaVaga`, presença, picker de candidatos, `/escalas/**` |
+| `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila de aprovação `/inscricoes/**` |
+| `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
+| `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
+
+Migrations: `src/main/resources/db/migration/V001..V026`. **V001–V015 são o baseline, nunca editar.**
+Mudança de schema = nova migration `V0NN__descricao.sql`.
+
+## Multi-tenancy (P0 — regras que não podem ser quebradas)
+- Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
+  `Tenant` e `Usuario` são globais. FKs compostas `(tenant_id, id)` no banco (V021).
+- Tenant vem **só do JWT** (`JwtAuthenticationFilter` → `TenantContext`). Nunca de body, path ou header.
+- Sem `TenantContext`, o resolver devolve o sentinela `SEM_TENANT` (UUID zero): leituras vêm vazias e
+  escritas falham por FK. Não "consertar" isso lançando exceção no resolver (quebra o bootstrap).
+- O Hibernate fixa o tenant **quando a sessão abre** (entrada do `@Transactional`). Código que define
+  `TenantContext` por conta própria (só `InscricaoService.criarPublica`) precisa abrir a transação
+  **depois** disso, com `TransactionTemplate`.
+- **Proibido SQL nativo/JDBC direto em tabela tenant-aware** (Native Query Gate, seção 81): use JPQL,
+  derived queries ou Criteria/`Specification`.
+
+## Convenções de código
+- Injeção por construtor; `EntityManager` via `@PersistenceContext` quando precisa de `flush()`.
+- DTOs são `record`s em `<modulo>/dto/`, com `static de(Entidade)` na resposta e Bean Validation no request.
+- Controller: `@PreAuthorize("hasAuthority('PERM_<PERMISSAO>')")` em **todo** método (`*_READ` para GET,
+  `*_WRITE`/`INSCRICAO_APPROVE` para escrita; `CONFIG_WRITE` só ADMIN). Toda rota não pública é autenticada.
+- Service: `@Transactional` / `@Transactional(readOnly = true)`; erro de negócio = subclasse de `ApiException`
+  (vira JSON `ApiError` com `requestId`). Nunca vazar detalhes internos num 500.
+- Mudança relevante chama `auditLogService.registrar("ACAO", "ENTIDADE", id, camposAlterados)` de forma explícita (sem AOP).
+- Javadocs longos que explicam o **porquê** (com data e seção do plano) são o estilo da casa. Mantenha-os ao mexer no código.
+- Segredos nunca versionados: prod lê de env var **sem valor padrão** (`JWT_SECRET`, `DB_URL`, `SUPABASE_*`,
+  `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`). Em `application-dev.yml`, **não** colocar placeholder vazio
+  `${X:}` para chave que vem de `application-dev-local.yml`: o vazio sobrescreve o arquivo importado.
+
+## Armadilhas já pagas (não repetir)
+- `open-in-view: false` → acessar coleção lazy no controller dá `LazyInitializationException`. Use
+  `@EntityGraph`/`JOIN FETCH` no repositório (ex.: `VoluntarioRepository.findById`).
+- "Apaga tudo e reinsere" (`clear()` + `orphanRemoval`) com índice único parcial (responsável principal):
+  `entityManager.flush()` logo depois do `clear()`.
+- Capturar `DataIntegrityViolationException` de um INSERT exige `saveAndFlush`, não `save`.
+- `RuntimeException` marca a transação inteira como rollback; um efeito que precisa sobreviver vai para um
+  método de **outro bean** com `REQUIRES_NEW` (ex.: `RefreshTokenRepository.revogarTodosAtivosDoUsuario`).
+- JPQL `(:p IS NULL OR ...)` quebra no Hibernate 7 + Postgres; filtros opcionais via `Specification`.
+- Jackson: a aplicação usa **Jackson 3** (`tools.jackson.*`, bean `JsonMapper`). Jackson 2
+  (`com.fasterxml.jackson.databind`) só existe por causa do `jjwt-jackson`, então não importe no código.
+- Spring Boot 4 é modular: Flyway exige `spring-boot-starter-flyway`; `@AutoConfigureMockMvc` fica em
+  `org.springframework.boot.webmvc.test.autoconfigure` (artefato `spring-boot-webmvc-test`);
+  `RestClient.Builder` é bean próprio (`RestClientConfiguration`); `HibernatePropertiesCustomizer` fica em
+  `org.springframework.boot.hibernate.autoconfigure`.
+- `GlobalExceptionHandler` precisa relançar `AccessDeniedException`/`AuthenticationException`, senão o
+  `@PreAuthorize` negado vira 500.
+- Supabase Storage: enviar **os dois** headers `Authorization: Bearer` e `apikey`; não usar template `{caminho}` na URI (codifica `/`).
+- Enum nativo do Postgres: `@Enumerated(STRING)` + `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`; array de enum:
+  `@JdbcTypeCode(ARRAY)` + `@ColumnTransformer(write = "?::tipo[]")`.
+
+## Testes (`src/test/java/...`)
+- Integração estende `AbstractIntegrationTest`: um Postgres 16 singleton (sem `@Container`, de propósito),
+  stub do Supabase aplicado uma vez, profile `test` (e-mail fixo em `log`, storage/turnstile vazios).
+- Cada teste cria seu **próprio tenant descartável** com `codigo`/`slug` aleatórios e faz
+  `TenantContext.set(...)` no `@BeforeEach` / `clear()` no `@AfterEach`. Não há rollback automático.
+- Testes de serviço/repositório **não** usam `@Transactional` na classe (fixaria o tenant errado).
+- Autorização HTTP: `MethodSecurityIntegrationTest` (MockMvc + `@MockitoBean` nos services). Clientes HTTP
+  externos: `MockRestServiceServer`, sem contexto Spring.
+- Ao adicionar migration: atualizar total e descrição da última em `FlywayMigrationIntegrationTest`.
+- Nomes de teste em português, descritivos (`atualizarComVersaoDivergenteLancaConflictException`).
