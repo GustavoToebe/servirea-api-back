@@ -14,9 +14,11 @@ Angular ao Supabase. Idioma do código, comentários, mensagens de erro e commit
 Este é o arquivo de instruções compartilhado entre ferramentas de IA (Cursor, Codex, Copilot etc.);
 o `CLAUDE.md` só importa este (`@AGENTS.md`). Edite **só aqui**.
 - Mudança que invalida algo daqui (migration nova, pacote novo, comando novo, armadilha resolvida)
-  atualiza este arquivo **no mesmo commit** da funcionalidade.
+  atualiza este arquivo **junto com a funcionalidade**.
 - Manter curto: só o que evita erro de quem vai mexer no código. Histórico e detalhes ficam no `README.md`.
-- Commits vão direto na `main`; branch só quando pedido explicitamente.
+- **Não commitar nem dar push.** Deixar as mudanças no working tree para o dono revisar e entregar
+  a mensagem de commit pronta (em português) para ele copiar. Os commits vão na `main`; branch só
+  quando pedido explicitamente.
 
 ## Stack
 Java 21 · Spring Boot **4.1.1** (Spring Framework 7, Security 7, Jakarta EE 11) · Hibernate 7.4 ·
