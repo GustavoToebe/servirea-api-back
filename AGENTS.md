@@ -48,14 +48,18 @@ ver "Como rodar localmente" no README. Segredos locais de dev ficam em
 | `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila de aprovação `/inscricoes/**` |
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
+| `backoffice/` | painel do operador do SaaS (`/admin/**`): login sem tenant, paróquias, logins, logs globais, sessão de suporte |
 
-Migrations: `src/main/resources/db/migration/V001..V026`. **V001–V015 são o baseline, nunca editar.**
+Migrations: `src/main/resources/db/migration/V001..V028`. **V001–V015 são o baseline, nunca editar.**
 Mudança de schema = nova migration `V0NN__descricao.sql`.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
   `Tenant` e `Usuario` são globais. FKs compostas `(tenant_id, id)` no banco (V021).
 - Tenant vem **só do JWT** (`JwtAuthenticationFilter` → `TenantContext`). Nunca de body, path ou header.
+  Exceção deliberada: JWT `purpose=backoffice` não tem tenant (operador no painel). JWT de
+  suporte (`purpose=access` + `suporte=true`) seta o `TenantContext` da paróquia escolhida **sem**
+  `usuario_tenant` — só `operador_saas`, ação auditada em `backoffice_log`.
 - Sem `TenantContext`, o resolver devolve o sentinela `SEM_TENANT` (UUID zero): leituras vêm vazias e
   escritas falham por FK. Não "consertar" isso lançando exceção no resolver (quebra o bootstrap).
 - O Hibernate fixa o tenant **quando a sessão abre** (entrada do `@Transactional`). Código que define
@@ -68,7 +72,8 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
 - Injeção por construtor; `EntityManager` via `@PersistenceContext` quando precisa de `flush()`.
 - DTOs são `record`s em `<modulo>/dto/`, com `static de(Entidade)` na resposta e Bean Validation no request.
 - Controller: `@PreAuthorize("hasAuthority('PERM_<PERMISSAO>')")` em **todo** método (`*_READ` para GET,
-  `*_WRITE`/`INSCRICAO_APPROVE` para escrita; `CONFIG_WRITE` só ADMIN). Toda rota não pública é autenticada.
+  `*_WRITE`/`INSCRICAO_APPROVE` para escrita; `CONFIG_WRITE` só ADMIN da paróquia; `PERM_BACKOFFICE`
+  só o JWT do operador, nunca a role ADMIN da paróquia). Toda rota não pública é autenticada.
 - Service: `@Transactional` / `@Transactional(readOnly = true)`; erro de negócio = subclasse de `ApiException`
   (vira JSON `ApiError` com `requestId`). Nunca vazar detalhes internos num 500.
 - Mudança relevante chama `auditLogService.registrar("ACAO", "ENTIDADE", id, camposAlterados)` de forma explícita (sem AOP).
@@ -97,6 +102,8 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
 - Supabase Storage: enviar **os dois** headers `Authorization: Bearer` e `apikey`; não usar template `{caminho}` na URI (codifica `/`).
 - Enum nativo do Postgres: `@Enumerated(STRING)` + `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`; array de enum:
   `@JdbcTypeCode(ARRAY)` + `@ColumnTransformer(write = "?::tipo[]")`.
+- Role `ADMIN` da paróquia **não** pode ganhar `PERM_BACKOFFICE`. Se `RolePermissoes`
+  usar `EnumSet.allOf(Permissao.class)`, o padre acessa `/admin/**`.
 
 ## Testes (`src/test/java/...`)
 - Integração estende `AbstractIntegrationTest`: um Postgres 16 singleton (sem `@Container`, de propósito),

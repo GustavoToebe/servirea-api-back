@@ -6,6 +6,7 @@ import br.com.servire.api.auth.UsuarioTenant;
 import br.com.servire.api.auth.UsuarioTenantRepository;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
+import br.com.servire.api.tenant.TenantRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,19 +25,27 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Substitui o {@code DevFixedTenantFilter} da Fase 4 (removido nesta
  * fase — seção 104 do plano mestre: "Depois passa a vir do JWT").
  *
- * <p>Extrai o access token do header {@code Authorization: Bearer
+ * <p>Extrai o token do header {@code Authorization: Bearer
  * <token>}, valida assinatura/expiração/finalidade via {@link JwtService}
  * e então REVALIDA o Kill Switch (seção 28) direto no banco a cada
- * requisição — usuário ativo, vínculo {@code usuario_tenant} ATIVO, tenant
- * ATIVO/TRIAL. Isso é deliberado: os claims do JWT ficam desatualizados
- * até o token expirar (15 minutos, seção 34) — sem essa revalidação a
- * cada requisição, bloquear um usuário ou uma paróquia não teria efeito
- * imediato, só depois do access token expirar.</p>
+ * requisição. Três ramos (seção 111):</p>
+ * <ul>
+ *   <li>{@code purpose=access} sem {@code suporte} — usuário ativo,
+ *   vínculo {@code usuario_tenant} ATIVO, tenant ATIVO/TRIAL.</li>
+ *   <li>{@code purpose=access} com {@code suporte=true} — usuário
+ *   operador ativo; tenant precisa existir (aceita {@code BLOQUEADO},
+ *   senão o dono não atende quem está inadimplente); SEM vínculo
+ *   {@code usuario_tenant} (seções 61/99: suporte explícito, nunca um
+ *   operador "plantado" em todas as paróquias).</li>
+ *   <li>{@code purpose=backoffice} — usuário operador ativo; NÃO seta
+ *   {@link TenantContext} (o operador não é de nenhuma paróquia).</li>
+ * </ul>
  *
  * <p>Quando o token está ausente, é inválido, ou alguma checagem do Kill
  * Switch falha, este filtro simplesmente NÃO autentica a requisição (não
@@ -44,17 +53,17 @@ import java.util.Optional;
  * cadeia normalmente. Cabe a {@code authorizeHttpRequests}/
  * {@link RestAuthenticationEntryPoint} (configurados em
  * {@link SecurityConfig}) decidir se o endpoint exige autenticação — as
- * rotas {@code /auth/**} são {@code permitAll} de propósito, então
- * requisições sem token continuam funcionando normalmente nelas.</p>
+ * rotas {@code /auth/**} e {@code /admin/auth/login} são {@code permitAll}
+ * de propósito.</p>
  *
- * <p>Segue a mesma regra crítica do {@link TenantContext} herdada do
- * antigo {@code DevFixedTenantFilter}: {@code set} sempre pareado com
- * {@code clear} em {@code finally}, mesmo em caso de exceção - nunca
- * deixar o contexto vazar para a próxima requisição atendida pela mesma
- * thread (seção 20/78/79/80). O {@code SecurityContextHolder} em si não
- * precisa de limpeza manual aqui: o {@code SecurityContextHolderFilter}
- * do Spring Security já limpa em {@code finally} ao redor de toda a
- * cadeia, mesmo em modo {@code STATELESS}.</p>
+ * <p>Segue a mesma regra crítica do {@link TenantContext}: {@code set}
+ * sempre pareado com {@code clear} em {@code finally}, mesmo em caso de
+ * exceção - nunca deixar o contexto vazar para a próxima requisição
+ * atendida pela mesma thread (seção 20/78/79/80). O
+ * {@code SecurityContextHolder} em si não precisa de limpeza manual
+ * aqui: o {@code SecurityContextHolderFilter} do Spring Security já
+ * limpa em {@code finally} ao redor de toda a cadeia, mesmo em modo
+ * {@code STATELESS}.</p>
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -67,13 +76,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
     private final UsuarioTenantRepository usuarioTenantRepository;
+    private final TenantRepository tenantRepository;
 
     public JwtAuthenticationFilter(JwtService jwtService,
                                     UsuarioRepository usuarioRepository,
-                                    UsuarioTenantRepository usuarioTenantRepository) {
+                                    UsuarioTenantRepository usuarioTenantRepository,
+                                    TenantRepository tenantRepository) {
         this.jwtService = jwtService;
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
+        this.tenantRepository = tenantRepository;
     }
 
     @Override
@@ -86,8 +98,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         AuthenticatedUser usuario = autenticado.get();
-        TenantContext.set(usuario.tenantId());
-        MDC.put(MDC_KEY, usuario.tenantId().toString());
+        if (usuario.tenantId() != null) {
+            TenantContext.set(usuario.tenantId());
+            MDC.put(MDC_KEY, usuario.tenantId().toString());
+        }
         try {
             List<GrantedAuthority> authorities = autoridadesDe(usuario);
             UsernamePasswordAuthenticationToken authentication =
@@ -115,19 +129,51 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         String token = header.substring(BEARER_PREFIX.length());
 
+        String purpose;
+        try {
+            purpose = jwtService.purpose(token);
+        } catch (RuntimeException e) {
+            return Optional.empty();
+        }
+
+        if (JwtService.PURPOSE_BACKOFFICE.equals(purpose)) {
+            return autenticarBackoffice(token);
+        }
+        if (JwtService.PURPOSE_ACCESS.equals(purpose)) {
+            return autenticarAccess(token);
+        }
+        return Optional.empty();
+    }
+
+    private Optional<AuthenticatedUser> autenticarBackoffice(String token) {
+        UUID usuarioId;
+        try {
+            usuarioId = jwtService.validarBackofficeToken(token);
+        } catch (RuntimeException e) {
+            return Optional.empty();
+        }
+        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
+        if (usuario == null || !usuario.isAtivo() || !usuario.isOperadorSaas()) {
+            return Optional.empty();
+        }
+        return Optional.of(AuthenticatedUser.backoffice(usuarioId));
+    }
+
+    private Optional<AuthenticatedUser> autenticarAccess(String token) {
         JwtService.AccessTokenClaims claims;
         try {
             claims = jwtService.validarAccessToken(token);
         } catch (RuntimeException e) {
-            // Token ausente/inválido/expirado/de outra finalidade - tratado
-            // como requisição anônima, nunca propagado a partir daqui (ver
-            // javadoc da classe).
             return Optional.empty();
         }
 
         Usuario usuarioEntidade = usuarioRepository.findById(claims.usuarioId()).orElse(null);
         if (usuarioEntidade == null || !usuarioEntidade.isAtivo()) {
             return Optional.empty();
+        }
+
+        if (claims.suporte()) {
+            return autenticarSuporte(usuarioEntidade, claims);
         }
 
         Optional<UsuarioTenant> vinculo =
@@ -148,17 +194,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /**
+     * Sessão de suporte (seção 99/111): operador escolheu explicitamente
+     * a paróquia. Sem {@code usuario_tenant}; tenant só precisa existir
+     * (incluindo {@code BLOQUEADO}/{@code CANCELADO}).
+     */
+    private Optional<AuthenticatedUser> autenticarSuporte(Usuario usuario, JwtService.AccessTokenClaims claims) {
+        if (!usuario.isOperadorSaas()) {
+            return Optional.empty();
+        }
+        if (!tenantRepository.existsById(claims.tenantId())) {
+            return Optional.empty();
+        }
+        return Optional.of(AuthenticatedUser.suporte(usuario.getId(), claims.tenantId()));
+    }
+
+    /**
      * Monta as {@link GrantedAuthority} do usuário autenticado (seção 31 do
-     * plano mestre): {@code ROLE_<role>} (mantida por compatibilidade — não
-     * é mais usada por nenhum {@code @PreAuthorize} desta rodada, mas
-     * continua disponível para {@code hasRole(...)} caso um endpoint futuro
-     * precise checar a role diretamente) mais um {@code PERM_<permissão>}
-     * por permissão concedida pelo {@link RolePermissoes mapeamento
-     * role -> permissions} — é esta segunda lista que os controllers
-     * checam via {@code hasAuthority("PERM_...")}.
+     * plano mestre). Operador no painel recebe só {@code PERM_BACKOFFICE}
+     * (não as {@code PERM_*} da paróquia). Sessão de suporte e login da
+     * paróquia recebem {@code ROLE_<role>} + {@code PERM_*} de
+     * {@link RolePermissoes}.
      */
     private List<GrantedAuthority> autoridadesDe(AuthenticatedUser usuario) {
         List<GrantedAuthority> authorities = new ArrayList<>();
+        if (usuario.isBackoffice()) {
+            authorities.add(new SimpleGrantedAuthority("PERM_BACKOFFICE"));
+            return authorities;
+        }
         authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.role().name()));
         for (Permissao permissao : RolePermissoes.de(usuario.role())) {
             authorities.add(new SimpleGrantedAuthority("PERM_" + permissao.name()));

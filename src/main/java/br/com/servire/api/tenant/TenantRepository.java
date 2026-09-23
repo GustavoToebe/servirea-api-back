@@ -1,6 +1,7 @@
 package br.com.servire.api.tenant;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -11,7 +12,13 @@ import java.util.UUID;
  * qualquer linha pode ser lida por qualquer código da aplicação (é a
  * própria raiz da hierarquia multi-tenant, seção 17/27).
  */
-public interface TenantRepository extends JpaRepository<Tenant, UUID> {
+public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecificationExecutor<Tenant> {
 
     Optional<Tenant> findBySlug(String slug);
+
+    boolean existsByCodigo(String codigo);
+
+    boolean existsBySlug(String slug);
+
+    long countByStatus(Tenant.Status status);
 }

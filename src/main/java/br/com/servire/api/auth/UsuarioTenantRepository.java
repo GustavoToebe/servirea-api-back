@@ -11,6 +11,12 @@ public interface UsuarioTenantRepository extends JpaRepository<UsuarioTenant, Us
 
     List<UsuarioTenant> findByUsuario_IdAndStatus(UUID usuarioId, UsuarioTenant.Status status);
 
+    @EntityGraph(attributePaths = "tenant")
+    List<UsuarioTenant> findByUsuario_Id(UUID usuarioId);
+
+    @EntityGraph(attributePaths = "usuario")
+    List<UsuarioTenant> findByTenant_Id(UUID tenantId);
+
     /**
      * Usado pelo {@code JwtAuthenticationFilter} no Kill Switch, fora de
      * qualquer {@code @Transactional}: com {@code open-in-view: false},

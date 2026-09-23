@@ -3,6 +3,9 @@ package br.com.servire.api.security;
 import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.auth.UsuarioTenant;
+import br.com.servire.api.backoffice.BackofficeLogService;
+import br.com.servire.api.backoffice.BackofficeParoquiaService;
+import br.com.servire.api.backoffice.BackofficeUsuarioService;
 import br.com.servire.api.escala.EscalaService;
 import br.com.servire.api.escala.EscalaVaga;
 import br.com.servire.api.inscricao.Inscricao;
@@ -106,6 +109,15 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
 
     @MockitoBean
     private TenantService tenantService;
+
+    @MockitoBean
+    private BackofficeParoquiaService backofficeParoquiaService;
+
+    @MockitoBean
+    private BackofficeUsuarioService backofficeUsuarioService;
+
+    @MockitoBean
+    private BackofficeLogService backofficeLogService;
 
     @Test
     void semAutenticacaoRecebe401() throws Exception {
@@ -285,6 +297,29 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void padreNaoAcessaBackoffice() throws Exception {
+        mockMvc.perform(get("/admin/paroquias").with(comoUsuario(UsuarioTenant.Role.ADMIN)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void operadorAcessaBackofficeMasNaoVoluntariosSemTokenDeSuporte() throws Exception {
+        when(backofficeParoquiaService.listar(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/admin/paroquias").with(comoOperador()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/voluntarios").with(comoOperador()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void visualizadorNaoAcessaLogsDoBackoffice() throws Exception {
+        mockMvc.perform(get("/admin/logs").with(comoUsuario(UsuarioTenant.Role.VISUALIZADOR)))
+                .andExpect(status().isForbidden());
+    }
+
     /**
      * Monta a mesma {@link UsernamePasswordAuthenticationToken} que
      * {@link JwtAuthenticationFilter#doFilterInternal} monta a partir de um
@@ -301,5 +336,12 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
         }
         return SecurityMockMvcRequestPostProcessors.authentication(
                 new UsernamePasswordAuthenticationToken(usuario, null, authorities));
+    }
+
+    private RequestPostProcessor comoOperador() {
+        AuthenticatedUser usuario = AuthenticatedUser.backoffice(UUID.randomUUID());
+        return SecurityMockMvcRequestPostProcessors.authentication(
+                new UsernamePasswordAuthenticationToken(
+                        usuario, null, List.of(new SimpleGrantedAuthority("PERM_BACKOFFICE"))));
     }
 }

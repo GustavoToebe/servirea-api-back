@@ -92,4 +92,62 @@ class JwtAuthenticationFilterIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.path").value("/voluntarios"));
     }
+
+    @Test
+    void tokenBackofficeAutenticaAdminParoquiasENaoVoluntarios() throws Exception {
+        Usuario operador = usuarioRepository.saveAndFlush(operador("jwt-backoffice"));
+        String token = jwtService.gerarBackofficeToken(operador.getId());
+
+        mockMvc.perform(get("/admin/paroquias")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/voluntarios")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void tokenDeSuporteEntraEmParoquiaBloqueada() throws Exception {
+        Usuario operador = usuarioRepository.saveAndFlush(operador("jwt-suporte"));
+        Tenant tenant = tenantRepository.saveAndFlush(new Tenant(
+                "JWT-SUP-" + UUID.randomUUID().toString().substring(0, 8),
+                "jwt-suporte-" + UUID.randomUUID(),
+                "Paróquia suporte",
+                Tenant.Status.BLOQUEADO));
+        String token = jwtService.gerarAccessToken(
+                operador.getId(), tenant.getId(), UsuarioTenant.Role.ADMIN, true);
+
+        mockMvc.perform(get("/voluntarios")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void padreNaoAutenticaRotasDoBackoffice() throws Exception {
+        Usuario usuario = usuarioRepository.saveAndFlush(
+                new Usuario("jwt-padre-" + UUID.randomUUID() + "@teste.com", "Padre JWT"));
+        Tenant tenant = tenantRepository.saveAndFlush(new Tenant(
+                "JWT-PADRE-" + UUID.randomUUID().toString().substring(0, 8),
+                "jwt-padre-" + UUID.randomUUID(),
+                "Paróquia padre",
+                Tenant.Status.ATIVO));
+        usuarioTenantRepository.saveAndFlush(
+                new UsuarioTenant(usuario, tenant, UsuarioTenant.Role.ADMIN, UsuarioTenant.Status.ATIVO));
+        String token = jwtService.gerarAccessToken(usuario.getId(), tenant.getId(), UsuarioTenant.Role.ADMIN);
+
+        mockMvc.perform(get("/admin/paroquias")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+    }
+
+    private Usuario operador(String rotulo) {
+        Usuario usuario = new Usuario(rotulo + "-" + UUID.randomUUID() + "@teste.com", "Operador " + rotulo);
+        usuario.setOperadorSaas(true);
+        return usuario;
+    }
 }

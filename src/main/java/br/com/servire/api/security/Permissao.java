@@ -10,7 +10,9 @@ package br.com.servire.api.security;
  * SUPORTE etc., já cogitadas na seção 31) sem tocar em nenhum controller.
  *
  * <p>{@code CONFIG_WRITE} protege {@code GET}/{@code PUT /tenant}
- * ({@link br.com.servire.api.tenant.TenantController}).</p>
+ * ({@link br.com.servire.api.tenant.TenantController}). {@code BACKOFFICE}
+ * protege {@code /admin/**} e só sai do JWT {@code purpose=backoffice}
+ * — nunca das roles da paróquia (seção 111).</p>
  */
 public enum Permissao {
     VOLUNTARIO_READ,
@@ -19,5 +21,11 @@ public enum Permissao {
     ESCALA_WRITE,
     INSCRICAO_READ,
     INSCRICAO_APPROVE,
-    CONFIG_WRITE
+    CONFIG_WRITE,
+    /**
+     * Painel do operador do SaaS ({@code /admin/**}, seção 111). NÃO entra
+     * no mapeamento das roles da paróquia — um ADMIN da paróquia não
+     * acessa o backoffice. Concedida só pelo JWT {@code purpose=backoffice}.
+     */
+    BACKOFFICE
 }

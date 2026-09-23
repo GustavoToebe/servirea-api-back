@@ -120,6 +120,17 @@ class AuthServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void loginDeOperadorNoAppDaParoquiaLancaForbiddenException() {
+        Usuario operador = novoUsuario("operador-app");
+        operador.setOperadorSaas(true);
+        usuarioRepository.saveAndFlush(operador);
+
+        assertThatThrownBy(() -> authService.login(operador.getEmail(), SENHA, "1.2.3.4", "junit"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Acesse o painel administrativo.");
+    }
+
+    @Test
     void loginComUmUnicoVinculoAtivoRetornaTokensCompletosDeImediato() {
         Usuario usuario = criarUsuarioComVinculoAtivo("login-simples", Tenant.Status.ATIVO);
 

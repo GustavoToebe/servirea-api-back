@@ -49,6 +49,14 @@ import br.com.servire.api.AbstractIntegrationTest;
  * mudou, de {@code "ajustes fases 7 8 9"} para {@code "table audit log"}
  * (descrição que o Flyway deriva do nome do arquivo {@code V026__table_audit_log.sql}
  * — substitui {@code _} por espaço).</p>
+ *
+ * <p>Total atualizado de 26 para 27 em 23/09/2026: V027 (backoffice,
+ * seção 111) soma {@code usuario.operador_saas}, contato/endereço em
+ * {@code tenant} e a tabela global {@code backoffice_log}.</p>
+ *
+ * <p>Total atualizado de 27 para 28 em 23/09/2026: V028 soma
+ * {@code tenant.vigencia_ate} e {@code tenant.tipo_email} para os filtros
+ * da listagem de paróquias no backoffice.</p>
  */
 class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
 
@@ -60,9 +68,8 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // Não fixamos o formato exato da string de versão que o Flyway grava
         // (ex.: se normaliza "001" para "1" ou mantém os zeros à esquerda) —
         // o que importa é que as migrations rodaram e nenhuma falhou.
-        // Total atualizado de 23 para 26 em 22/09/2026 (Bug real #11): a
-        // Fase 11 somou V024/V025/V026 ao baseline V001-V023 — ver javadoc
-        // da classe.
+        // Total atualizado de 27 para 28 em 23/09/2026: V028 (filtros da
+        // listagem de paróquias no backoffice).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -71,10 +78,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(26);
-        assertThat(sucesso).isEqualTo(26);
+        assertThat(total).isEqualTo(28);
+        assertThat(sucesso).isEqualTo(28);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("table audit log");
+        assertThat(descricoes.getLast()).isEqualTo("filtro paroquia");
     }
 
     @Test

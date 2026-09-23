@@ -12,6 +12,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -67,6 +68,35 @@ public class Tenant {
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private Status status;
+
+    private String email;
+
+    private String telefone;
+
+    private String cep;
+
+    private String cidade;
+
+    private String uf;
+
+    private String bairro;
+
+    private String logradouro;
+
+    private String numero;
+
+    private String complemento;
+
+    private String observacoes;
+
+    @Column(name = "ultimo_pagamento_em")
+    private Instant ultimoPagamentoEm;
+
+    @Column(name = "vigencia_ate")
+    private LocalDate vigenciaAte;
+
+    @Column(name = "tipo_email")
+    private String tipoEmail;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
@@ -127,6 +157,110 @@ public class Tenant {
 
     public void setStatus(Status status) {
         this.status = status;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getTelefone() {
+        return telefone;
+    }
+
+    public void setTelefone(String telefone) {
+        this.telefone = telefone;
+    }
+
+    public String getCep() {
+        return cep;
+    }
+
+    public void setCep(String cep) {
+        this.cep = cep;
+    }
+
+    public String getCidade() {
+        return cidade;
+    }
+
+    public void setCidade(String cidade) {
+        this.cidade = cidade;
+    }
+
+    public String getUf() {
+        return uf;
+    }
+
+    public void setUf(String uf) {
+        this.uf = uf;
+    }
+
+    public String getBairro() {
+        return bairro;
+    }
+
+    public void setBairro(String bairro) {
+        this.bairro = bairro;
+    }
+
+    public String getLogradouro() {
+        return logradouro;
+    }
+
+    public void setLogradouro(String logradouro) {
+        this.logradouro = logradouro;
+    }
+
+    public String getNumero() {
+        return numero;
+    }
+
+    public void setNumero(String numero) {
+        this.numero = numero;
+    }
+
+    public String getComplemento() {
+        return complemento;
+    }
+
+    public void setComplemento(String complemento) {
+        this.complemento = complemento;
+    }
+
+    public String getObservacoes() {
+        return observacoes;
+    }
+
+    public void setObservacoes(String observacoes) {
+        this.observacoes = observacoes;
+    }
+
+    public Instant getUltimoPagamentoEm() {
+        return ultimoPagamentoEm;
+    }
+
+    public void setUltimoPagamentoEm(Instant ultimoPagamentoEm) {
+        this.ultimoPagamentoEm = ultimoPagamentoEm;
+    }
+
+    public LocalDate getVigenciaAte() {
+        return vigenciaAte;
+    }
+
+    public void setVigenciaAte(LocalDate vigenciaAte) {
+        this.vigenciaAte = vigenciaAte;
+    }
+
+    public String getTipoEmail() {
+        return tipoEmail;
+    }
+
+    public void setTipoEmail(String tipoEmail) {
+        this.tipoEmail = tipoEmail;
     }
 
     public Instant getCreatedAt() {

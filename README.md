@@ -1768,6 +1768,37 @@ passo manual do usuário, feito fora deste código — **concluído em
   fechada~~ — **fechada em 23/09/2026**, envio com `contato@servirea.com.br`
   confirmado ("Próximos passos" item 4).
 
+## ⏳ Backoffice — API do operador do SaaS (seção 111 do plano mestre)
+
+Implementado em 23/09/2026. **Não confundir** com a "Fase 11" deste
+README (permissões/faltas/auditoria/e-mail). Aqui é o painel do **dono
+da plataforma**, login em `admin.servirea.com.br`. Telas Angular ficam
+fora deste repositório.
+
+Desenho fechado com o usuário: operador `suporte@servirea.com.br`
+(`usuario.operador_saas`), JWT `purpose=backoffice` **sem tenant**;
+"entrar na paróquia" emite access token `suporte=true` (as rotas que já
+existem de voluntário/escala). Padre **não** acessa `/admin/**`.
+Voluntários **não** são CRUD no backoffice.
+
+- Pacote `backoffice/`, migration `V027`.
+- `POST /admin/auth/login` (cookie de refresh em `/admin/auth`).
+- `GET /admin/dashboard`; CRUD `/admin/paroquias` (filtros: situação
+  ativos/inadimplentes/inativos, nome, CNPJ, e-mail, tipo de e-mail,
+  contratadoDe/Ate, vigenciaDe/Ate; criar + primeiro admin, bloquear,
+  desbloquear, marcar pago, suporte).
+- CRUD `/admin/usuarios` + `PUT /admin/usuarios/{id}/paroquias`.
+- `GET /admin/logs` (`backoffice_log`, tabela global).
+- Seed do operador em profile `dev` via
+  `servire.backoffice.operador-email` / `operador-senha` em
+  `application-dev-local.yml` (não versionar senha).
+
+✅ Confirmado nesta máquina em 23/09/2026: `mvn test` com
+`BUILD SUCCESS`, `Tests run: 161, Failures: 0, Errors: 0` (era 140
+depois da config do tenant; o backoffice soma os testes novos de
+`backoffice/*`, JWT/filtro de suporte e `@PreAuthorize` de
+`PERM_BACKOFFICE`).
+
 ## Como rodar localmente
 
 Requer um PostgreSQL acessível (local, Docker, ou outro) para o profile
@@ -1818,6 +1849,18 @@ mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
 > # 3) Só agora rodar a aplicação
 > mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
 > ```
+>
+> Operador do backoffice em dev: em `application-dev-local.yml` (gitignorado):
+>
+> ```yaml
+> servire:
+>   backoffice:
+>     operador-email: suporte@servirea.com.br
+>     operador-senha: uma-senha-sua
+> ```
+>
+> Sem isso o seed `DevOperadorSeed` não roda — crie o usuário na mão ou
+> deixe o teste criar o dele.
 >
 > Se o Flyway já tiver tentado migrar e falhado antes de você aplicar o
 > stub (como aconteceu nesta descoberta), não tem problema — o Flyway já
@@ -2113,39 +2156,13 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    foi colada no chat desta sessão (`re_WUReeCvS_...`) e gerar uma nova
    antes de configurar `RESEND_API_KEY` em produção — ver aviso na seção
    da Fase 11 acima.
-8. 🔜 **Próxima fase de código sugerida: Backoffice (seção 111 do plano
-   mestre — não confundir com a "Fase 11" deste README).** Explicação
-   combinada com o usuário em 23/09/2026: o backoffice é o **painel do
-   dono do Servire** para administrar o negócio, não o dia a dia das
-   paróquias. O plano separa dois níveis de "admin" (seções 60, 61 e 99):
+8. ✅ **API do backoffice (seção 111) — implementada em 23/09/2026.**
+   Pacote `backoffice/`, migration V027, JWT `purpose=backoffice` e
+   sessão de suporte (`suporte=true`). Endpoints `/admin/**`. Telas
+   Angular (`admin.servirea.com.br` e faixa "modo suporte" no app da
+   paróquia) ficam no front. Confirmado nesta máquina: `mvn test`
+   `BUILD SUCCESS`, 161 testes, 0 falhas.
 
-   | | **Admin da paróquia** (já existe) | **Operador do SaaS** (backoffice) |
-   |---|---|---|
-   | Quem é | Padre/coordenador de uma paróquia (role `ADMIN` no `usuario_tenant`) | O dono da plataforma |
-   | O que vê | Só os dados da **própria paróquia** (voluntários, escalas, inscrições) | **Todas as paróquias**, no nível do negócio |
-   | Exemplos | Aprovar inscrição, montar escala | Cadastrar paróquia e o primeiro admin dela, bloquear inadimplente, marcar PIX como recebido, ver paróquias ativas |
-   | Onde fica | `app.servirea.com.br` | Front separado, ex.: `admin.servirea.com.br` |
-
-   MVP do backoffice pelo plano:
-   - **Dashboard:** total de paróquias, ativas/bloqueadas, assinaturas vencendo.
-   - **Paróquias (tenants):** cadastrar, editar e ver status. Hoje criar
-     paróquia nova exige mexer direto no banco; o painel substitui isso
-     pelo fluxo da seção 71 (cria tenant → cria admin → dados iniciais).
-   - **Usuários:** quem acessa cada paróquia; reenviar convite/redefinição de senha.
-   - **Bloqueio/desbloqueio** de paróquia.
-   - **"Marcar como pago":** com PIX manual (seção 131.3), o dono confere
-     o PIX e libera o acesso por aqui, sem webhook de gateway.
-   - **Logs** das ações feitas no painel.
-
-   **Regra de privacidade (seções 61 e 99):** o operador **não** enxerga
-   automaticamente os dados funcionais das paróquias (voluntários,
-   escalas). Suporte num dado de paróquia exige escolher explicitamente o
-   tenant, e o acesso fica auditado e identificado na interface. Nada de
-   "modo global" que desligue o filtro de tenant.
-
-   **Escopo neste repositório:** só a API (endpoints do backoffice + papel
-   de operador separado dos papéis da paróquia). A tela fica no front
-   Angular. Antes de codar: fechar com o usuário o desenho técnico
-   (tabelas, como o operador se autentica sem tenant no JWT, endpoints).
-   Depois dele, na ordem do plano: Billing (seção 112), Deploy (113),
-   migração de dados (114) e remoção do Supabase direto do Angular (115).
+   Próximo de código no plano depois desta API: Billing (seção 112),
+   Deploy (113), migração de dados (114) e remoção do Supabase direto
+   do Angular (115).

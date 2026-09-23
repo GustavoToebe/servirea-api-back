@@ -25,17 +25,20 @@ import java.util.UUID;
  * .verifyWith(key).build().parseSignedClaims(token)}), confirmada contra a
  * documentação oficial do projeto antes de escrever este código.
  *
- * <p>Dois tipos de token, distinguidos pelo claim customizado
+ * <p>Três tipos de token, distinguidos pelo claim customizado
  * {@code purpose} — nunca aceitar um pelo outro:</p>
  * <ul>
- *   <li><b>access</b> — token de acesso normal (seção 34: 15 minutos),
+ *   <li><b>access</b> — token de acesso da paróquia (seção 34: 15 minutos),
  *   carrega {@code sub} (usuarioId), {@code tenant} (tenantId) e
- *   {@code roles} (seção 33 usa esse formato de array, mesmo hoje só
- *   existindo uma role por vínculo usuario_tenant).</li>
+ *   {@code roles}. Claim opcional {@code suporte=true} (seção 111):
+ *   sessão de suporte do operador, sem vínculo {@code usuario_tenant}.</li>
  *   <li><b>tenant_selection</b> — token temporário (poucos minutos),
  *   emitido só quando o usuário tem mais de uma paróquia (seção 30: fluxo
  *   de {@code POST /auth/select-tenant}), carrega só {@code sub} — sem
  *   claim de tenant, porque o tenant ainda não foi escolhido.</li>
+ *   <li><b>backoffice</b> — token do operador no painel (seção 111),
+ *   carrega só {@code sub} — sem tenant (o operador não é de nenhuma
+ *   paróquia). Nunca aceito nas rotas da paróquia.</li>
  * </ul>
  *
  * <p>O backend não confia apenas nos claims (seção 33): o
@@ -49,8 +52,10 @@ public class JwtService {
     static final String CLAIM_PURPOSE = "purpose";
     static final String PURPOSE_ACCESS = "access";
     static final String PURPOSE_TENANT_SELECTION = "tenant_selection";
+    static final String PURPOSE_BACKOFFICE = "backoffice";
     static final String CLAIM_TENANT = "tenant";
     static final String CLAIM_ROLES = "roles";
+    static final String CLAIM_SUPORTE = "suporte";
 
     private final SecretKey key;
     private final SecurityProperties.Jwt config;
@@ -73,12 +78,36 @@ public class JwtService {
     }
 
     public String gerarAccessToken(UUID usuarioId, UUID tenantId, UsuarioTenant.Role role) {
+        return gerarAccessToken(usuarioId, tenantId, role, false);
+    }
+
+    /**
+     * @param suporte {@code true} só para a sessão explícita
+     * "entrar nesta paróquia" do operador (seção 99/111). O claim fica
+     * no token para o front mostrar a faixa de modo suporte; o filtro
+     * revalida {@code operador_saas} no banco a cada request.
+     */
+    public String gerarAccessToken(UUID usuarioId, UUID tenantId, UsuarioTenant.Role role, boolean suporte) {
         Instant agora = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(usuarioId.toString())
                 .claim(CLAIM_TENANT, tenantId.toString())
                 .claim(CLAIM_ROLES, List.of(role.name()))
                 .claim(CLAIM_PURPOSE, PURPOSE_ACCESS)
+                .issuedAt(Date.from(agora))
+                .expiration(Date.from(agora.plus(config.accessTokenTtl())))
+                .signWith(key);
+        if (suporte) {
+            builder.claim(CLAIM_SUPORTE, true);
+        }
+        return builder.compact();
+    }
+
+    public String gerarBackofficeToken(UUID usuarioId) {
+        Instant agora = Instant.now();
+        return Jwts.builder()
+                .subject(usuarioId.toString())
+                .claim(CLAIM_PURPOSE, PURPOSE_BACKOFFICE)
                 .issuedAt(Date.from(agora))
                 .expiration(Date.from(agora.plus(config.accessTokenTtl())))
                 .signWith(key)
@@ -123,7 +152,29 @@ public class JwtService {
             throw new UnauthorizedException("Token de acesso com role desconhecida.");
         }
 
-        return new AccessTokenClaims(usuarioId, tenantId, role);
+        boolean suporte = Boolean.TRUE.equals(claims.get(CLAIM_SUPORTE, Boolean.class));
+        return new AccessTokenClaims(usuarioId, tenantId, role, suporte);
+    }
+
+    /**
+     * @throws UnauthorizedException se o token for inválido, expirado ou de
+     * outra finalidade (ex.: um access token da paróquia apresentado no
+     * painel).
+     */
+    public UUID validarBackofficeToken(String token) {
+        Claims claims = parseClaims(token);
+        exigirPurpose(claims, PURPOSE_BACKOFFICE);
+        return parseUuidClaim(claims.getSubject(), "sub");
+    }
+
+    /**
+     * Lê o {@code purpose} sem exigir um valor específico — o filtro usa
+     * isso para escolher o ramo (access vs backoffice) antes de validar
+     * o restante das claims.
+     */
+    public String purpose(String token) {
+        Object purpose = parseClaims(token).get(CLAIM_PURPOSE);
+        return purpose == null ? null : purpose.toString();
     }
 
     /**
@@ -159,6 +210,6 @@ public class JwtService {
         }
     }
 
-    public record AccessTokenClaims(UUID usuarioId, UUID tenantId, UsuarioTenant.Role role) {
+    public record AccessTokenClaims(UUID usuarioId, UUID tenantId, UsuarioTenant.Role role, boolean suporte) {
     }
 }

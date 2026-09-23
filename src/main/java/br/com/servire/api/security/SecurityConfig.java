@@ -33,9 +33,11 @@ import java.util.List;
  * {@code /auth/login}, {@code /auth/select-tenant},
  * {@code /auth/forgot-password} e {@code /auth/reset-password} são
  * isentos de CSRF porque nenhum deles depende de uma credencial ambiente
- * do navegador (o corpo da requisição é autossuficiente). Já
- * {@code /auth/refresh} e {@code /auth/logout} dependem do cookie
- * HttpOnly do refresh token (seção 92) e por isso continuam protegidos —
+ * do navegador (o corpo da requisição é autossuficiente). O mesmo vale
+ * para {@code /admin/auth/login} (seção 111). Já
+ * {@code /auth/refresh}, {@code /auth/logout}, {@code /admin/auth/refresh}
+ * e {@code /admin/auth/logout} dependem do cookie HttpOnly do refresh
+ * token (seção 92) e por isso continuam protegidos —
  * ver a javadoc de {@code AuthController}.</p>
  *
  * <p><b>CORS:</b> só libera as origens vindas de
@@ -80,7 +82,10 @@ public class SecurityConfig {
     // filtros, o Boot despacha para cá SEM reaplicar o JWT
     // (OncePerRequestFilter pula ERROR dispatch). Sem isto, o cliente
     // vê 401 path=/error em vez do 500 real (Bug real #15).
-    private static final String[] ROTAS_PUBLICAS = {"/auth/**", "/public/**", "/actuator/health", "/error"};
+    // /admin/auth/login é o equivalente do /auth/login para o operador
+    // (seção 111) — o JWT ainda não existe nesse momento.
+    private static final String[] ROTAS_PUBLICAS = {
+            "/auth/**", "/admin/auth/**", "/public/**", "/actuator/health", "/error"};
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -119,6 +124,7 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(
                                 "/auth/login", "/auth/select-tenant",
                                 "/auth/forgot-password", "/auth/reset-password",
+                                "/admin/auth/login",
                                 "/public/**"))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
