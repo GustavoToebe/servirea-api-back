@@ -2113,3 +2113,39 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    foi colada no chat desta sessão (`re_WUReeCvS_...`) e gerar uma nova
    antes de configurar `RESEND_API_KEY` em produção — ver aviso na seção
    da Fase 11 acima.
+8. 🔜 **Próxima fase de código sugerida: Backoffice (seção 111 do plano
+   mestre — não confundir com a "Fase 11" deste README).** Explicação
+   combinada com o usuário em 23/09/2026: o backoffice é o **painel do
+   dono do Servire** para administrar o negócio, não o dia a dia das
+   paróquias. O plano separa dois níveis de "admin" (seções 60, 61 e 99):
+
+   | | **Admin da paróquia** (já existe) | **Operador do SaaS** (backoffice) |
+   |---|---|---|
+   | Quem é | Padre/coordenador de uma paróquia (role `ADMIN` no `usuario_tenant`) | O dono da plataforma |
+   | O que vê | Só os dados da **própria paróquia** (voluntários, escalas, inscrições) | **Todas as paróquias**, no nível do negócio |
+   | Exemplos | Aprovar inscrição, montar escala | Cadastrar paróquia e o primeiro admin dela, bloquear inadimplente, marcar PIX como recebido, ver paróquias ativas |
+   | Onde fica | `app.servirea.com.br` | Front separado, ex.: `admin.servirea.com.br` |
+
+   MVP do backoffice pelo plano:
+   - **Dashboard:** total de paróquias, ativas/bloqueadas, assinaturas vencendo.
+   - **Paróquias (tenants):** cadastrar, editar e ver status. Hoje criar
+     paróquia nova exige mexer direto no banco; o painel substitui isso
+     pelo fluxo da seção 71 (cria tenant → cria admin → dados iniciais).
+   - **Usuários:** quem acessa cada paróquia; reenviar convite/redefinição de senha.
+   - **Bloqueio/desbloqueio** de paróquia.
+   - **"Marcar como pago":** com PIX manual (seção 131.3), o dono confere
+     o PIX e libera o acesso por aqui, sem webhook de gateway.
+   - **Logs** das ações feitas no painel.
+
+   **Regra de privacidade (seções 61 e 99):** o operador **não** enxerga
+   automaticamente os dados funcionais das paróquias (voluntários,
+   escalas). Suporte num dado de paróquia exige escolher explicitamente o
+   tenant, e o acesso fica auditado e identificado na interface. Nada de
+   "modo global" que desligue o filtro de tenant.
+
+   **Escopo neste repositório:** só a API (endpoints do backoffice + papel
+   de operador separado dos papéis da paróquia). A tela fica no front
+   Angular. Antes de codar: fechar com o usuário o desenho técnico
+   (tabelas, como o operador se autentica sem tenant no JWT, endpoints).
+   Depois dele, na ordem do plano: Billing (seção 112), Deploy (113),
+   migração de dados (114) e remoção do Supabase direto do Angular (115).
