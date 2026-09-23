@@ -1781,7 +1781,7 @@ Desenho fechado com o usuário: operador `suporte@servirea.com.br`
 existem de voluntário/escala). Padre **não** acessa `/admin/**`.
 Voluntários **não** são CRUD no backoffice.
 
-- Pacote `backoffice/`, migration `V027`.
+- Pacote `backoffice/`, migrations `V027` (operador, contato/endereço da paróquia, `backoffice_log`) e `V028` (`vigencia_ate`, `tipo_email`).
 - `POST /admin/auth/login` (cookie de refresh em `/admin/auth`).
 - `GET /admin/dashboard`; CRUD `/admin/paroquias` (filtros: situação
   ativos/inadimplentes/inativos, nome, CNPJ, e-mail, tipo de e-mail,
@@ -1798,6 +1798,63 @@ Voluntários **não** são CRUD no backoffice.
 depois da config do tenant; o backoffice soma os testes novos de
 `backoffice/*`, JWT/filtro de suporte e `@PreAuthorize` de
 `PERM_BACKOFFICE`).
+
+## Onde está o código (disco + GitHub) — 23/09/2026
+
+Dois repositórios **irmãos** (não é monorepo). A pasta `servire` existe
+**só no PC** — não vira um terceiro git.
+
+```
+Documents/servire/
+  servire-api-back/     ← este repo (Java / Spring)
+  servire-api-front/    ← Angular (outro git)
+```
+
+No GitHub (privados, `GustavoToebe`):
+
+- https://github.com/GustavoToebe/servire-api-back
+- https://github.com/GustavoToebe/servire-api-front
+
+O que mudou nesta máquina em 23/09/2026:
+
+- `Documents\servire-api` passou a `Documents\servire\servire-api-back`.
+- O repo GitHub `GustavoToebe/servire-api` foi **renomeado** para
+  `servire-api-back`. A URL antiga redireciona.
+- O front era `Documents\paroquia-escalas-completo` e **não era git**.
+  Virou `Documents\servire\servire-api-front`, `git init`, commit inicial,
+  repo privado criado e enviado.
+- GitHub CLI (`gh`) instalado com `winget install --id GitHub.cli -e` e
+  autenticado como `GustavoToebe` (`gh auth login` no navegador).
+
+O artifact Maven continua `br.com.servire:servire-api`. O `package.json`
+do front continua `paroquia-escalas-front`. Só os nomes de pasta/repo
+mudaram.
+
+### Clonar em casa
+
+```powershell
+New-Item -ItemType Directory -Path "$HOME\Documents\servire" -Force
+Set-Location "$HOME\Documents\servire"
+git clone https://github.com/GustavoToebe/servire-api-back.git
+git clone https://github.com/GustavoToebe/servire-api-front.git
+```
+
+Se já existir um clone antigo chamado `servire-api`:
+
+```powershell
+git remote set-url origin https://github.com/GustavoToebe/servire-api-back.git
+```
+
+`gh` em casa (opcional, para criar/renomear repo):
+
+```powershell
+winget install --id GitHub.cli -e
+gh auth login
+```
+
+No Cursor: abrir `servire-api-back`, ou a pasta `servire` inteira se
+quiser back e front no mesmo workspace. `application-dev-local.yml` **não
+vai no git** — copiar/recriar em casa (gitignorado).
 
 ## Como rodar localmente
 
@@ -2157,7 +2214,7 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    antes de configurar `RESEND_API_KEY` em produção — ver aviso na seção
    da Fase 11 acima.
 8. ✅ **API do backoffice (seção 111) — implementada em 23/09/2026.**
-   Pacote `backoffice/`, migration V027, JWT `purpose=backoffice` e
+   Pacote `backoffice/`, migrations V027/V028, JWT `purpose=backoffice` e
    sessão de suporte (`suporte=true`). Endpoints `/admin/**`. Telas
    Angular (`admin.servirea.com.br` e faixa "modo suporte" no app da
    paróquia) ficam no front. Confirmado nesta máquina: `mvn test`

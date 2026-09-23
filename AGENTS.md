@@ -1,8 +1,10 @@
 # AGENTS.md — servire-api
 
 Backend Java do **Servire** (SaaS multi-tenant de gestão paroquial: voluntários/coroinhas,
-escalas de missa, inscrições públicas). Substitui aos poucos o acesso direto do front
-Angular ao Supabase. Idioma do código, comentários, mensagens de erro e commits: **português**.
+escalas de missa, inscrições públicas). Este repo é o **`servire-api-back`**; o Angular
+é o irmão **`servire-api-front`** (outro git — não misturar). Substitui aos poucos o
+acesso direto do front ao Supabase. Idioma do código, comentários, mensagens de erro
+e commits: **português**.
 
 - Referência de produto/arquitetura: `plano_mestre_servire_v2_mvp_baixo_custo.md` (~4000 linhas).
   O código cita "seção N" desse arquivo o tempo todo — use `grep -n "^# N\." ` para achar.
@@ -35,6 +37,8 @@ mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
 `src/test/resources/testcontainers/supabase-stubs.sql` (schemas `auth`/`storage` e roles do Supabase);
 ver "Como rodar localmente" no README. Segredos locais de dev ficam em
 `application-dev-local.yml` (raiz, gitignorado, importado pelo profile `dev`).
+Layout em casa (dois clones irmãos; pasta `servire` só no disco): README,
+seção "Onde está o código (disco + GitHub)".
 
 ## Pacotes (`src/main/java/br/com/servire/api/`)
 | Pacote | Conteúdo |
@@ -59,7 +63,9 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
 - Tenant vem **só do JWT** (`JwtAuthenticationFilter` → `TenantContext`). Nunca de body, path ou header.
   Exceção deliberada: JWT `purpose=backoffice` não tem tenant (operador no painel). JWT de
   suporte (`purpose=access` + `suporte=true`) seta o `TenantContext` da paróquia escolhida **sem**
-  `usuario_tenant` — só `operador_saas`, ação auditada em `backoffice_log`.
+  `usuario_tenant` — só `operador_saas`, ação auditada em `backoffice_log`. Suporte **aceita
+  tenant `BLOQUEADO`** (Kill Switch normal negaria). `backoffice_log` é tabela **global**
+  (sem `@TenantId`); não “consertar” virando `audit_log`.
 - Sem `TenantContext`, o resolver devolve o sentinela `SEM_TENANT` (UUID zero): leituras vêm vazias e
   escritas falham por FK. Não "consertar" isso lançando exceção no resolver (quebra o bootstrap).
 - O Hibernate fixa o tenant **quando a sessão abre** (entrada do `@Transactional`). Código que define
@@ -104,6 +110,9 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
   `@JdbcTypeCode(ARRAY)` + `@ColumnTransformer(write = "?::tipo[]")`.
 - Role `ADMIN` da paróquia **não** pode ganhar `PERM_BACKOFFICE`. Se `RolePermissoes`
   usar `EnumSet.allOf(Permissao.class)`, o padre acessa `/admin/**`.
+- Operador SaaS entra só em `POST /admin/auth/login`; `POST /auth/login` recusa
+  `operador_saas`. `/admin/auth/**` é `permitAll` (refresh/logout usam cookie em
+  path `/admin/auth`, não JWT) — não colocar `PERM_BACKOFFICE` nessas rotas.
 
 ## Testes (`src/test/java/...`)
 - Integração estende `AbstractIntegrationTest`: um Postgres 16 singleton (sem `@Container`, de propósito),
