@@ -94,6 +94,7 @@ Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + cont
 - Segredos nunca versionados: prod lê de env var **sem valor padrão** (`JWT_SECRET`, `DB_URL`, `SUPABASE_*`,
   `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`). Em `application-dev.yml`, **não** colocar placeholder vazio
   `${X:}` para chave que vem de `application-dev-local.yml`: o vazio sobrescreve o arquivo importado.
+  Env var nova do profile `prod` entra também no `.env.example` (é a lista usada no deploy).
 
 ## Armadilhas já pagas (não repetir)
 - `open-in-view: false` → acessar coleção lazy no controller dá `LazyInitializationException`. Use

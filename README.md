@@ -156,7 +156,7 @@ Flyway V001–V032 · JJWT 0.13 · Testcontainers 2.x.
 ## Próximos passos
 
 1. Ensaio do backfill V030–V032 numa cópia do banco real.
-2. Definir `CSRF_COOKIE_DOMAIN` no deploy.
+2. Definir `CSRF_COOKIE_DOMAIN` no deploy (lista completa das variáveis de produção em `.env.example`).
 3. Conferir Nginx/Caddy de produção com o snippet acima.
 4. Resto do billing (gateway, webhooks, bloqueio por atraso).
 5. Deploy (seção 113) e corte do acesso direto do Angular ao Supabase (115).
