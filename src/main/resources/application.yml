@@ -97,6 +97,9 @@ servire:
 
 server:
   port: ${PORT:8080}
+  # Dev/test: não confiar em X-Forwarded-For (um cliente forjaria o IP do
+  # rate limit). Produção liga native + internal-proxies — ver application-prod.yml.
+  forward-headers-strategy: none
 
 management:
   endpoints:

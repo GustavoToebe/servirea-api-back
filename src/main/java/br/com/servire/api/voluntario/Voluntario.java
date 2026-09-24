@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Perfil de serviço 1:1 com {@link Pessoa} ({@code papel = VOLUNTARIO}).
+ * Perfil de serviço 1:1 com {@link Pessoa} ({@code e_voluntario = true}).
  * O UUID é o da pessoa ({@code @MapsId}) — vagas, disponibilidade e
  * inscrição aprovada continuam apontando para este id.
  */

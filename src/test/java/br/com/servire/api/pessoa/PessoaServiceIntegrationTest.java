@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,14 +46,14 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void criarVoluntarioSemResponsavelPrincipalLancaBadRequestException() {
-        Pessoa mae = pessoaService.criar(requestResponsavel("Fulana"));
-        PessoaRequest request = requestVoluntario(List.of(
-                new RelacaoRequest(mae.getId(), "Mãe", "Filho", false)));
+    void criarVoluntarioAdultoSemRelacaoPersiste() {
+        Pessoa salvo = pessoaService.criar(requestVoluntario(List.of()));
 
-        assertThatThrownBy(() -> pessoaService.criar(request))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("exatamente um responsável principal");
+        assertThat(salvo.isVoluntario()).isTrue();
+        assertThat(salvo.isResponsavel()).isFalse();
+        assertThat(salvo.getVoluntario()).isNotNull();
+        assertThat(salvo.getVoluntario().getId()).isEqualTo(salvo.getId());
+        assertThat(salvo.getResponsaveis()).isEmpty();
     }
 
     @Test
@@ -65,7 +66,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertThatThrownBy(() -> pessoaService.criar(request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("exatamente um responsável principal");
+                .hasMessageContaining("responsável principal");
     }
 
     @Test
@@ -76,12 +77,22 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 new RelacaoRequest(mae.getId(), "Mãe", "Filho", true))));
 
         assertThat(salvo.getId()).isNotNull();
-        assertThat(salvo.getPapel()).isEqualTo(PessoaPapel.VOLUNTARIO);
+        assertThat(salvo.isVoluntario()).isTrue();
         assertThat(salvo.getVoluntario()).isNotNull();
         assertThat(salvo.getVoluntario().getId()).isEqualTo(salvo.getId());
         assertThat(salvo.getResponsaveis()).hasSize(1);
         assertThat(salvo.getResponsaveis().getFirst().getResponsavel().getId()).isEqualTo(mae.getId());
         assertThat(salvo.getResponsaveis().getFirst().isPrincipal()).isTrue();
+    }
+
+    @Test
+    void criarAdultoVoluntarioEResponsavelAoMesmoTempo() {
+        Pessoa salvo = pessoaService.criar(requestAmbos("Ministro Pai"));
+
+        assertThat(salvo.isVoluntario()).isTrue();
+        assertThat(salvo.isResponsavel()).isTrue();
+        assertThat(salvo.getVoluntario()).isNotNull();
+        assertThat(salvo.getResponsaveis()).isEmpty();
     }
 
     @Test
@@ -99,19 +110,28 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void papelNaoPodeSerAlterado() {
+    void podeAcrescentarPapelResponsavelEmVoluntario() {
+        Pessoa voluntario = pessoaService.criar(requestVoluntario(List.of()));
+
+        Pessoa atualizado = pessoaService.atualizar(voluntario.getId(), requestAmbos(voluntario.getNomeCompleto()));
+
+        assertThat(atualizado.isVoluntario()).isTrue();
+        assertThat(atualizado.isResponsavel()).isTrue();
+    }
+
+    @Test
+    void naoPodeRemoverPapelExistente() {
         Pessoa mae = pessoaService.criar(requestResponsavel("Fulana"));
 
-        assertThatThrownBy(() -> pessoaService.atualizar(mae.getId(), requestVoluntario(List.of(
-                new RelacaoRequest(mae.getId(), "Mãe", "Filho", true)))))
+        assertThatThrownBy(() -> pessoaService.atualizar(mae.getId(), requestVoluntario(List.of())))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("papel");
+                .hasMessageContaining("remover o papel RESPONSAVEL");
     }
 
     @Test
     void doisEmailsExigemExatamenteUmPrincipal() {
         PessoaRequest request = new PessoaRequest(
-                PessoaPapel.RESPONSAVEL, "Sem Principal", null, null, null, null,
+                Set.of(PessoaPapel.RESPONSAVEL), "Sem Principal", null, null, null, null,
                 List.of(
                         new ContatoEmailRequest("E-mail pessoal", "a@teste.com", false),
                         new ContatoEmailRequest("Secundário", "b@teste.com", false)),
@@ -124,7 +144,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
 
     private PessoaRequest requestResponsavel(String nome) {
         return new PessoaRequest(
-                PessoaPapel.RESPONSAVEL, nome, null, null, null, null,
+                Set.of(PessoaPapel.RESPONSAVEL), nome, null, null, null, null,
                 List.of(new ContatoEmailRequest("E-mail pessoal", nome.toLowerCase() + UUID.randomUUID() + "@teste.com", true)),
                 List.of(new ContatoTelefoneRequest("celular", "11999990000", true)),
                 List.of(), null, null, null, null, null, null, null, null, null);
@@ -132,10 +152,19 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
 
     private PessoaRequest requestVoluntario(List<RelacaoRequest> relacoes) {
         return new PessoaRequest(
-                PessoaPapel.VOLUNTARIO, "Nome de Teste " + UUID.randomUUID(), null, null, null, null,
+                Set.of(PessoaPapel.VOLUNTARIO), "Nome de Teste " + UUID.randomUUID(), null, null, null, null,
                 List.of(new ContatoEmailRequest("E-mail pessoal", "vol-" + UUID.randomUUID() + "@teste.com", true)),
                 List.of(new ContatoTelefoneRequest("celular", "11988887777", true)),
                 relacoes, null, null, null, null, null, null, null, null,
                 new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of()));
+    }
+
+    private PessoaRequest requestAmbos(String nome) {
+        return new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO, PessoaPapel.RESPONSAVEL), nome, null, null, null, null,
+                List.of(new ContatoEmailRequest("E-mail pessoal", "ambos-" + UUID.randomUUID() + "@teste.com", true)),
+                List.of(new ContatoTelefoneRequest("celular", "11977776666", true)),
+                List.of(), null, null, null, null, null, null, null, null,
+                new VoluntarioPerfilRequest(TipoVoluntario.ACOLITO, true, null, null, null, null, false, List.of()));
     }
 }

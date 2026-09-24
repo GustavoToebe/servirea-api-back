@@ -113,7 +113,7 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
         // Tenant A: só enxerga João, mesmo em findAll().
         TenantContext.set(tenantA);
-        assertThat(pessoaRepository.findAll().stream().filter(p -> p.getPapel() == PessoaPapel.VOLUNTARIO))
+        assertThat(pessoaRepository.findAll().stream().filter(Pessoa::isVoluntario))
                 .extracting(Pessoa::getNomeCompleto)
                 .containsExactly("João");
         // Cenário P0 (seção 78): buscar pelo ID de Maria (tenant B) estando
@@ -124,7 +124,7 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
         // Tenant B: só enxerga Maria, e não acha o ID de João (tenant A).
         TenantContext.set(tenantB);
-        assertThat(pessoaRepository.findAll().stream().filter(p -> p.getPapel() == PessoaPapel.VOLUNTARIO))
+        assertThat(pessoaRepository.findAll().stream().filter(Pessoa::isVoluntario))
                 .extracting(Pessoa::getNomeCompleto)
                 .containsExactly("Maria");
         assertThat(voluntarioRepository.findById(joao.getId())).isEmpty();
@@ -176,14 +176,14 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
         TenantContext.clear();
 
         TenantContext.set(tenantA);
-        assertThat(pessoaRepository.findAll().stream().filter(p -> p.getPapel() == PessoaPapel.RESPONSAVEL))
+        assertThat(pessoaRepository.findAll().stream().filter(Pessoa::isResponsavel))
                 .extracting(Pessoa::getNomeCompleto)
                 .containsExactly("Responsável A");
         assertThat(pessoaRepository.findById(respBId)).isEmpty();
         TenantContext.clear();
 
         TenantContext.set(tenantB);
-        assertThat(pessoaRepository.findAll().stream().filter(p -> p.getPapel() == PessoaPapel.RESPONSAVEL))
+        assertThat(pessoaRepository.findAll().stream().filter(Pessoa::isResponsavel))
                 .extracting(Pessoa::getNomeCompleto)
                 .containsExactly("Responsável B");
         assertThat(pessoaRepository.findById(respAId)).isEmpty();

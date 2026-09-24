@@ -7,7 +7,6 @@ import br.com.servire.api.voluntario.TipoVoluntario;
 import br.com.servire.api.voluntario.Voluntario;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
@@ -30,7 +29,7 @@ public record InscricaoPublicaRequest(
         String crismaAno,
         @Valid List<ContatoEmailRequest> emails,
         @Valid List<ContatoTelefoneRequest> telefones,
-        @NotEmpty @Valid List<InscricaoResponsavelRequest> responsaveis,
+        @Valid List<InscricaoResponsavelRequest> responsaveis,
         String cep,
         String cidade,
         String uf,

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
-/** Bloco de serviço — só entra quando {@code papel = VOLUNTARIO}. */
+/** Bloco de serviço — obrigatório quando {@code papeis} contém VOLUNTARIO. */
 public record VoluntarioPerfilRequest(
         @NotNull TipoVoluntario tipo,
         boolean ativo,

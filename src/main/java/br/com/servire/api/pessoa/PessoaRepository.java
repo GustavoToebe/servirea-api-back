@@ -18,10 +18,8 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID>, JpaSpecif
     @Query("""
             SELECT DISTINCT p FROM Pessoa p
             JOIN p.emails e
-            WHERE p.papel = :papel
-              AND e.principal = true
+            WHERE e.principal = true
               AND lower(e.email) = lower(:email)
             """)
-    Optional<Pessoa> findResponsavelPorEmailPrincipal(@Param("papel") PessoaPapel papel,
-                                                      @Param("email") String email);
+    Optional<Pessoa> findPorEmailPrincipal(@Param("email") String email);
 }

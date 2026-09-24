@@ -53,6 +53,18 @@ servire:
       api-key: ${RESEND_API_KEY}
       from: ${RESEND_FROM:contato@servirea.com.br}
 
+# Reverse proxy (Nginx/Caddy no mesmo VPS ou rede privada): o Tomcat só
+# reescreve getRemoteAddr() se o hop imediato estiver em internal-proxies.
+# O proxy TEM que sobrescrever X-Forwarded-For com o IP do cliente, não
+# repassar o header que o browser enviou. Ver README, seção "Reverse proxy".
+server:
+  forward-headers-strategy: native
+  tomcat:
+    remoteip:
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+      internal-proxies: "127\\.0\\.0\\.1|::1|10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(1[6-9]|2[0-9]|3[0-1])\\.\\d{1,3}\\.\\d{1,3}"
+
 logging:
   level:
     root: INFO

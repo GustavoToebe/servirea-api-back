@@ -4,12 +4,14 @@ import br.com.servire.api.pessoa.Pessoa;
 import br.com.servire.api.pessoa.PessoaPapel;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public record PessoaResponse(
         UUID id,
-        PessoaPapel papel,
+        Set<PessoaPapel> papeis,
         String nomeCompleto,
         LocalDate dataNascimento,
         String sexo,
@@ -29,12 +31,16 @@ public record PessoaResponse(
         VoluntarioPerfilResponse voluntario) {
 
     public static PessoaResponse de(Pessoa p) {
-        List<RelacaoResponse> relacoes = p.getPapel() == PessoaPapel.VOLUNTARIO
-                ? p.getResponsaveis().stream().map(RelacaoResponse::doVoluntario).toList()
-                : p.getDependentes().stream().map(RelacaoResponse::doResponsavel).toList();
+        List<RelacaoResponse> relacoes = new ArrayList<>();
+        if (p.isVoluntario()) {
+            relacoes.addAll(p.getResponsaveis().stream().map(RelacaoResponse::doVoluntario).toList());
+        }
+        if (p.isResponsavel()) {
+            relacoes.addAll(p.getDependentes().stream().map(RelacaoResponse::doResponsavel).toList());
+        }
         return new PessoaResponse(
                 p.getId(),
-                p.getPapel(),
+                p.getPapeis(),
                 p.getNomeCompleto(),
                 p.getDataNascimento(),
                 p.getSexo(),

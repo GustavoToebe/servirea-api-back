@@ -110,7 +110,19 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertThatThrownBy(() -> inscricaoService.criarPublica(tenant.getSlug(), request, null, "10.0.1.4"))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("exatamente um responsável principal");
+                .hasMessageContaining("exatamente um principal");
+    }
+
+    @Test
+    void criarPublicaSemResponsavelPersisteInscricaoDeAdulto() {
+        doNothing().when(turnstileService).validar(anyString(), anyString());
+        Tenant tenant = criarTenant("adulto-ministro");
+        InscricaoPublicaRequest request = requestPublicaComResponsaveis("Ministro Adulto", List.of());
+
+        Inscricao criada = inscricaoService.criarPublica(tenant.getSlug(), request, null, "10.0.1.9");
+
+        assertThat(criada.getId()).isNotNull();
+        assertThat(criada.getResponsaveis()).isEmpty();
     }
 
     @Test
@@ -144,7 +156,7 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         assertThat(voluntarioRepository.findById(aprovada.getVoluntarioId()))
                 .get().extracting(v -> v.getPessoa().getNomeCompleto()).isEqualTo("Candidato a Aprovar");
         assertThat(pessoaRepository.findById(aprovada.getVoluntarioId())).get()
-                .extracting(Pessoa::getPapel).isEqualTo(PessoaPapel.VOLUNTARIO);
+                .extracting(Pessoa::isVoluntario).isEqualTo(true);
         TenantContext.clear();
     }
 

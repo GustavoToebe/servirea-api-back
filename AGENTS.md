@@ -8,16 +8,18 @@ e commits: **português**.
 
 - Referência de produto/arquitetura: `plano_mestre_servire_v2_mvp_baixo_custo.md` (~4000 linhas).
   O código cita "seção N" desse arquivo o tempo todo — use `grep -n "^# N\." ` para achar.
-- Histórico de fases, decisões e bugs reais (#1–#17): `README.md`. Atenção: a numeração
-  de "Fase 11" do README (permissões/faltas/disponibilidade/auditoria/e-mail) **não** é a
-  "FASE 11 — Backoffice" da seção 111 do plano mestre.
+- Estado atual (módulos, contrato do front, como rodar): `README.md`.
+- Histórico de fases, decisões e bugs reais (#1–#17): `HISTORICO.md`. Atenção: a
+  numeração de "Fase 11" dali (permissões/faltas/disponibilidade/auditoria/e-mail)
+  **não** é a "FASE 11 — Backoffice" da seção 111 do plano mestre.
 
 ## Manter este arquivo atualizado
 Este é o arquivo de instruções compartilhado entre ferramentas de IA (Cursor, Codex, Copilot etc.);
 o `CLAUDE.md` só importa este (`@AGENTS.md`). Edite **só aqui**.
 - Mudança que invalida algo daqui (migration nova, pacote novo, comando novo, armadilha resolvida)
   atualiza este arquivo **junto com a funcionalidade**.
-- Manter curto: só o que evita erro de quem vai mexer no código. Histórico e detalhes ficam no `README.md`.
+- Manter curto: só o que evita erro de quem vai mexer no código. Estado atual no
+  `README.md`; histórico detalhado no `HISTORICO.md`.
 - **Não commitar nem dar push.** Deixar as mudanças no working tree para o dono revisar e entregar
   a mensagem de commit pronta (em português) para ele copiar. Os commits vão na `main`; branch só
   quando pedido explicitamente.
@@ -43,11 +45,11 @@ seção "Onde está o código (disco + GitHub)".
 ## Pacotes (`src/main/java/br/com/servire/api/`)
 | Pacote | Conteúdo |
 |---|---|
-| `web/` | `GlobalExceptionHandler`, `ApiError`, hierarquia `ApiException` (`BadRequest`/`Conflict`/`Forbidden`/`ResourceNotFound`/`Unauthorized`/`TooManyRequests`), `RequestIdFilter` (MDC `requestId`), `RestClientConfiguration` |
+| `web/` | `GlobalExceptionHandler`, `ApiError`, hierarquia `ApiException` (`BadRequest`/`Conflict`/`Forbidden`/`ResourceNotFound`/`Unauthorized`/`TooManyRequests`), `RequestIdFilter` (MDC `requestId`), `ClientIp` (nunca lê `X-Forwarded-For` no código), `RestClientConfiguration` |
 | `tenant/` | `Tenant` (global), `TenantEmail`/`TenantTelefone` (globais, sem `@TenantId`), `TenantContext`, `GET/PUT /tenant` |
 | `security/` | `SecurityConfig`, `JwtAuthenticationFilter`, `JwtService`, `Permissao` + `RolePermissoes`, handlers 401/403 |
 | `auth/` | `Usuario`, `UsuarioTenant` (role ADMIN/COORDENADOR/VISUALIZADOR), refresh token, reset de senha, `EmailSender` (`LoggingEmailSender` / `ResendEmailSender`), `/auth/**` |
-| `pessoa/` | cadastro pessoa-primeiro: `Pessoa` (papel exclusivo VOLUNTARIO/RESPONSAVEL), e-mails/telefones 1:N, `PessoaRelacao` (é/de), `/pessoas/**` |
+| `pessoa/` | cadastro pessoa-primeiro: `Pessoa` (`e_voluntario`/`e_responsavel`, podem coexistir), e-mails/telefones 1:N, `PessoaRelacao` (é/de, opcional), `/pessoas/**` |
 | `voluntario/` | perfil 1:1 `@MapsId` com `Pessoa` (escala, foto, ativo, disponibilidade), `/voluntarios/**` — identidade não mora mais aqui |
 | `escala/` | `Escala` → `EscalaEvento` → `EscalaVaga`, presença, picker de candidatos, `/escalas/**` |
 | `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila `/inscricoes/**`; aprovar materializa `Pessoa` e reusa RESPONSAVEL por e-mail principal |
@@ -56,8 +58,8 @@ seção "Onde está o código (disco + GitHub)".
 | `backoffice/` | painel do operador do SaaS (`/admin/**`): login sem tenant, paróquias, logins, logs globais, sessão de suporte |
 | `billing/` | financeiro manual do painel: `Plano`/`PrecoPlano` (`/admin/planos`), `Assinatura`/`Cobranca` (`/admin/paroquias/{id}/financeiro`, pagamentos, estorno, isenção), `BillingJob` diário |
 
-Migrations: `src/main/resources/db/migration/V001..V030`. **V001–V015 são o baseline, nunca editar.**
-Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis` e das colunas soltas de e-mail/telefone.
+Migrations: `src/main/resources/db/migration/V001..V031`. **V001–V015 são o baseline, nunca editar.**
+Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. **Não aplicar V030/V031 em produção** sem o front em `/pessoas` e um ensaio do backfill numa cópia do banco real.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
@@ -100,6 +102,11 @@ Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + cont
   explode em `MultipleBagFetchException`. Não fetchar as duas; inicialize as coleções
   dentro do `@Transactional` do service (`PessoaService.buscar`,
   `BackofficeParoquiaService.listar`).
+- Rate limit / IP: use `ClientIp.de(request)` (= `getRemoteAddr()`). **Nunca** ler
+  `X-Forwarded-For` no código — o cliente forja e esvazia o limitador. Em prod,
+  `server.forward-headers-strategy: native` + `internal-proxies` (Nginx/Caddy no
+  mesmo VPS). O proxy tem que **sobrescrever** o header (`$remote_addr`), não
+  concatenar o valor que o browser mandou.
 - "Apaga tudo e reinsere" (`clear()` + `orphanRemoval`) com índice único parcial (responsável principal):
   `entityManager.flush()` logo depois do `clear()`.
 - Capturar `DataIntegrityViolationException` de um INSERT exige `saveAndFlush`, não `save`.
@@ -144,4 +151,4 @@ Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + cont
   desligado no profile `test` (`servire.billing.job.enabled: false`).
 - Nomes de teste em português, descritivos (`atualizarComVersaoDivergenteLancaConflictException`).
 - Voluntário em teste: `Pessoas.persistirVoluntario(pessoaRepository, "Nome")` — não existe mais
-  `new Voluntario("Nome")`. Papel é exclusivo; responsável principal é outra `Pessoa`.
+  `new Voluntario("Nome")`. Papéis podem coexistir; responsável é opcional (adulto/ministro).

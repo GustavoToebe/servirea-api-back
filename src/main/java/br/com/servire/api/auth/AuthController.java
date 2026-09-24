@@ -8,6 +8,7 @@ import br.com.servire.api.auth.dto.RefreshRequest;
 import br.com.servire.api.auth.dto.ResetPasswordRequest;
 import br.com.servire.api.auth.dto.SelectTenantRequest;
 import br.com.servire.api.security.SecurityProperties;
+import br.com.servire.api.web.ClientIp;
 import br.com.servire.api.web.UnauthorizedException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -140,14 +141,10 @@ public class AuthController {
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
-    // getRemoteAddr() não considera reverse proxy (X-Forwarded-For) - ver
-    // seção 11/89: quando o deploy real (VPS + Caddy/Nginx) existir, isto
-    // provavelmente precisa ler X-Forwarded-For em vez do IP de conexão
-    // direta. Simplificação deliberada por enquanto (auditoria/ip em
-    // refresh_token é informativo, não é usado para nenhuma decisão de
-    // segurança nesta fase).
+    // Em prod o Tomcat RemoteIpValve reescreve getRemoteAddr() quando o
+    // hop é um proxy interno. Não ler X-Forwarded-For aqui — ver ClientIp.
     private String ip(HttpServletRequest request) {
-        return request.getRemoteAddr();
+        return ClientIp.de(request);
     }
 
     private String userAgent(HttpServletRequest request) {

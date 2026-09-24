@@ -36,13 +36,16 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Inscrição pública e fila de aprovação. Aprovar materializa
- * {@code pessoa} VOLUNTARIO + perfil e reusa RESPONSAVEL pelo e-mail
- * principal (ou cria um novo).
+ * Inscrição pública e fila de aprovação. Responsável é opcional
+ * (adulto/ministro). Aprovar materializa {@code pessoa} voluntária +
+ * perfil e reusa, pelo e-mail principal, uma pessoa já cadastrada
+ * (acrescenta o papel RESPONSAVEL se ainda não tiver).
  */
 @Service
 public class InscricaoService {
@@ -166,7 +169,7 @@ public class InscricaoService {
         Inscricao inscricao = buscarPorId(id);
         exigirPendente(inscricao);
 
-        Pessoa voluntarioPessoa = new Pessoa(PessoaPapel.VOLUNTARIO, inscricao.getNomeCompleto());
+        Pessoa voluntarioPessoa = new Pessoa(Set.of(PessoaPapel.VOLUNTARIO), inscricao.getNomeCompleto());
         voluntarioPessoa.setDataNascimento(inscricao.getDataNascimento());
         voluntarioPessoa.setSexo(opcional(inscricao.getSexo()));
         voluntarioPessoa.setCpf(opcional(inscricao.getCpf()));
@@ -236,14 +239,25 @@ public class InscricaoService {
                 .findFirst()
                 .orElse(null);
         if (emailPrincipal != null) {
-            return pessoaRepository.findResponsavelPorEmailPrincipal(PessoaPapel.RESPONSAVEL, emailPrincipal)
+            return pessoaRepository.findPorEmailPrincipal(emailPrincipal)
+                    .map(this::marcarComoResponsavel)
                     .orElseGet(() -> criarPessoaResponsavel(ir));
         }
         return criarPessoaResponsavel(ir);
     }
 
+    private Pessoa marcarComoResponsavel(Pessoa pessoa) {
+        if (!pessoa.isResponsavel()) {
+            Set<PessoaPapel> papeis = EnumSet.noneOf(PessoaPapel.class);
+            papeis.addAll(pessoa.getPapeis());
+            papeis.add(PessoaPapel.RESPONSAVEL);
+            pessoa.setPapeis(papeis);
+        }
+        return pessoa;
+    }
+
     private Pessoa criarPessoaResponsavel(InscricaoResponsavel ir) {
-        Pessoa pessoa = new Pessoa(PessoaPapel.RESPONSAVEL, ir.getNome());
+        Pessoa pessoa = new Pessoa(Set.of(PessoaPapel.RESPONSAVEL), ir.getNome());
         for (InscricaoResponsavelEmail e : ir.getEmails()) {
             PessoaEmail linha = new PessoaEmail(e.getTipo(), e.getEmail(), e.isPrincipal());
             linha.setPessoa(pessoa);
@@ -269,13 +283,17 @@ public class InscricaoService {
                                  List<InscricaoResponsavelRequest> responsaveis) {
         Contatos.exigirUmPrincipalEmail(emails);
         Contatos.exigirUmPrincipalTelefone(telefones);
-        long principais = responsaveis.stream().filter(InscricaoResponsavelRequest::principal).count();
+        List<InscricaoResponsavelRequest> lista = responsaveis == null ? List.of() : responsaveis;
+        if (lista.isEmpty()) {
+            return;
+        }
+        long principais = lista.stream().filter(InscricaoResponsavelRequest::principal).count();
         if (principais != 1) {
             throw new BadRequestException(
-                    "Deve existir exatamente um responsável principal (seção 38 do plano mestre) — recebido: "
+                    "Quando a inscrição informa responsáveis, deve existir exatamente um principal — recebido: "
                             + principais + ".");
         }
-        for (InscricaoResponsavelRequest r : responsaveis) {
+        for (InscricaoResponsavelRequest r : lista) {
             Contatos.exigirUmPrincipalEmail(r.emails());
             Contatos.exigirUmPrincipalTelefone(r.telefones());
         }
@@ -333,6 +351,9 @@ public class InscricaoService {
     private void substituirResponsaveis(Inscricao inscricao, List<InscricaoResponsavelRequest> requests) {
         inscricao.getResponsaveis().clear();
         entityManager.flush();
+        if (requests == null) {
+            return;
+        }
         for (InscricaoResponsavelRequest r : requests) {
             InscricaoResponsavel responsavel = new InscricaoResponsavel(r.parentesco().trim(), r.nome().trim(),
                     r.principal());

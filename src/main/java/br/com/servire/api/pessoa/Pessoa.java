@@ -4,8 +4,6 @@ import br.com.servire.api.voluntario.Voluntario;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,21 +12,21 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.TenantId;
-import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Identidade do cadastro. Papel exclusivo ({@link PessoaPapel}) — voluntário
- * ou responsável, nunca os dois. Contato e relação moram nas coleções;
- * o perfil de serviço (escala, foto, funções) fica em {@link Voluntario}
- * 1:1 só quando o papel é {@code VOLUNTARIO}.
+ * Identidade do cadastro. Papéis ({@link PessoaPapel}) não são exclusivos:
+ * {@code e_voluntario} e {@code e_responsavel} podem coexistir. Contato e
+ * relação moram nas coleções; o perfil de serviço fica em {@link Voluntario}
+ * 1:1 quando a pessoa é voluntária. Responsável é opcional (adulto/ministro).
  */
 @Entity
 @Table(name = "pessoa")
@@ -42,10 +40,11 @@ public class Pessoa {
     @Column(name = "tenant_id")
     private UUID tenantId;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false)
-    private PessoaPapel papel;
+    @Column(name = "e_voluntario", nullable = false)
+    private boolean eVoluntario;
+
+    @Column(name = "e_responsavel", nullable = false)
+    private boolean eResponsavel;
 
     @Column(name = "nome_completo", nullable = false)
     private String nomeCompleto;
@@ -102,8 +101,12 @@ public class Pessoa {
     }
 
     public Pessoa(PessoaPapel papel, String nomeCompleto) {
-        this.papel = papel;
+        this(papel == null ? Set.of() : Set.of(papel), nomeCompleto);
+    }
+
+    public Pessoa(Set<PessoaPapel> papeis, String nomeCompleto) {
         this.nomeCompleto = nomeCompleto;
+        setPapeis(papeis);
     }
 
     public UUID getId() {
@@ -114,8 +117,28 @@ public class Pessoa {
         return tenantId;
     }
 
-    public PessoaPapel getPapel() {
-        return papel;
+    public boolean isVoluntario() {
+        return eVoluntario;
+    }
+
+    public boolean isResponsavel() {
+        return eResponsavel;
+    }
+
+    public Set<PessoaPapel> getPapeis() {
+        EnumSet<PessoaPapel> papeis = EnumSet.noneOf(PessoaPapel.class);
+        if (eVoluntario) {
+            papeis.add(PessoaPapel.VOLUNTARIO);
+        }
+        if (eResponsavel) {
+            papeis.add(PessoaPapel.RESPONSAVEL);
+        }
+        return papeis;
+    }
+
+    public void setPapeis(Set<PessoaPapel> papeis) {
+        this.eVoluntario = papeis != null && papeis.contains(PessoaPapel.VOLUNTARIO);
+        this.eResponsavel = papeis != null && papeis.contains(PessoaPapel.RESPONSAVEL);
     }
 
     public String getNomeCompleto() {

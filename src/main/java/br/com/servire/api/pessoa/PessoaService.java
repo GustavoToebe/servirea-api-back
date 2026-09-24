@@ -19,13 +19,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
- * Cadastro pessoa-primeiro. Papel é imutável. Relação só liga
- * RESPONSAVEL ↔ VOLUNTARIO; o voluntário exige exatamente um responsável
- * principal (seção 38).
+ * Cadastro pessoa-primeiro. Papéis não são exclusivos e podem ser
+ * acrescentados (nunca removidos). Relação responsável↔voluntário é
+ * opcional — adulto/ministro entra sem responsável.
  */
 @Service
 public class PessoaService {
@@ -54,8 +56,10 @@ public class PessoaService {
     private static Specification<Pessoa> filtro(PessoaPapel papel, String nome) {
         return (root, query, cb) -> {
             List<Predicate> predicados = new ArrayList<>();
-            if (papel != null) {
-                predicados.add(cb.equal(root.get("papel"), papel));
+            if (papel == PessoaPapel.VOLUNTARIO) {
+                predicados.add(cb.isTrue(root.get("eVoluntario")));
+            } else if (papel == PessoaPapel.RESPONSAVEL) {
+                predicados.add(cb.isTrue(root.get("eResponsavel")));
             }
             if (nome != null && !nome.isBlank()) {
                 predicados.add(cb.like(cb.lower(root.get("nomeCompleto")), "%" + nome.trim().toLowerCase() + "%"));
@@ -72,15 +76,17 @@ public class PessoaService {
 
     @Transactional
     public Pessoa criar(PessoaRequest request) {
-        validarRequest(request);
-        Pessoa pessoa = new Pessoa(request.papel(), request.nomeCompleto().trim());
+        Set<PessoaPapel> papeis = papeisDe(request);
+        validarRequest(request, papeis);
+        Pessoa pessoa = new Pessoa(papeis, request.nomeCompleto().trim());
         aplicarIdentidade(pessoa, request);
         substituirContatos(pessoa, request.emails(), request.telefones());
-        if (request.papel() == PessoaPapel.VOLUNTARIO) {
+        if (pessoa.isVoluntario()) {
             aplicarPerfilVoluntario(pessoa, request.voluntario());
             substituirRelacoesDoVoluntario(pessoa, request.relacoes());
-        } else {
-            substituirRelacoesDoResponsavel(pessoa, request.relacoes());
+        }
+        if (pessoa.isResponsavel()) {
+            substituirRelacoesDoResponsavel(pessoa, request.relacoes(), pessoa.isVoluntario());
         }
         pessoa = pessoaRepository.save(pessoa);
         auditLogService.registrar("CRIACAO", "PESSOA", pessoa.getId(), null);
@@ -90,37 +96,63 @@ public class PessoaService {
     @Transactional
     public Pessoa atualizar(UUID id, PessoaRequest request) {
         Pessoa pessoa = buscarPorId(id);
-        if (pessoa.getPapel() != request.papel()) {
-            throw new BadRequestException("O papel da pessoa não pode ser alterado.");
+        Set<PessoaPapel> novos = papeisDe(request);
+        if (pessoa.isVoluntario() && !novos.contains(PessoaPapel.VOLUNTARIO)) {
+            throw new BadRequestException("Não é possível remover o papel VOLUNTARIO.");
         }
-        validarRequest(request);
+        if (pessoa.isResponsavel() && !novos.contains(PessoaPapel.RESPONSAVEL)) {
+            throw new BadRequestException("Não é possível remover o papel RESPONSAVEL.");
+        }
+        validarRequest(request, novos);
+        pessoa.setPapeis(novos);
         aplicarIdentidade(pessoa, request);
         substituirContatos(pessoa, request.emails(), request.telefones());
-        if (pessoa.getPapel() == PessoaPapel.VOLUNTARIO) {
+        if (pessoa.isVoluntario()) {
             aplicarPerfilVoluntario(pessoa, request.voluntario());
             substituirRelacoesDoVoluntario(pessoa, request.relacoes());
-        } else {
-            substituirRelacoesDoResponsavel(pessoa, request.relacoes());
+        }
+        if (pessoa.isResponsavel()) {
+            substituirRelacoesDoResponsavel(pessoa, request.relacoes(), pessoa.isVoluntario());
         }
         pessoaRepository.save(pessoa);
-        auditLogService.registrar("ATUALIZACAO", "PESSOA", id, List.of("identidade", "contatos", "relacoes"));
+        auditLogService.registrar("ATUALIZACAO", "PESSOA", id, List.of("identidade", "contatos", "relacoes", "papeis"));
         return buscarPorId(id);
     }
 
-    private void validarRequest(PessoaRequest request) {
+    private static Set<PessoaPapel> papeisDe(PessoaRequest request) {
+        if (request.papeis() == null || request.papeis().isEmpty()) {
+            throw new BadRequestException("Informe ao menos um papel (VOLUNTARIO e/ou RESPONSAVEL).");
+        }
+        return EnumSet.copyOf(request.papeis());
+    }
+
+    private void validarRequest(PessoaRequest request, Set<PessoaPapel> papeis) {
         Contatos.exigirUmPrincipalEmail(request.emails());
         Contatos.exigirUmPrincipalTelefone(request.telefones());
-        if (request.papel() == PessoaPapel.VOLUNTARIO) {
-            if (request.voluntario() == null) {
-                throw new BadRequestException("O bloco de voluntário é obrigatório quando o papel é VOLUNTARIO.");
-            }
-            List<RelacaoRequest> relacoes = request.relacoes() == null ? List.of() : request.relacoes();
-            long principais = relacoes.stream().filter(RelacaoRequest::principal).count();
-            if (principais != 1) {
-                throw new BadRequestException(
-                        "Deve existir exatamente um responsável principal (seção 38) — recebido: "
-                                + principais + ".");
-            }
+        if (papeis.contains(PessoaPapel.VOLUNTARIO) && request.voluntario() == null) {
+            throw new BadRequestException("O bloco de voluntário é obrigatório quando o papel inclui VOLUNTARIO.");
+        }
+        validarPrincipaisDasRelacoes(request.relacoes());
+    }
+
+    /**
+     * Relação é opcional. Se vier alguma, no máximo um principal — e se
+     * houver mais de uma, exige exatamente um principal (contato da família).
+     */
+    private static void validarPrincipaisDasRelacoes(List<RelacaoRequest> relacoes) {
+        List<RelacaoRequest> lista = relacoes == null ? List.of() : relacoes;
+        if (lista.isEmpty()) {
+            return;
+        }
+        long principais = lista.stream().filter(RelacaoRequest::principal).count();
+        if (principais > 1) {
+            throw new BadRequestException(
+                    "Deve existir no máximo um responsável principal — recebido: " + principais + ".");
+        }
+        if (lista.size() > 1 && principais != 1) {
+            throw new BadRequestException(
+                    "Quando há mais de uma relação, deve existir exatamente um responsável principal — recebido: "
+                            + principais + ".");
         }
     }
 
@@ -181,10 +213,13 @@ public class PessoaService {
     private void substituirRelacoesDoVoluntario(Pessoa voluntario, List<RelacaoRequest> requests) {
         voluntario.getResponsaveis().clear();
         entityManager.flush();
+        if (requests == null) {
+            return;
+        }
         for (RelacaoRequest r : requests) {
             Pessoa responsavel = buscarPorId(r.pessoaId());
-            if (responsavel.getPapel() != PessoaPapel.RESPONSAVEL) {
-                throw new BadRequestException("A relação do voluntário precisa apontar para um RESPONSAVEL.");
+            if (!responsavel.isResponsavel()) {
+                throw new BadRequestException("A relação do voluntário precisa apontar para alguém com papel RESPONSAVEL.");
             }
             if (responsavel.getId().equals(voluntario.getId())) {
                 throw new BadRequestException("Uma pessoa não pode se relacionar consigo mesma.");
@@ -195,18 +230,25 @@ public class PessoaService {
         }
     }
 
-    private void substituirRelacoesDoResponsavel(Pessoa responsavel, List<RelacaoRequest> requests) {
-        if (requests == null || requests.isEmpty()) {
-            responsavel.getDependentes().clear();
-            entityManager.flush();
+    /**
+     * @param relacoesJaAplicadasNoVoluntario quando a pessoa é os dois papéis,
+     *        as relações do request são as do lado voluntário; o lado
+     *        responsável não é substituído pelo mesmo payload.
+     */
+    private void substituirRelacoesDoResponsavel(Pessoa responsavel, List<RelacaoRequest> requests,
+                                                 boolean relacoesJaAplicadasNoVoluntario) {
+        if (relacoesJaAplicadasNoVoluntario) {
             return;
         }
         responsavel.getDependentes().clear();
         entityManager.flush();
+        if (requests == null || requests.isEmpty()) {
+            return;
+        }
         for (RelacaoRequest r : requests) {
             Pessoa voluntario = buscarPorId(r.pessoaId());
-            if (voluntario.getPapel() != PessoaPapel.VOLUNTARIO) {
-                throw new BadRequestException("A relação do responsável precisa apontar para um VOLUNTARIO.");
+            if (!voluntario.isVoluntario()) {
+                throw new BadRequestException("A relação do responsável precisa apontar para alguém com papel VOLUNTARIO.");
             }
             PessoaRelacao relacao = new PessoaRelacao(responsavel, voluntario, r.parentesco().trim(),
                     opcional(r.parentescoInverso()), r.principal());
