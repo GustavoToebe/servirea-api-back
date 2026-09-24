@@ -226,17 +226,17 @@ public class InscricaoService {
 
         voluntarioPessoa = pessoaRepository.saveAndFlush(voluntarioPessoa);
 
-        // Principal primeiro: se dois responsáveis da ficha caírem na mesma
-        // pessoa (mesmo e-mail principal), a relação que fica é a principal.
+        // Principal primeiro. Pai e mãe com o mesmo e-mail na mesma ficha são
+        // duas pessoas: quem já foi ligado nesta aprovação não é candidato de
+        // novo (antes o segundo responsável era descartado — 24/09/2026).
         List<InscricaoResponsavel> responsaveis = inscricao.getResponsaveis().stream()
                 .sorted(Comparator.comparing(InscricaoResponsavel::isPrincipal).reversed())
                 .toList();
         Set<UUID> jaRelacionados = new HashSet<>();
+        jaRelacionados.add(voluntarioPessoa.getId());
         for (InscricaoResponsavel ir : responsaveis) {
-            Pessoa responsavel = resolverResponsavel(ir, voluntarioPessoa);
-            if (!jaRelacionados.add(responsavel.getId())) {
-                continue;
-            }
+            Pessoa responsavel = resolverResponsavel(ir, jaRelacionados);
+            jaRelacionados.add(responsavel.getId());
             PessoaRelacao relacao = new PessoaRelacao(responsavel, voluntarioPessoa, ir.getParentesco(),
                     opcional(ir.getParentescoInverso()), ir.isPrincipal());
             voluntarioPessoa.getResponsaveis().add(relacao);
@@ -277,11 +277,13 @@ public class InscricaoService {
      * da V031): o voluntário que acabou de ser criado nunca é candidato
      * (viraria responsável de si mesmo e bateria em
      * {@code pessoa_relacao_distintos}); quem já é RESPONSAVEL tem
-     * preferência; e alguém que ainda não é responsável (ministro adulto,
-     * irmão cadastrado com o e-mail da mãe) só é promovido se o nome
-     * também bater — senão um irmão viraria "responsável" do outro.</p>
+     * preferência (primeiro o de mesmo nome — pai e mãe podem dividir o
+     * e-mail); alguém que ainda não é responsável (ministro adulto, irmão
+     * cadastrado com o e-mail da mãe) só é promovido se o nome também
+     * bater — senão um irmão viraria "responsável" do outro. Quem já foi
+     * ligado nesta mesma aprovação ({@code excluir}) não é reusado.</p>
      */
-    private Pessoa resolverResponsavel(InscricaoResponsavel ir, Pessoa voluntarioPessoa) {
+    private Pessoa resolverResponsavel(InscricaoResponsavel ir, Set<UUID> excluir) {
         String emailPrincipal = ir.getEmails().stream()
                 .filter(InscricaoResponsavelEmail::isPrincipal)
                 .map(InscricaoResponsavelEmail::getEmail)
@@ -291,11 +293,12 @@ public class InscricaoService {
             return criarPessoaResponsavel(ir);
         }
         List<Pessoa> candidatos = pessoaRepository.findPorEmailPrincipal(emailPrincipal.trim()).stream()
-                .filter(p -> !p.getId().equals(voluntarioPessoa.getId()))
+                .filter(p -> !excluir.contains(p.getId()))
                 .toList();
         return candidatos.stream()
-                .filter(Pessoa::isResponsavel)
+                .filter(p -> p.isResponsavel() && mesmoNome(p.getNomeCompleto(), ir.getNome()))
                 .findFirst()
+                .or(() -> candidatos.stream().filter(Pessoa::isResponsavel).findFirst())
                 .or(() -> candidatos.stream()
                         .filter(p -> mesmoNome(p.getNomeCompleto(), ir.getNome()))
                         .findFirst()

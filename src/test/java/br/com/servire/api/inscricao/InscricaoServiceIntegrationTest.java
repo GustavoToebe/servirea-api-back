@@ -262,7 +262,7 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void aprovarComDoisResponsaveisDeMesmoEmailCriaUmaSoRelacaoPrincipal() {
+    void aprovarComPaiEMaeDividindoOMesmoEmailCriaDuasPessoas() {
         Tenant tenant = criarTenant("resp-duplicado");
         Usuario aprovador = usuarioRepository.saveAndFlush(new Usuario("aprovador-dup-" + UUID.randomUUID() + "@teste.com", "Aprovador"));
         TenantContext.set(tenant.getId());
@@ -276,8 +276,24 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
 
         Pessoa voluntario = pessoaService.buscarPorId(aprovada.getVoluntarioId());
-        assertThat(voluntario.getResponsaveis()).hasSize(1);
-        assertThat(voluntario.getResponsaveis().getFirst().isPrincipal()).isTrue();
+        assertThat(voluntario.getResponsaveis()).hasSize(2);
+        assertThat(voluntario.getResponsaveis())
+                .extracting(r -> r.getResponsavel().getNomeCompleto(), r -> r.isPrincipal())
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("Mãe Do Casal", true),
+                        org.assertj.core.groups.Tuple.tuple("Pai Do Casal", false));
+
+        // Irmão depois: cada um reencontra a própria pessoa pelo nome, sem duplicar.
+        Inscricao irmao = new Inscricao("Irmão Do Casal");
+        irmao.getResponsaveis().add(responsavelComEmail(irmao, "Pai Do Casal", email, true));
+        irmao.getResponsaveis().add(responsavelComEmail(irmao, "Mãe Do Casal", email, false));
+        irmao = inscricaoRepository.saveAndFlush(irmao);
+        Pessoa voluntarioIrmao = pessoaService.buscarPorId(
+                inscricaoService.aprovar(irmao.getId(), aprovador.getId()).getVoluntarioId());
+        assertThat(voluntarioIrmao.getResponsaveis())
+                .extracting(r -> r.getResponsavel().getId())
+                .containsExactlyInAnyOrderElementsOf(
+                        voluntario.getResponsaveis().stream().map(r -> r.getResponsavel().getId()).toList());
     }
 
     @Test
