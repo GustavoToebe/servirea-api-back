@@ -1983,6 +1983,48 @@ reabrir, cancelar, excluir) e refresh de token com dois 401 simultâneos
 V032 remove o enum órfão `pessoa_papel`. Pessoa "nova" na ficha do
 voluntário agora é criada na mesma transação (`novaPessoa`), sem órfãos.
 
+## Produção recriada (24/09/2026)
+
+**Situação encontrada:** o Supabase de produção nunca tinha rodado o
+Flyway (`flyway_schema_history` não existia). Estava no estado da V015,
+com 7 tabelas (`voluntarios`, `responsaveis`, `escalas`, `escala_eventos`,
+`escala_vagas`, `inscricoes`, `inscricao_responsaveis`) e ~6 pessoas de teste.
+A API com `baseline-on-migrate: false` recusaria subir nesse banco.
+
+**Tentativas:**
+1. Script "V015 → V032" (pré-checagem de colunas/constraints, V016–V032
+   na ordem, `flyway_schema_history` com baseline 15 + checksums reais).
+   Falhou na V023: `inscricoes.aprovado_por` tinha um id do **Supabase
+   Auth** que não existia em `public.usuario` (**Bug real #27**). A versão
+   seguinte criava um `usuario` com o mesmo id antes da V023.
+2. O SQL Editor do Supabase, no botão "Run and enable RLS", injetou
+   `ALTER TABLE faltando ENABLE ROW LEVEL SECURITY` dentro do `DO $$` da
+   pré-checagem (leu `SELECT ... INTO faltando` como criação de tabela) e
+   quebrou o script. Passou a rodar pelo `psql` via Docker.
+
+**Decisão:** com dados só de teste, apagar e recriar. Script único,
+numa transação: drop das tabelas/view/funções/tipos antigos e das 4
+policies de fotos do Storage (a V015 as recria sem `IF NOT EXISTS`),
+V001–V032 na ordem, `flyway_schema_history` com as 32 migrations e os
+checksums que o Flyway calcula, e RLS ligado em **todas** as tabelas do
+`public` (sem policy — a Data API anon não lê `usuario`, `refresh_token`
+etc.; a API Java conecta como dona e não é afetada). Primeiro ADMIN criado
+à mão com `extensions.crypt(..., extensions.gen_salt('bf', 10))`.
+
+Testado antes num Postgres com o stub do Supabase, em três cenários
+(estado V015 com dados, aprovador ausente do `auth.users`, script
+recriado): `COMMIT`, a API sobe com "Successfully validated 32
+migrations… No migration necessary" e o login funciona.
+
+**Bug real #28 (mesma rodada):** na aprovação de inscrição, pai e mãe com
+o mesmo e-mail principal viravam uma pessoa só e o segundo era descartado.
+Agora quem já foi ligado na mesma aprovação não é candidato de novo, e entre
+responsáveis com o mesmo e-mail vence o de mesmo nome (`9491963`).
+
+**Pendências:** trocar a senha do banco (foi commitada no `.env.example`
+em `f94b7b5` e continua no histórico do git); V033 com o RLS nas
+migrations; renomear a paróquia `placeholder`.
+
 ## Onde está o código (disco + GitHub) — 23/09/2026
 
 Dois repositórios **irmãos** (não é monorepo). A pasta `servire` existe

@@ -88,14 +88,26 @@ HttpOnly e continuam exigindo o header. Em produção, front e API em hosts
 diferentes: `CSRF_COOKIE_DOMAIN=servirea.com.br` para o front conseguir ler o
 cookie `XSRF-TOKEN`.
 
-### Antes de aplicar V030–V032 em produção
+### Produção (banco) — estado em 24/09/2026
 
-1. Subir junto o front que já usa `/pessoas` e `/escalas` (repo irmão).
-2. Rodar Flyway numa **cópia** do Postgres real e conferir o backfill
-   (voluntários → `pessoa` com o mesmo `id`; responsáveis antigos →
-   `pessoa` + `pessoa_relacao`; e-mails/telefones viram listas).
-3. Só então apontar o Flyway de produção. V030 dropa `responsaveis` e
-   as colunas soltas — não tem volta fácil.
+O Supabase de produção **nunca tinha passado pelo Flyway**: estava no
+estado da V015 (criado pelo `supabase/schema.sql` do front), sem
+`flyway_schema_history`. Com só 6 pessoas de teste, a decisão foi
+**apagar e recriar**: um script único (V001–V032 na ordem + histórico do
+Flyway com os checksums reais + RLS ligado em todas as tabelas do
+`public`) rodou pelo `psql`. Os dados antigos foram descartados; o
+primeiro ADMIN foi criado à mão (ver HISTORICO, "Produção recriada").
+
+Daqui em diante é o fluxo normal: migration nova (`V033+`) é aplicada
+pelo próprio Flyway quando a API sobe.
+
+- SQL manual em produção: rodar pelo `psql`, não pelo SQL Editor. O
+  botão "Run and enable RLS" do editor injeta `ALTER TABLE` no meio de
+  blocos `DO $$ ... $$` e corrompe o script.
+- Senha com `@` quebra a URL `postgresql://`: passar `-h/-U` e
+  `PGPASSWORD` separados.
+- Criar usuário à mão: `'{bcrypt}' || extensions.crypt('senha', extensions.gen_salt('bf', 10))`
+  (pgcrypto do Supabase fica no schema `extensions`).
 
 ## Reverse proxy e rate limit
 
@@ -155,8 +167,10 @@ Flyway V001–V032 · JJWT 0.13 · Testcontainers 2.x.
 
 ## Próximos passos
 
-1. Ensaio do backfill V030–V032 numa cópia do banco real.
-2. Definir `CSRF_COOKIE_DOMAIN` no deploy (lista completa das variáveis de produção em `.env.example`).
-3. Conferir Nginx/Caddy de produção com o snippet acima.
-4. Resto do billing (gateway, webhooks, bloqueio por atraso).
-5. Deploy (seção 113) e corte do acesso direto do Angular ao Supabase (115).
+1. **Trocar a senha do banco de produção** (vazou no histórico do git em `f94b7b5`, `.env.example`).
+2. V033: `ENABLE ROW LEVEL SECURITY` nas tabelas que ainda não têm nas migrations (em produção o
+   script já ligou; banco recriado só pelo Flyway ficaria sem).
+3. Definir `CSRF_COOKIE_DOMAIN` no deploy (lista completa das variáveis de produção em `.env.example`).
+4. Conferir Nginx/Caddy de produção com o snippet acima.
+5. Renomear a paróquia inicial (`placeholder`, V020) e recadastrar as pessoas.
+6. Resto do billing (gateway, webhooks, bloqueio por atraso).
