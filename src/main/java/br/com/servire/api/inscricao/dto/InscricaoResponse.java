@@ -2,6 +2,8 @@ package br.com.servire.api.inscricao.dto;
 
 import br.com.servire.api.inscricao.Inscricao;
 import br.com.servire.api.inscricao.StatusInscricao;
+import br.com.servire.api.pessoa.dto.ContatoEmailResponse;
+import br.com.servire.api.pessoa.dto.ContatoTelefoneResponse;
 import br.com.servire.api.voluntario.FuncaoEscala;
 import br.com.servire.api.voluntario.TipoVoluntario;
 import br.com.servire.api.voluntario.Voluntario;
@@ -15,17 +17,24 @@ public record InscricaoResponse(
         UUID id,
         String nomeCompleto,
         LocalDate dataNascimento,
+        String sexo,
+        String cpf,
+        String rg,
         TipoVoluntario tipo,
         String fotoPath,
         String etapaCatequese,
         String eucaristiaAno,
         String crismaAno,
+        List<ContatoEmailResponse> emails,
+        List<ContatoTelefoneResponse> telefones,
+        List<InscricaoResponsavelResponse> responsaveis,
+        String cep,
+        String cidade,
+        String uf,
         String rua,
         String numero,
+        String complemento,
         String bairro,
-        String telefone,
-        String celular,
-        String email,
         Voluntario.HorarioEstudo horarioEstudo,
         String observacoes,
         boolean autorizaWhatsapp,
@@ -36,25 +45,35 @@ public record InscricaoResponse(
         UUID voluntarioId,
         Instant dataRejeicao,
         UUID rejeitadoPor,
-        String motivoRejeicao,
-        List<InscricaoResponsavelResponse> responsaveis) {
+        String motivoRejeicao) {
 
     public static InscricaoResponse de(Inscricao i) {
         return new InscricaoResponse(
                 i.getId(),
                 i.getNomeCompleto(),
                 i.getDataNascimento(),
+                i.getSexo(),
+                i.getCpf(),
+                i.getRg(),
                 i.getTipo(),
                 i.getFotoPath(),
                 i.getEtapaCatequese(),
                 i.getEucaristiaAno(),
                 i.getCrismaAno(),
+                i.getEmails().stream()
+                        .map(e -> new ContatoEmailResponse(e.getId(), e.getTipo(), e.getEmail(), e.isPrincipal()))
+                        .toList(),
+                i.getTelefones().stream()
+                        .map(t -> new ContatoTelefoneResponse(t.getId(), t.getTipo(), t.getNumero(), t.isPrincipal()))
+                        .toList(),
+                i.getResponsaveis().stream().map(InscricaoResponsavelResponse::de).toList(),
+                i.getCep(),
+                i.getCidade(),
+                i.getUf(),
                 i.getRua(),
                 i.getNumero(),
+                i.getComplemento(),
                 i.getBairro(),
-                i.getTelefone(),
-                i.getCelular(),
-                i.getEmail(),
                 i.getHorarioEstudo(),
                 i.getObservacoes(),
                 i.isAutorizaWhatsapp(),
@@ -65,7 +84,6 @@ public record InscricaoResponse(
                 i.getVoluntarioId(),
                 i.getDataRejeicao(),
                 i.getRejeitadoPor(),
-                i.getMotivoRejeicao(),
-                i.getResponsaveis().stream().map(InscricaoResponsavelResponse::de).toList());
+                i.getMotivoRejeicao());
     }
 }

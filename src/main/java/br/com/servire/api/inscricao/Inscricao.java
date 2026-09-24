@@ -27,33 +27,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Cadastro pendente vindo do formulário público {@code /public/{slug}/inscricoes}
- * (Fase 8, seção 44/108 do plano mestre) — mapeia {@code inscricoes} (V008
- * + {@code tenant_id} de V021). Espelha praticamente todos os campos de
- * {@link Voluntario} (mesmo formulário, seção 20.3) mais os campos de
- * auditoria de aprovação/rejeição.
- *
- * <p>{@code funcoesHabilitadas} usa o MESMO padrão de mapeamento de array
- * de ENUM nativo do Postgres já confirmado por build real em
- * {@link Voluntario#getFuncoesHabilitadas()} (Fase 6, 22/09/2026) —
- * {@code @JdbcTypeCode(SqlTypes.ARRAY)} + {@code @Enumerated(EnumType.STRING)}
- * + {@code @ColumnTransformer(write = "?::funcao_escala[]")}. Como a
- * coluna e o tipo Postgres são idênticos aos de {@code voluntarios}, o
- * risco aqui é bem menor que o da Fase 6 (mesmo padrão, já provado).</p>
- *
- * <p>{@code aprovadoPor}/{@code rejeitadoPor} são {@code UUID} simples
- * (não {@code @ManyToOne} para {@code Usuario}) — só precisamos gravar
- * "quem", nunca navegar da inscrição para o usuário; a FK que o banco
- * mantém (repontada de {@code auth.users} para {@code usuario} pela V023,
- * ver seu comentário) garante a integridade sem precisar de um
- * relacionamento JPA.</p>
- *
- * <p>As CHECK constraints {@code inscricoes_aprovada_ck}/
- * {@code inscricoes_rejeitada_ck} (V008) exigem que, ao mudar para
- * APROVADA/REJEITADA, os campos de auditoria correspondentes já estejam
- * preenchidos — {@link InscricaoService#aprovar}/{@link InscricaoService#rejeitar}
- * são os únicos lugares que fazem essa transição, sempre setando todos os
- * campos exigidos juntos, na mesma transação.</p>
+ * Rascunho do formulário público até a aprovação. Identidade e contato
+ * espelham {@code pessoa}; na aprovação viram pessoa VOLUNTARIO + perfil
+ * 1:1 e responsáveis reaproveitados por e-mail principal.
  */
 @Entity
 @Table(name = "inscricoes")
@@ -72,6 +48,12 @@ public class Inscricao {
 
     @Column(name = "data_nascimento")
     private LocalDate dataNascimento;
+
+    private String sexo;
+
+    private String cpf;
+
+    private String rg;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -96,11 +78,13 @@ public class Inscricao {
 
     private String bairro;
 
-    private String telefone;
+    private String cep;
 
-    private String celular;
+    private String cidade;
 
-    private String email;
+    private String uf;
+
+    private String complemento;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "horario_estudo")
@@ -141,6 +125,14 @@ public class Inscricao {
     private String motivoRejeicao;
 
     @OneToMany(mappedBy = "inscricao", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("principal DESC, email ASC")
+    private List<InscricaoEmail> emails = new ArrayList<>();
+
+    @OneToMany(mappedBy = "inscricao", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("principal DESC, numero ASC")
+    private List<InscricaoTelefone> telefones = new ArrayList<>();
+
+    @OneToMany(mappedBy = "inscricao", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("principal DESC, nome ASC")
     private List<InscricaoResponsavel> responsaveis = new ArrayList<>();
 
@@ -151,7 +143,6 @@ public class Inscricao {
     private Instant updatedAt;
 
     protected Inscricao() {
-        // JPA
     }
 
     public Inscricao(String nomeCompleto) {
@@ -180,6 +171,30 @@ public class Inscricao {
 
     public void setDataNascimento(LocalDate dataNascimento) {
         this.dataNascimento = dataNascimento;
+    }
+
+    public String getSexo() {
+        return sexo;
+    }
+
+    public void setSexo(String sexo) {
+        this.sexo = sexo;
+    }
+
+    public String getCpf() {
+        return cpf;
+    }
+
+    public void setCpf(String cpf) {
+        this.cpf = cpf;
+    }
+
+    public String getRg() {
+        return rg;
+    }
+
+    public void setRg(String rg) {
+        this.rg = rg;
     }
 
     public TipoVoluntario getTipo() {
@@ -246,28 +261,36 @@ public class Inscricao {
         this.bairro = bairro;
     }
 
-    public String getTelefone() {
-        return telefone;
+    public String getCep() {
+        return cep;
     }
 
-    public void setTelefone(String telefone) {
-        this.telefone = telefone;
+    public void setCep(String cep) {
+        this.cep = cep;
     }
 
-    public String getCelular() {
-        return celular;
+    public String getCidade() {
+        return cidade;
     }
 
-    public void setCelular(String celular) {
-        this.celular = celular;
+    public void setCidade(String cidade) {
+        this.cidade = cidade;
     }
 
-    public String getEmail() {
-        return email;
+    public String getUf() {
+        return uf;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setUf(String uf) {
+        this.uf = uf;
+    }
+
+    public String getComplemento() {
+        return complemento;
+    }
+
+    public void setComplemento(String complemento) {
+        this.complemento = complemento;
     }
 
     public Voluntario.HorarioEstudo getHorarioEstudo() {
@@ -356,6 +379,14 @@ public class Inscricao {
 
     public void setMotivoRejeicao(String motivoRejeicao) {
         this.motivoRejeicao = motivoRejeicao;
+    }
+
+    public List<InscricaoEmail> getEmails() {
+        return emails;
+    }
+
+    public List<InscricaoTelefone> getTelefones() {
+        return telefones;
     }
 
     public List<InscricaoResponsavel> getResponsaveis() {

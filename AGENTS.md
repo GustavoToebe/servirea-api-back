@@ -44,19 +44,20 @@ seção "Onde está o código (disco + GitHub)".
 | Pacote | Conteúdo |
 |---|---|
 | `web/` | `GlobalExceptionHandler`, `ApiError`, hierarquia `ApiException` (`BadRequest`/`Conflict`/`Forbidden`/`ResourceNotFound`/`Unauthorized`/`TooManyRequests`), `RequestIdFilter` (MDC `requestId`), `RestClientConfiguration` |
-| `tenant/` | `Tenant` (global), `TenantContext` (ThreadLocal), `ServireCurrentTenantIdentifierResolver`, `TenantConfiguration`, `GET/PUT /tenant` |
+| `tenant/` | `Tenant` (global), `TenantEmail`/`TenantTelefone` (globais, sem `@TenantId`), `TenantContext`, `GET/PUT /tenant` |
 | `security/` | `SecurityConfig`, `JwtAuthenticationFilter`, `JwtService`, `Permissao` + `RolePermissoes`, handlers 401/403 |
 | `auth/` | `Usuario`, `UsuarioTenant` (role ADMIN/COORDENADOR/VISUALIZADOR), refresh token, reset de senha, `EmailSender` (`LoggingEmailSender` / `ResendEmailSender`), `/auth/**` |
-| `voluntario/` | `Voluntario`, `Responsavel`, `DisponibilidadeVoluntario`, `/voluntarios/**` |
+| `pessoa/` | cadastro pessoa-primeiro: `Pessoa` (papel exclusivo VOLUNTARIO/RESPONSAVEL), e-mails/telefones 1:N, `PessoaRelacao` (é/de), `/pessoas/**` |
+| `voluntario/` | perfil 1:1 `@MapsId` com `Pessoa` (escala, foto, ativo, disponibilidade), `/voluntarios/**` — identidade não mora mais aqui |
 | `escala/` | `Escala` → `EscalaEvento` → `EscalaVaga`, presença, picker de candidatos, `/escalas/**` |
-| `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila de aprovação `/inscricoes/**` |
+| `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila `/inscricoes/**`; aprovar materializa `Pessoa` e reusa RESPONSAVEL por e-mail principal |
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
 | `backoffice/` | painel do operador do SaaS (`/admin/**`): login sem tenant, paróquias, logins, logs globais, sessão de suporte |
 | `billing/` | financeiro manual do painel: `Plano`/`PrecoPlano` (`/admin/planos`), `Assinatura`/`Cobranca` (`/admin/paroquias/{id}/financeiro`, pagamentos, estorno, isenção), `BillingJob` diário |
 
-Migrations: `src/main/resources/db/migration/V001..V029`. **V001–V015 são o baseline, nunca editar.**
-Mudança de schema = nova migration `V0NN__descricao.sql`.
+Migrations: `src/main/resources/db/migration/V001..V030`. **V001–V015 são o baseline, nunca editar.**
+Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis` e das colunas soltas de e-mail/telefone.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
@@ -69,6 +70,7 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
   (sem `@TenantId`); não “consertar” virando `audit_log`. Idem `plano`, `preco_plano`,
   `assinatura` e `cobranca` (V029): `tenant_id` ali é FK comum vinda do path `/admin/paroquias/{id}`,
   não `@TenantId`. Toda cobrança é buscada junto com o tenant do path (`findByIdInAndTenantId`).
+  Idem `tenant_email`/`tenant_telefone` (V030): globais, sem `@TenantId`.
 - Sem `TenantContext`, o resolver devolve o sentinela `SEM_TENANT` (UUID zero): leituras vêm vazias e
   escritas falham por FK. Não "consertar" isso lançando exceção no resolver (quebra o bootstrap).
 - O Hibernate fixa o tenant **quando a sessão abre** (entrada do `@Transactional`). Código que define
@@ -94,6 +96,10 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
 ## Armadilhas já pagas (não repetir)
 - `open-in-view: false` → acessar coleção lazy no controller dá `LazyInitializationException`. Use
   `@EntityGraph`/`JOIN FETCH` no repositório (ex.: `VoluntarioRepository.findById`).
+- Criteria/`JOIN FETCH` em **duas** coleções `List` da mesma raiz (`emails` + `telefones`)
+  explode em `MultipleBagFetchException`. Não fetchar as duas; inicialize as coleções
+  dentro do `@Transactional` do service (`PessoaService.buscar`,
+  `BackofficeParoquiaService.listar`).
 - "Apaga tudo e reinsere" (`clear()` + `orphanRemoval`) com índice único parcial (responsável principal):
   `entityManager.flush()` logo depois do `clear()`.
 - Capturar `DataIntegrityViolationException` de um INSERT exige `saveAndFlush`, não `save`.
@@ -137,3 +143,5 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
   (código aleatório) além da paróquia; as datas são relativas a `billingService.hoje()`. O `BillingJob` fica
   desligado no profile `test` (`servire.billing.job.enabled: false`).
 - Nomes de teste em português, descritivos (`atualizarComVersaoDivergenteLancaConflictException`).
+- Voluntário em teste: `Pessoas.persistirVoluntario(pessoaRepository, "Nome")` — não existe mais
+  `new Voluntario("Nome")`. Papel é exclusivo; responsável principal é outra `Pessoa`.

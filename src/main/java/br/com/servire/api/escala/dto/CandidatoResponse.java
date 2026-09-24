@@ -19,7 +19,7 @@ public record CandidatoResponse(
         FuncaoEscala[] funcoes = v.getFuncoesHabilitadas();
         return new CandidatoResponse(
                 v.getId(),
-                v.getNomeCompleto(),
+                v.getPessoa().getNomeCompleto(),
                 v.getTipo(),
                 v.getFotoPath(),
                 funcoes == null ? List.of() : List.of(funcoes));

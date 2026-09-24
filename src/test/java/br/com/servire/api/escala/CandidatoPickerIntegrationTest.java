@@ -5,6 +5,8 @@ import br.com.servire.api.escala.dto.CandidatoResponse;
 import br.com.servire.api.escala.dto.EscalaEventoRequest;
 import br.com.servire.api.escala.dto.EscalaRequest;
 import br.com.servire.api.escala.dto.EscalaVagaRequest;
+import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.Pessoas;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
@@ -43,6 +45,9 @@ class CandidatoPickerIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private VoluntarioRepository voluntarioRepository;
+
+    @Autowired
+    private PessoaRepository pessoaRepository;
 
     @Autowired
     private DisponibilidadeVoluntarioRepository disponibilidadeRepository;
@@ -141,7 +146,7 @@ class CandidatoPickerIntegrationTest extends AbstractIntegrationTest {
     }
 
     private Voluntario voluntarioComFuncao(String nome, FuncaoEscala funcao) {
-        Voluntario voluntario = new Voluntario(nome);
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, nome);
         voluntario.setFuncoesHabilitadas(new FuncaoEscala[]{funcao});
         return voluntarioRepository.saveAndFlush(voluntario);
     }

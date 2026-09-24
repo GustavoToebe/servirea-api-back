@@ -1,13 +1,18 @@
 package br.com.servire.api.inscricao.dto;
 
+import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
+import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
-/** Um responsável dentro do payload de inscrição (seção 108, mesma regra de {@code ResponsavelRequest} da Fase 6). */
+import java.util.List;
+
+/** Responsável do formulário público — identidade + listas 1:N + rótulos é/de. */
 public record InscricaoResponsavelRequest(
         @NotBlank String parentesco,
+        String parentescoInverso,
         @NotBlank String nome,
-        String telefone,
-        String celular,
-        String email,
+        @Valid List<ContatoEmailRequest> emails,
+        @Valid List<ContatoTelefoneRequest> telefones,
         boolean principal) {
 }

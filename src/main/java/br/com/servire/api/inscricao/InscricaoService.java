@@ -4,13 +4,22 @@ import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.inscricao.dto.InscricaoAtualizarRequest;
 import br.com.servire.api.inscricao.dto.InscricaoPublicaRequest;
 import br.com.servire.api.inscricao.dto.InscricaoResponsavelRequest;
+import br.com.servire.api.pessoa.Contatos;
+import br.com.servire.api.pessoa.Pessoa;
+import br.com.servire.api.pessoa.PessoaEmail;
+import br.com.servire.api.pessoa.PessoaPapel;
+import br.com.servire.api.pessoa.PessoaRelacao;
+import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.PessoaTelefone;
+import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
+import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
 import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
-import br.com.servire.api.voluntario.Responsavel;
+import br.com.servire.api.voluntario.FuncaoEscala;
+import br.com.servire.api.voluntario.TipoVoluntario;
 import br.com.servire.api.voluntario.Voluntario;
-import br.com.servire.api.voluntario.VoluntarioRepository;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
@@ -26,18 +35,20 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Regras de negócio de inscrição pública e da fila de aprovação (Fase 8,
- * seção 44/108 do plano mestre).
+ * Inscrição pública e fila de aprovação. Aprovar materializa
+ * {@code pessoa} VOLUNTARIO + perfil e reusa RESPONSAVEL pelo e-mail
+ * principal (ou cria um novo).
  */
 @Service
 public class InscricaoService {
 
     private final InscricaoRepository inscricaoRepository;
-    private final VoluntarioRepository voluntarioRepository;
+    private final PessoaRepository pessoaRepository;
     private final TenantRepository tenantRepository;
     private final StorageService storageService;
     private final TurnstileService turnstileService;
@@ -49,7 +60,7 @@ public class InscricaoService {
     private EntityManager entityManager;
 
     public InscricaoService(InscricaoRepository inscricaoRepository,
-                             VoluntarioRepository voluntarioRepository,
+                             PessoaRepository pessoaRepository,
                              TenantRepository tenantRepository,
                              StorageService storageService,
                              TurnstileService turnstileService,
@@ -57,56 +68,26 @@ public class InscricaoService {
                              AuditLogService auditLogService,
                              PlatformTransactionManager transactionManager) {
         this.inscricaoRepository = inscricaoRepository;
-        this.voluntarioRepository = voluntarioRepository;
+        this.pessoaRepository = pessoaRepository;
         this.tenantRepository = tenantRepository;
         this.storageService = storageService;
         this.turnstileService = turnstileService;
         this.rateLimiter = rateLimiter;
         this.auditLogService = auditLogService;
-        // Ver javadoc de criarPublica: precisamos abrir a transação só
-        // DEPOIS de TenantContext.set(...), então não dá pra usar
-        // @Transactional (que abriria a sessão do Hibernate na entrada do
-        // método, antes do tenant ser resolvido) — Bug real #8, seção 108.
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     /**
-     * Cria uma inscrição a partir do formulário público — SEM autenticação
-     * (rota {@code /public/**}, seção 44). Como não passa por
-     * {@link br.com.servire.api.security.JwtAuthenticationFilter}, o
-     * {@link TenantContext} não vem setado por ninguém: esta é a única
-     * classe de negócio do projeto que chama {@link TenantContext#set}
-     * diretamente, imitando o que o filtro faz para requisições
-     * autenticadas — sempre com {@code try/finally} (regra P0, seção
-     * 20/78/79/80).
-     *
-     * <p>Ordem deliberada: rate limit (mais barato) → Turnstile (chamada de
-     * rede) → resolver tenant → gravar. Cada barreira só é cruzada se a
-     * anterior passou, para não gastar uma chamada HTTP ao Cloudflare em
-     * requisições que o rate limit já teria barrado.</p>
-     *
-     * <p><b>Bug real #8 (seção 108):</b> este método NÃO pode ser anotado
-     * com {@code @Transactional} — o Hibernate resolve e fixa o
-     * identificador de tenant da sessão no momento em que a sessão é
-     * aberta, o que sob {@code @Transactional} declarativo acontece na
-     * ENTRADA do método (antes do corpo rodar), e não no momento em que
-     * {@link TenantContext#set} é chamado dentro dele. Com
-     * {@code @Transactional} no método, a sessão nascia presa ao tenant
-     * sentinela {@code SEM_TENANT} e o INSERT (adiado até o commit)
-     * violava a FK {@code inscricoes_tenant_id_fkey} — a inscrição pública
-     * nunca funcionou de fato contra um banco real. A correção é abrir a
-     * transação manualmente, via {@link #transactionTemplate}, só DEPOIS
-     * de {@code TenantContext.set(...)} já ter rodado.</p>
+     * Sem {@code @Transactional}: o Hibernate fixa o tenant na abertura da
+     * sessão. {@code TenantContext.set} precisa rodar antes (Bug real #8).
      */
-    public Inscricao criarPublica(String tenantSlug, InscricaoPublicaRequest request, MultipartFile foto, String ipRemetente) {
+    public Inscricao criarPublica(String tenantSlug, InscricaoPublicaRequest request, MultipartFile foto,
+                                  String ipRemetente) {
         rateLimiter.registrarTentativa(ipRemetente);
         turnstileService.validar(request.turnstileToken(), ipRemetente);
 
         Tenant tenant = tenantRepository.findBySlug(tenantSlug)
                 .orElseThrow(() -> new ResourceNotFoundException("Paróquia não encontrada."));
-        // Mesma checagem de Kill Switch do JwtAuthenticationFilter (seção 28)
-        // — uma paróquia BLOQUEADA/CANCELADA não deve nem aceitar novas
-        // inscrições no formulário público.
         if (tenant.getStatus() != Tenant.Status.ATIVO && tenant.getStatus() != Tenant.Status.TRIAL) {
             throw new ResourceNotFoundException("Paróquia não encontrada.");
         }
@@ -121,17 +102,15 @@ public class InscricaoService {
         }
     }
 
-    /**
-     * Parte da gravação de {@link #criarPublica} que precisa mesmo de uma
-     * transação — extraída para rodar dentro de {@link #transactionTemplate},
-     * já com {@link TenantContext#set} aplicado (ver Bug real #8 acima).
-     */
     private Inscricao gravarInscricaoPublica(InscricaoPublicaRequest request, MultipartFile foto) {
-        Inscricao inscricao = new Inscricao(request.nomeCompleto());
-        aplicarCampos(inscricao, request.dataNascimento(), request.tipo(), request.etapaCatequese(),
-                request.eucaristiaAno(), request.crismaAno(), request.rua(), request.numero(), request.bairro(),
-                request.telefone(), request.celular(), request.email(), request.horarioEstudo(),
-                request.observacoes(), request.autorizaWhatsapp(), request.funcoesHabilitadas());
+        validarContatos(request.emails(), request.telefones(), request.responsaveis());
+        Inscricao inscricao = new Inscricao(request.nomeCompleto().trim());
+        aplicarCampos(inscricao, request.dataNascimento(), request.sexo(), request.cpf(), request.rg(),
+                request.tipo(), request.etapaCatequese(), request.eucaristiaAno(), request.crismaAno(),
+                request.cep(), request.cidade(), request.uf(), request.rua(), request.numero(),
+                request.complemento(), request.bairro(), request.horarioEstudo(), request.observacoes(),
+                request.autorizaWhatsapp(), request.funcoesHabilitadas());
+        substituirContatos(inscricao, request.emails(), request.telefones());
         substituirResponsaveis(inscricao, request.responsaveis());
         inscricao = inscricaoRepository.save(inscricao);
 
@@ -143,12 +122,8 @@ public class InscricaoService {
             } catch (IOException e) {
                 throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
             }
-            String caminhoSalvo = storageService.armazenar(caminho, conteudo, foto.getContentType());
-            inscricao.setFotoPath(caminhoSalvo);
+            inscricao.setFotoPath(storageService.armazenar(caminho, conteudo, foto.getContentType()));
         }
-        // Sem usuário autenticado (formulário público, seção 44) —
-        // AuditLogService.registrar grava userId nulo automaticamente
-        // (ver seu javadoc).
         auditLogService.registrar("CRIACAO", "INSCRICAO", inscricao.getId(), null);
         return inscricao;
     }
@@ -168,68 +143,70 @@ public class InscricaoService {
     public Inscricao atualizarPendente(UUID id, InscricaoAtualizarRequest request) {
         Inscricao inscricao = buscarPorId(id);
         exigirPendente(inscricao);
-        inscricao.setNomeCompleto(request.nomeCompleto());
-        aplicarCampos(inscricao, request.dataNascimento(), request.tipo(), request.etapaCatequese(),
-                request.eucaristiaAno(), request.crismaAno(), request.rua(), request.numero(), request.bairro(),
-                request.telefone(), request.celular(), request.email(), request.horarioEstudo(),
-                request.observacoes(), request.autorizaWhatsapp(), request.funcoesHabilitadas());
+        validarContatos(request.emails(), request.telefones(), request.responsaveis());
+        inscricao.setNomeCompleto(request.nomeCompleto().trim());
+        aplicarCampos(inscricao, request.dataNascimento(), request.sexo(), request.cpf(), request.rg(),
+                request.tipo(), request.etapaCatequese(), request.eucaristiaAno(), request.crismaAno(),
+                request.cep(), request.cidade(), request.uf(), request.rua(), request.numero(),
+                request.complemento(), request.bairro(), request.horarioEstudo(), request.observacoes(),
+                request.autorizaWhatsapp(), request.funcoesHabilitadas());
+        substituirContatos(inscricao, request.emails(), request.telefones());
         substituirResponsaveis(inscricao, request.responsaveis());
         auditLogService.registrar("ATUALIZACAO", "INSCRICAO", inscricao.getId(),
-                List.of("nomeCompleto", "dataNascimento", "tipo", "etapaCatequese", "eucaristiaAno", "crismaAno",
-                        "rua", "numero", "bairro", "telefone", "celular", "email", "horarioEstudo", "observacoes",
-                        "autorizaWhatsapp", "funcoesHabilitadas", "responsaveis"));
+                List.of("identidade", "contatos", "responsaveis"));
         return inscricao;
     }
 
     /**
-     * Aprova a inscrição: cria um {@link Voluntario} de verdade a partir
-     * dos dados da inscrição (copiando também os responsáveis), vincula
-     * {@code inscricao.voluntario_id} ao voluntário recém-criado e marca a
-     * inscrição como {@code APROVADA} — tudo na mesma transação (a CHECK
-     * {@code inscricoes_aprovada_ck}, V008, exige que os três campos de
-     * auditoria estejam preenchidos juntos).
-     *
-     * <p><b>Tabela de auditoria dedicada (Fase 11, seção 59):</b> dois
-     * registros são gravados aqui — a criação do voluntário (entidade
-     * {@code VOLUNTARIO}) e a aprovação da inscrição em si (entidade
-     * {@code INSCRICAO}) — além dos próprios campos de auditoria já
-     * existentes em {@code inscricoes} ({@code aprovado_por}/
-     * {@code data_aprovacao}), que continuam preenchidos como sempre.</p>
+     * Materializa pessoa VOLUNTARIO + perfil e reusa/cria RESPONSAVEL
+     * pelo e-mail principal de cada responsável da inscrição.
      */
     @Transactional
     public Inscricao aprovar(UUID id, UUID usuarioIdAprovador) {
         Inscricao inscricao = buscarPorId(id);
         exigirPendente(inscricao);
 
-        Voluntario voluntario = new Voluntario(inscricao.getNomeCompleto());
-        voluntario.setDataNascimento(inscricao.getDataNascimento());
-        voluntario.setTipo(inscricao.getTipo());
-        voluntario.setAtivo(true);
-        voluntario.setFotoPath(inscricao.getFotoPath());
-        voluntario.setEtapaCatequese(inscricao.getEtapaCatequese());
-        voluntario.setEucaristiaAno(inscricao.getEucaristiaAno());
-        voluntario.setCrismaAno(inscricao.getCrismaAno());
-        voluntario.setRua(inscricao.getRua());
-        voluntario.setNumero(inscricao.getNumero());
-        voluntario.setBairro(inscricao.getBairro());
-        voluntario.setTelefone(inscricao.getTelefone());
-        voluntario.setCelular(inscricao.getCelular());
-        voluntario.setEmail(inscricao.getEmail());
-        voluntario.setHorarioEstudo(inscricao.getHorarioEstudo());
-        voluntario.setObservacoes(inscricao.getObservacoes());
-        voluntario.setAutorizaWhatsapp(inscricao.isAutorizaWhatsapp());
-        voluntario.setFuncoesHabilitadas(inscricao.getFuncoesHabilitadas());
+        Pessoa voluntarioPessoa = new Pessoa(PessoaPapel.VOLUNTARIO, inscricao.getNomeCompleto());
+        voluntarioPessoa.setDataNascimento(inscricao.getDataNascimento());
+        voluntarioPessoa.setSexo(opcional(inscricao.getSexo()));
+        voluntarioPessoa.setCpf(opcional(inscricao.getCpf()));
+        voluntarioPessoa.setRg(opcional(inscricao.getRg()));
+        voluntarioPessoa.setCep(opcional(inscricao.getCep()));
+        voluntarioPessoa.setCidade(opcional(inscricao.getCidade()));
+        voluntarioPessoa.setUf(opcional(inscricao.getUf()));
+        voluntarioPessoa.setLogradouro(opcional(inscricao.getRua()));
+        voluntarioPessoa.setNumero(opcional(inscricao.getNumero()));
+        voluntarioPessoa.setComplemento(opcional(inscricao.getComplemento()));
+        voluntarioPessoa.setBairro(opcional(inscricao.getBairro()));
+        voluntarioPessoa.setObservacoes(opcional(inscricao.getObservacoes()));
+        copiarEmailsParaPessoa(voluntarioPessoa, inscricao.getEmails());
+        copiarTelefonesParaPessoa(voluntarioPessoa, inscricao.getTelefones());
+
+        Voluntario perfil = new Voluntario();
+        perfil.setTipo(inscricao.getTipo());
+        perfil.setAtivo(true);
+        perfil.setFotoPath(inscricao.getFotoPath());
+        perfil.setEtapaCatequese(opcional(inscricao.getEtapaCatequese()));
+        perfil.setEucaristiaAno(opcional(inscricao.getEucaristiaAno()));
+        perfil.setCrismaAno(opcional(inscricao.getCrismaAno()));
+        perfil.setHorarioEstudo(inscricao.getHorarioEstudo());
+        perfil.setAutorizaWhatsapp(inscricao.isAutorizaWhatsapp());
+        perfil.setFuncoesHabilitadas(inscricao.getFuncoesHabilitadas());
+        voluntarioPessoa.setVoluntario(perfil);
+
+        voluntarioPessoa = pessoaRepository.saveAndFlush(voluntarioPessoa);
+
         for (InscricaoResponsavel ir : inscricao.getResponsaveis()) {
-            Responsavel responsavel = new Responsavel(ir.getParentesco(), ir.getNome(), ir.getTelefone(), ir.getCelular(),
-                    ir.getEmail(), ir.isPrincipal());
-            responsavel.setVoluntario(voluntario);
-            voluntario.getResponsaveis().add(responsavel);
+            Pessoa responsavel = resolverResponsavel(ir);
+            PessoaRelacao relacao = new PessoaRelacao(responsavel, voluntarioPessoa, ir.getParentesco(),
+                    opcional(ir.getParentescoInverso()), ir.isPrincipal());
+            voluntarioPessoa.getResponsaveis().add(relacao);
         }
-        voluntario = voluntarioRepository.save(voluntario);
-        auditLogService.registrar("CRIACAO", "VOLUNTARIO", voluntario.getId(), null);
+        pessoaRepository.save(voluntarioPessoa);
+        auditLogService.registrar("CRIACAO", "PESSOA", voluntarioPessoa.getId(), null);
 
         inscricao.setStatus(StatusInscricao.APROVADA);
-        inscricao.setVoluntarioId(voluntario.getId());
+        inscricao.setVoluntarioId(voluntarioPessoa.getId());
         inscricao.setDataAprovacao(Instant.now());
         inscricao.setAprovadoPor(usuarioIdAprovador);
         auditLogService.registrar("APROVACAO", "INSCRICAO", inscricao.getId(), List.of("status"));
@@ -252,6 +229,34 @@ public class InscricaoService {
         return inscricao;
     }
 
+    private Pessoa resolverResponsavel(InscricaoResponsavel ir) {
+        String emailPrincipal = ir.getEmails().stream()
+                .filter(InscricaoResponsavelEmail::isPrincipal)
+                .map(InscricaoResponsavelEmail::getEmail)
+                .findFirst()
+                .orElse(null);
+        if (emailPrincipal != null) {
+            return pessoaRepository.findResponsavelPorEmailPrincipal(PessoaPapel.RESPONSAVEL, emailPrincipal)
+                    .orElseGet(() -> criarPessoaResponsavel(ir));
+        }
+        return criarPessoaResponsavel(ir);
+    }
+
+    private Pessoa criarPessoaResponsavel(InscricaoResponsavel ir) {
+        Pessoa pessoa = new Pessoa(PessoaPapel.RESPONSAVEL, ir.getNome());
+        for (InscricaoResponsavelEmail e : ir.getEmails()) {
+            PessoaEmail linha = new PessoaEmail(e.getTipo(), e.getEmail(), e.isPrincipal());
+            linha.setPessoa(pessoa);
+            pessoa.getEmails().add(linha);
+        }
+        for (InscricaoResponsavelTelefone t : ir.getTelefones()) {
+            PessoaTelefone linha = new PessoaTelefone(t.getTipo(), t.getNumero(), t.isPrincipal());
+            linha.setPessoa(pessoa);
+            pessoa.getTelefones().add(linha);
+        }
+        return pessoaRepository.saveAndFlush(pessoa);
+    }
+
     private void exigirPendente(Inscricao inscricao) {
         if (inscricao.getStatus() != StatusInscricao.PENDENTE) {
             throw new ConflictException(
@@ -260,66 +265,120 @@ public class InscricaoService {
         }
     }
 
-    private void aplicarCampos(Inscricao inscricao, java.time.LocalDate dataNascimento,
-                                br.com.servire.api.voluntario.TipoVoluntario tipo, String etapaCatequese,
-                                String eucaristiaAno, String crismaAno, String rua, String numero, String bairro,
-                                String telefone, String celular, String email, Voluntario.HorarioEstudo horarioEstudo,
-                                String observacoes, boolean autorizaWhatsapp,
-                                List<br.com.servire.api.voluntario.FuncaoEscala> funcoesHabilitadas) {
-        inscricao.setDataNascimento(dataNascimento);
-        inscricao.setTipo(tipo);
-        inscricao.setEtapaCatequese(etapaCatequese);
-        inscricao.setEucaristiaAno(eucaristiaAno);
-        inscricao.setCrismaAno(crismaAno);
-        inscricao.setRua(rua);
-        inscricao.setNumero(numero);
-        inscricao.setBairro(bairro);
-        inscricao.setTelefone(telefone);
-        inscricao.setCelular(celular);
-        inscricao.setEmail(email);
-        inscricao.setHorarioEstudo(horarioEstudo);
-        inscricao.setObservacoes(observacoes);
-        inscricao.setAutorizaWhatsapp(autorizaWhatsapp);
-        inscricao.setFuncoesHabilitadas(funcoesHabilitadas == null ? new br.com.servire.api.voluntario.FuncaoEscala[0]
-                : funcoesHabilitadas.toArray(new br.com.servire.api.voluntario.FuncaoEscala[0]));
-    }
-
-    /**
-     * Mesma regra "exatamente um principal" (seção 38) reaplicada aqui —
-     * {@link Inscricao} não compartilha entidade com {@link Voluntario}.
-     *
-     * <p><b>Bug real #10 (mesmo mecanismo de {@code VoluntarioService},
-     * seção 106):</b> encontrado por revisão manual proativa depois do
-     * bug idêntico confirmado em {@code VoluntarioService.substituirResponsaveis}
-     * — sem o {@code entityManager.flush()} logo após o {@code clear()},
-     * o Hibernate pode tentar inserir o novo responsável principal ANTES
-     * de deletar o antigo (a ordem de flush do Hibernate agrupa por tipo
-     * de operação, não segue a ordem cronológica da coleção Java),
-     * violando o índice único parcial {@code ux_inscricao_responsavel_principal}
-     * (V009) quando esta chamada é usada para SUBSTITUIR responsáveis de
-     * uma inscrição já existente (via {@link #atualizarPendente}) — não
-     * afeta {@link #criarPublica}, que sempre parte de uma inscrição nova
-     * sem responsáveis antigos para conflitar. Ainda sem um teste
-     * automatizado que exercite essa troca de principal em
-     * {@code atualizarPendente} (só {@code InscricaoServiceIntegrationTest.atualizarPendenteDepoisDeAprovadaLancaConflictException}
-     * toca esse método, e não troca o principal) — corrigido
-     * proativamente por analogia, não por um build real que o tenha
-     * confirmado.</p>
-     */
-    private void substituirResponsaveis(Inscricao inscricao, List<InscricaoResponsavelRequest> requests) {
-        long principais = requests.stream().filter(InscricaoResponsavelRequest::principal).count();
+    private void validarContatos(List<ContatoEmailRequest> emails, List<ContatoTelefoneRequest> telefones,
+                                 List<InscricaoResponsavelRequest> responsaveis) {
+        Contatos.exigirUmPrincipalEmail(emails);
+        Contatos.exigirUmPrincipalTelefone(telefones);
+        long principais = responsaveis.stream().filter(InscricaoResponsavelRequest::principal).count();
         if (principais != 1) {
             throw new BadRequestException(
-                    "Deve existir exatamente um responsável principal (seção 38 do plano mestre) — recebido: " + principais + ".");
+                    "Deve existir exatamente um responsável principal (seção 38 do plano mestre) — recebido: "
+                            + principais + ".");
         }
+        for (InscricaoResponsavelRequest r : responsaveis) {
+            Contatos.exigirUmPrincipalEmail(r.emails());
+            Contatos.exigirUmPrincipalTelefone(r.telefones());
+        }
+    }
+
+    private void aplicarCampos(Inscricao inscricao, LocalDate dataNascimento, String sexo, String cpf, String rg,
+                                TipoVoluntario tipo, String etapaCatequese, String eucaristiaAno, String crismaAno,
+                                String cep, String cidade, String uf, String rua, String numero, String complemento,
+                                String bairro, Voluntario.HorarioEstudo horarioEstudo, String observacoes,
+                                boolean autorizaWhatsapp, List<FuncaoEscala> funcoesHabilitadas) {
+        inscricao.setDataNascimento(dataNascimento);
+        inscricao.setSexo(opcional(sexo));
+        inscricao.setCpf(opcional(cpf));
+        inscricao.setRg(opcional(rg));
+        inscricao.setTipo(tipo);
+        inscricao.setEtapaCatequese(opcional(etapaCatequese));
+        inscricao.setEucaristiaAno(opcional(eucaristiaAno));
+        inscricao.setCrismaAno(opcional(crismaAno));
+        inscricao.setCep(opcional(cep));
+        inscricao.setCidade(opcional(cidade));
+        inscricao.setUf(opcional(uf));
+        inscricao.setRua(opcional(rua));
+        inscricao.setNumero(opcional(numero));
+        inscricao.setComplemento(opcional(complemento));
+        inscricao.setBairro(opcional(bairro));
+        inscricao.setHorarioEstudo(horarioEstudo);
+        inscricao.setObservacoes(opcional(observacoes));
+        inscricao.setAutorizaWhatsapp(autorizaWhatsapp);
+        inscricao.setFuncoesHabilitadas(funcoesHabilitadas == null
+                ? new FuncaoEscala[0]
+                : funcoesHabilitadas.toArray(new FuncaoEscala[0]));
+    }
+
+    private void substituirContatos(Inscricao inscricao, List<ContatoEmailRequest> emails,
+                                    List<ContatoTelefoneRequest> telefones) {
+        inscricao.getEmails().clear();
+        inscricao.getTelefones().clear();
+        entityManager.flush();
+        if (emails != null) {
+            for (ContatoEmailRequest e : emails) {
+                InscricaoEmail linha = new InscricaoEmail(e.tipo().trim(), e.email().trim(), e.principal());
+                linha.setInscricao(inscricao);
+                inscricao.getEmails().add(linha);
+            }
+        }
+        if (telefones != null) {
+            for (ContatoTelefoneRequest t : telefones) {
+                InscricaoTelefone linha = new InscricaoTelefone(t.tipo().trim(), t.numero().trim(), t.principal());
+                linha.setInscricao(inscricao);
+                inscricao.getTelefones().add(linha);
+            }
+        }
+    }
+
+    private void substituirResponsaveis(Inscricao inscricao, List<InscricaoResponsavelRequest> requests) {
         inscricao.getResponsaveis().clear();
         entityManager.flush();
         for (InscricaoResponsavelRequest r : requests) {
-            InscricaoResponsavel responsavel = new InscricaoResponsavel(r.parentesco(), r.nome(), r.telefone(), r.celular(),
-                    r.email(), r.principal());
+            InscricaoResponsavel responsavel = new InscricaoResponsavel(r.parentesco().trim(), r.nome().trim(),
+                    r.principal());
+            responsavel.setParentescoInverso(opcional(r.parentescoInverso()));
             responsavel.setInscricao(inscricao);
+            if (r.emails() != null) {
+                for (ContatoEmailRequest e : r.emails()) {
+                    InscricaoResponsavelEmail linha = new InscricaoResponsavelEmail(
+                            e.tipo().trim(), e.email().trim(), e.principal());
+                    linha.setResponsavel(responsavel);
+                    responsavel.getEmails().add(linha);
+                }
+            }
+            if (r.telefones() != null) {
+                for (ContatoTelefoneRequest t : r.telefones()) {
+                    InscricaoResponsavelTelefone linha = new InscricaoResponsavelTelefone(
+                            t.tipo().trim(), t.numero().trim(), t.principal());
+                    linha.setResponsavel(responsavel);
+                    responsavel.getTelefones().add(linha);
+                }
+            }
             inscricao.getResponsaveis().add(responsavel);
         }
+    }
+
+    private static void copiarEmailsParaPessoa(Pessoa pessoa, List<InscricaoEmail> emails) {
+        for (InscricaoEmail e : emails) {
+            PessoaEmail linha = new PessoaEmail(e.getTipo(), e.getEmail(), e.isPrincipal());
+            linha.setPessoa(pessoa);
+            pessoa.getEmails().add(linha);
+        }
+    }
+
+    private static void copiarTelefonesParaPessoa(Pessoa pessoa, List<InscricaoTelefone> telefones) {
+        for (InscricaoTelefone t : telefones) {
+            PessoaTelefone linha = new PessoaTelefone(t.getTipo(), t.getNumero(), t.isPrincipal());
+            linha.setPessoa(pessoa);
+            pessoa.getTelefones().add(linha);
+        }
+    }
+
+    private static String opcional(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        return valor.trim();
     }
 
     private String extensaoDe(MultipartFile foto) {
@@ -327,7 +386,6 @@ public class InscricaoService {
         if (nomeOriginal != null && nomeOriginal.contains(".")) {
             return nomeOriginal.substring(nomeOriginal.lastIndexOf('.'));
         }
-        // Mesma proteção contra contentType nulo de VoluntarioService.extensaoDe.
         return switch (String.valueOf(foto.getContentType())) {
             case "image/png" -> ".png";
             case "image/webp" -> ".webp";

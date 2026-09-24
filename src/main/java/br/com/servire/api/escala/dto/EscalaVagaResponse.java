@@ -15,7 +15,7 @@ public record EscalaVagaResponse(UUID id, FuncaoEscala funcao, int posicao, UUID
                 v.getFuncao(),
                 v.getPosicao(),
                 v.getVoluntario() != null ? v.getVoluntario().getId() : null,
-                v.getVoluntario() != null ? v.getVoluntario().getNomeCompleto() : null,
+                v.getVoluntario() != null ? v.getVoluntario().getPessoa().getNomeCompleto() : null,
                 v.getPresenca());
     }
 }

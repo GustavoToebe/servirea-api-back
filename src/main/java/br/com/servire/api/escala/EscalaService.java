@@ -97,7 +97,7 @@ public class EscalaService {
         Periodo periodo = periodoDe(evento.getHorario());
         DayOfWeek diaSemana = evento.getData().getDayOfWeek();
         LocalDate data = evento.getData();
-        return voluntarioRepository.findByAtivoTrueOrderByNomeCompletoAsc().stream()
+        return voluntarioRepository.findByAtivoTrueOrderByPessoa_NomeCompletoAsc().stream()
                 .filter(v -> !jaAlocados.contains(v.getId()))
                 .filter(v -> temFuncao(v, funcao))
                 .filter(v -> disponivelEm(porVoluntario.getOrDefault(v.getId(), List.of()), data, diaSemana, periodo))

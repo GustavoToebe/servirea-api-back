@@ -1,18 +1,24 @@
 package br.com.servire.api.tenant;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -20,20 +26,8 @@ import java.util.UUID;
  * lógico" (seção 25 do plano mestre), raiz da hierarquia multi-tenant
  * (seção 17/27). Ver migration V016.
  *
- * <p>{@code createdAt}/{@code updatedAt} são {@code insertable=false,
- * updatable=false} porque são geridos pelo banco (DEFAULT now() /
- * trigger {@code trg_tenant_updated_at}, não pela aplicação.</p>
- *
- * <p><b>Risco residual a verificar:</b> {@code status} usa
- * {@code @JdbcTypeCode(SqlTypes.NAMED_ENUM)} para mapear direto no tipo
- * nativo Postgres {@code tenant_status} (evita o erro clássico "column is
- * of type tenant_status but expression is of type character varying").
- * Este padrão foi confirmado como existente no Hibernate 6.5
- * ({@code PostgreSQLEnumJdbcType}), mas NÃO foi possível reconfirmar
- * contra a versão exata usada neste projeto (Hibernate ORM 7.4.5.Final)
- * por ter batido um limite de sessão de pesquisa no momento em que este
- * código foi escrito. Se o próximo {@code mvn clean verify} acusar erro
- * de schema/tipo nesta coluna, este é o primeiro lugar a checar.</p>
+ * <p>Contato 1:N em {@link TenantEmail}/{@link TenantTelefone} (V030) —
+ * tabelas globais, sem {@code @TenantId}.</p>
  */
 @Entity
 @Table(name = "tenant")
@@ -69,10 +63,6 @@ public class Tenant {
     @Column(nullable = false)
     private Status status;
 
-    private String email;
-
-    private String telefone;
-
     private String cep;
 
     private String cidade;
@@ -95,8 +85,13 @@ public class Tenant {
     @Column(name = "vigencia_ate")
     private LocalDate vigenciaAte;
 
-    @Column(name = "tipo_email")
-    private String tipoEmail;
+    @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("principal DESC, email ASC")
+    private List<TenantEmail> emails = new ArrayList<>();
+
+    @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("principal DESC, numero ASC")
+    private List<TenantTelefone> telefones = new ArrayList<>();
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
@@ -105,7 +100,6 @@ public class Tenant {
     private Instant updatedAt;
 
     protected Tenant() {
-        // JPA
     }
 
     public Tenant(String codigo, String slug, String nome, Status status) {
@@ -157,22 +151,6 @@ public class Tenant {
 
     public void setStatus(Status status) {
         this.status = status;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getTelefone() {
-        return telefone;
-    }
-
-    public void setTelefone(String telefone) {
-        this.telefone = telefone;
     }
 
     public String getCep() {
@@ -255,12 +233,12 @@ public class Tenant {
         this.vigenciaAte = vigenciaAte;
     }
 
-    public String getTipoEmail() {
-        return tipoEmail;
+    public List<TenantEmail> getEmails() {
+        return emails;
     }
 
-    public void setTipoEmail(String tipoEmail) {
-        this.tipoEmail = tipoEmail;
+    public List<TenantTelefone> getTelefones() {
+        return telefones;
     }
 
     public Instant getCreatedAt() {

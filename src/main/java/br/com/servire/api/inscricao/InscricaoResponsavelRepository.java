@@ -6,9 +6,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Só usado a partir de {@link InscricaoService} (mesma regra de
- * {@link br.com.servire.api.voluntario.ResponsavelRepository}) — nunca
- * diretamente de um controller.
+ * Só usado a partir de {@link InscricaoService} — nunca diretamente
+ * de um controller.
  */
 public interface InscricaoResponsavelRepository extends JpaRepository<InscricaoResponsavel, UUID> {
 

@@ -10,6 +10,8 @@ import br.com.servire.api.backoffice.dto.AtualizarParoquiaRequest;
 import br.com.servire.api.backoffice.dto.CriarParoquiaRequest;
 import br.com.servire.api.backoffice.dto.DashboardResponse;
 import br.com.servire.api.backoffice.dto.FiltroParoquia;
+import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
+import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
 import br.com.servire.api.security.AuthenticatedUser;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantRepository;
@@ -90,7 +92,7 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
 
         Tenant criado = backofficeParoquiaService.criar(new CriarParoquiaRequest(
                 "COD-" + sufixo, "slug-" + sufixo, "Paróquia " + sufixo,
-                null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 new CriarParoquiaRequest.AdminInicial(existente.getNome(), existente.getEmail(), SENHA)));
 
         assertThat(usuarioRepository.findByEmail(existente.getEmail())).hasValueSatisfying(
@@ -139,14 +141,17 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
         String slug = tenant.getSlug();
 
         Tenant atualizado = backofficeParoquiaService.atualizar(tenant.getId(), new AtualizarParoquiaRequest(
-                "Nome Novo", "Razão", "00.000.000/0001-00", "contato@x.com", "41 9999",
-                "80000-000", "Curitiba", "PR", "Centro", "Rua X", "10", "ap 1", "obs", "FINANCEIRO", null));
+                "Nome Novo", "Razão", "00.000.000/0001-00",
+                List.of(new ContatoEmailRequest("FINANCEIRO", "contato@x.com", true)),
+                List.of(new ContatoTelefoneRequest("Telefone", "41 9999", true)),
+                "80000-000", "Curitiba", "PR", "Centro", "Rua X", "10", "ap 1", "obs", null));
 
         assertThat(atualizado.getNome()).isEqualTo("Nome Novo");
         assertThat(atualizado.getSlug()).isEqualTo(slug);
         assertThat(atualizado.getStatus()).isEqualTo(Tenant.Status.TRIAL);
         assertThat(atualizado.getUf()).isEqualTo("PR");
-        assertThat(atualizado.getTipoEmail()).isEqualTo("FINANCEIRO");
+        assertThat(atualizado.getEmails()).extracting(e -> e.getTipo() + ":" + e.getEmail())
+                .containsExactly("FINANCEIRO:contato@x.com");
     }
 
     @Test
@@ -167,8 +172,9 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
         String sufixo = UUID.randomUUID().toString().substring(0, 8);
         Tenant alvo = backofficeParoquiaService.criar(new CriarParoquiaRequest(
                 "COD-F-" + sufixo, "filtro-" + sufixo, "Paróquia Filtro " + sufixo,
-                null, "12.345.678/0001-90", "contato-" + sufixo + "@paroquia.com", null, null, null, null, null,
-                null, null, null, null, "contato",
+                null, "12.345.678/0001-90",
+                List.of(new ContatoEmailRequest("CONTATO", "contato-" + sufixo + "@paroquia.com", true)),
+                null, null, null, null, null, null, null, null, null,
                 new CriarParoquiaRequest.AdminInicial("Padre F", "admin-f-" + sufixo + "@teste.com", SENHA)));
         backofficeParoquiaService.bloquear(alvo.getId());
 
@@ -241,7 +247,7 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
     private CriarParoquiaRequest novaParoquia(String sufixo, String emailAdmin) {
         return new CriarParoquiaRequest(
                 "COD-" + sufixo, sufixo, "Paróquia " + sufixo,
-                null, null, null, null, null, "Curitiba", null, null, null, null, null, null, null,
+                null, null, null, null, null, "Curitiba", null, null, null, null, null, null,
                 new CriarParoquiaRequest.AdminInicial("Padre " + sufixo, emailAdmin, SENHA));
     }
 }

@@ -1,15 +1,18 @@
-# Servire API — Fases 2 a 11 (fundação + modelo SaaS lógico + multi-tenancy + autenticação própria + voluntários + storage + inscrições + escalas + multi-tenant real + permissões/faltas/disponibilidade/auditoria/e-mail)
+# Servire API — Fases 2 a 11 + backoffice + billing + cadastro pessoa-primeiro
 
 Este projeto cobre a **FASE 2** (fundação Spring Boot, seção 102/125), a
 **FASE 3** (modelo SaaS lógico, seção 103/126), a **FASE 4**
 (`TenantContext`/`@TenantId`, seção 104/126), a **FASE 5** (autenticação
 própria, seção 105/32-36), a **FASE 6** (voluntários/responsáveis, seção
-37/38/106), a **FASE 7** (storage de fotos, seção 107), a **FASE 8**
-(inscrições públicas, seção 44/108), a **FASE 9** (escalas, seção
-46/47/109), a **FASE 10** (multi-tenant real, seção 110) e a **FASE 11**
-(roles/permissões reais, controle de faltas, disponibilidade do
-voluntário, tabela de auditoria e provedor de e-mail real, seção
-31/59/122/131.5) do `plano_mestre_servire_v2_mvp_baixo_custo.md`.
+37/38/106 — **superada pelo cadastro pessoa-primeiro**, V030), a **FASE 7**
+(storage de fotos, seção 107), a **FASE 8** (inscrições públicas, seção
+44/108), a **FASE 9** (escalas, seção 46/47/109), a **FASE 10**
+(multi-tenant real, seção 110), a **FASE 11** (roles/permissões reais,
+controle de faltas, disponibilidade do voluntário, tabela de auditoria e
+provedor de e-mail real, seção 31/59/122/131.5), o **backoffice** (seção
+111), o **financeiro manual** (seção 112 / V029) e o **cadastro
+pessoa-primeiro** (V030, 24/09/2026) do
+`plano_mestre_servire_v2_mvp_baixo_custo.md`.
 
 > ⏳ **Fase 11 (22/09/2026) — AINDA NÃO CONFIRMADA por `mvn clean verify`
 > real.** Cinco funcionalidades implementadas nesta rodada, por pedido
@@ -834,6 +837,13 @@ de `RefreshTokenService`.
 > aviso no topo deste README para o histórico completo das três rodadas.
 
 ## Fase 6 — voluntários e responsáveis (seção 37/38/39/106 do plano mestre)
+
+> **Superado em 24/09/2026 (V030).** Identidade, contato e relação saíram
+> de `Voluntario`/`Responsavel` para `Pessoa`/`pessoa_relacao`.
+> `POST`/`PUT /voluntarios` **não existem mais** — o cadastro é
+> `POST`/`PUT /pessoas`. Ver seção "Cadastro pessoa-primeiro" abaixo. O
+> restante desta seção (bugs da época, Storage, testes da Fase 10)
+> continua histórico.
 
 Primeiro módulo de negócio migrado do Angular/Supabase para o backend
 próprio (seção 83: "RPCs de negócio e regras → migrar para Java"). Baseado
@@ -1863,6 +1873,59 @@ Também foi testado de ponta a ponta contra o `servire-dev-db` (login do
 operador, preço, assinatura, pagamento de dois meses, filtro "em
 atraso", dashboard e `backoffice_log`).
 
+## Cadastro pessoa-primeiro (V030, 24/09/2026)
+
+Redesenho do cadastro **sem compatibilidade** com o modelo da Fase 6.
+Pedido explícito do usuário: "pode fazer tudo novo". Não é uma fase
+numerada do plano; é o modelo atual. Telas ficam no `servire-api-front`.
+
+Decisões fechadas nesta rodada:
+- Cadastra-se uma **`Pessoa`** primeiro, com papel exclusivo
+  `VOLUNTARIO` ou `RESPONSAVEL` (imutável depois de gravado). Ninguém
+  é os dois.
+- E-mails e telefones são listas 1:N (`tipo` livre tipo "E-mail
+  pessoal" / "celular", exatamente um `principal`) na pessoa, na
+  paróquia (`tenant_email`/`tenant_telefone`, tabelas **globais**, sem
+  `@TenantId`) e no rascunho da inscrição.
+- Relação bidirecional **é / de** em `pessoa_relacao` (`parentesco` +
+  `parentesco_inverso`). Voluntário exige exatamente um responsável
+  principal; um responsável pode ter vários dependentes.
+- `Voluntario` passou a ser perfil 1:1 `@MapsId` com a pessoa (mesmo
+  `id`): tipo, ativo, foto, catequese, funções. Identidade não mora
+  mais aqui.
+- Tabela `responsaveis` e as colunas soltas de e-mail/telefone
+  (pessoa, tenant, inscrição) foram dropadas na V030, com backfill.
+- Aprovar inscrição materializa `Pessoa` VOLUNTARIO + perfil e **reusa**
+  RESPONSAVEL pelo e-mail principal; se não achar, cria outro.
+
+Rotas novas / o que saiu:
+
+| Verbo/rota | Uso |
+|---|---|
+| `GET /pessoas?papel=&nome=` | Lista pessoas (`PERM_VOLUNTARIO_READ`) |
+| `GET /pessoas/{id}` | Detalhe com e-mails, telefones, relações e perfil |
+| `POST /pessoas` | Cria pessoa (+ perfil se VOLUNTARIO) |
+| `PUT /pessoas/{id}` | Atualiza; papel não muda |
+| `GET /voluntarios` | Continua: lista só o perfil de escala |
+| `POST /voluntarios` e `PUT /voluntarios/{id}` | **Removidos** |
+
+`PUT /tenant` e o CRUD de paróquia do backoffice passaram a receber
+listas de contato (`ContatoEmail*` / `ContatoTelefone*`), não mais um
+e-mail/telefone solto.
+
+Armadilha desta rodada: `Criteria` com `root.fetch` em `emails` **e**
+`telefones` da mesma entidade explode em `MultipleBagFetchException`.
+`PessoaService.buscar` e `BackofficeParoquiaService.listar` inicializam
+as coleções dentro da transação, sem fetch duplo.
+
+Teste de voluntário: `Pessoas.persistirVoluntario(pessoaRepository,
+"Nome")` — `new Voluntario("Nome")` não existe mais.
+
+✅ Confirmado nesta máquina em 24/09/2026: `mvn clean verify` com
+`BUILD SUCCESS`, `Tests run: 186, Failures: 0, Errors: 0`. Novos:
+`PessoaServiceIntegrationTest` e
+`InscricaoServiceIntegrationTest.aprovarReusaResponsavelPeloEmailPrincipal`.
+
 ## Onde está o código (disco + GitHub) — 23/09/2026
 
 Dois repositórios **irmãos** (não é monorepo). A pasta `servire` existe
@@ -1994,17 +2057,18 @@ mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
 mvn test
 ```
 
-Os testes de integração (`AbstractIntegrationTest` e suas subclasses —
+Preferir `mvn clean verify` (build + todos os testes). Os de integração
+(`AbstractIntegrationTest` e subclasses — `PessoaServiceIntegrationTest`,
 `TenantIsolationIntegrationTest`, `VoluntarioServiceIntegrationTest`,
 `InscricaoServiceIntegrationTest`, `EscalaServiceIntegrationTest`,
 `AuthServiceIntegrationTest`, `FlywayMigrationIntegrationTest`,
 `ServireApiApplicationTests`) precisam de Docker disponível
-(Testcontainers sobe um Postgres real). Os testes puramente unitários
+(Testcontainers sobe um Postgres real). Os puramente unitários
 (`RequestIdFilterTest`, `GlobalExceptionHandlerTest`,
 `InscricaoRateLimiterTest`, `TurnstileServiceTest`,
 `SupabaseStorageServiceTest` — nenhum destes três últimos toca banco nem
 sobe o Spring context, usam `MockRestServiceServer`/só memória) não
-precisam.
+precisam. No PowerShell, `-Dtest=A,B` vai entre aspas.
 
 ## Estrutura
 
@@ -2018,6 +2082,7 @@ src/main/java/br/com/servire/api/
     ApiException.java (+ subclasses: ResourceNotFoundException, ConflictException, BadRequestException, ForbiddenException, UnauthorizedException)
   tenant/
     Tenant.java, TenantRepository.java
+    TenantEmail.java, TenantTelefone.java   <- V030 (globais, sem @TenantId)
     TenantContext.java
     ServireCurrentTenantIdentifierResolver.java
     TenantConfiguration.java
@@ -2036,19 +2101,26 @@ src/main/java/br/com/servire/api/
     ResendProperties.java, EmailConfiguration.java, ResendEmailSender.java, EmailException.java   <- Fase 11
     AuthService.java, AuthController.java
     dto/   <- LoginRequest, LoginResponse, SelectTenantRequest, RefreshRequest, AccessTokenResponse, ForgotPasswordRequest, ResetPasswordRequest, TenantResumo
+  pessoa/   <- V030, cadastro pessoa-primeiro
+    Pessoa.java, PessoaPapel.java, PessoaEmail.java, PessoaTelefone.java, PessoaRelacao.java
+    PessoaRepository.java, PessoaService.java, PessoaController.java, Contatos.java
+    dto/   <- PessoaRequest/Response, ContatoEmail*/ContatoTelefone*, Relacao*, VoluntarioPerfil*
   voluntario/
-    Voluntario.java, VoluntarioRepository.java, VoluntarioService.java, VoluntarioController.java
-    Responsavel.java, ResponsavelRepository.java
+    Voluntario.java   <- perfil 1:1 @MapsId com Pessoa (identidade não mora mais aqui)
+    VoluntarioRepository.java, VoluntarioService.java, VoluntarioController.java
     TipoVoluntario.java, FuncaoEscala.java
     Periodo.java, DisponibilidadeVoluntario.java, DisponibilidadeVoluntarioRepository.java,
     DisponibilidadeVoluntarioService.java, DisponibilidadeVoluntarioController.java   <- Fase 11
-    dto/   <- VoluntarioRequest, VoluntarioResponse, ResponsavelRequest, ResponsavelResponse, FotoUrlResponse,
+    dto/   <- VoluntarioResponse, FotoUrlResponse,
               DisponibilidadeVoluntarioRequest, DisponibilidadeVoluntarioResponse (Fase 11)
+    (Responsavel.java / VoluntarioRequest / POST+PUT /voluntarios saíram na V030)
   storage/   <- Fase 7
     StorageProperties.java, StorageConfiguration.java
     StorageService.java (interface), SupabaseStorageService.java, StorageException.java
-  inscricao/   <- Fase 8
+  inscricao/   <- Fase 8; V030: contatos 1:N + aprovar materializa Pessoa
     Inscricao.java, InscricaoRepository.java, InscricaoResponsavel.java, InscricaoResponsavelRepository.java
+    InscricaoEmail.java, InscricaoTelefone.java
+    InscricaoResponsavelEmail.java, InscricaoResponsavelTelefone.java
     StatusInscricao.java, InscricaoService.java
     PublicInscricaoController.java, InscricaoController.java
     TurnstileProperties.java, TurnstileService.java
@@ -2063,6 +2135,8 @@ src/main/java/br/com/servire/api/
   audit/   <- Fase 11 (seção 59)
     AuditLog.java, AuditLogRepository.java, AuditLogService.java, AuditLogController.java
     dto/   <- AuditLogResponse
+  backoffice/   <- 23/09/2026, seção 111
+  billing/      <- 23/09/2026, seção 112 / V029
 src/main/resources/
   application.yml, application-dev.yml, application-prod.yml
   logback-spring.xml
@@ -2076,6 +2150,9 @@ src/main/resources/
     V024.sql        <- escala_vagas.presenca (Fase 11, controle de faltas)
     V025.sql        <- disponibilidade_voluntario (Fase 11)
     V026.sql        <- audit_log (Fase 11)
+    V027-V028.sql   <- backoffice (operador, contato/endereço da paróquia, vigencia_ate)
+    V029.sql        <- plano, preco_plano, assinatura, cobranca (billing)
+    V030.sql        <- pessoa, contatos 1:N, pessoa_relacao, tenant_email/telefone, drop responsaveis
 src/test/java/br/com/servire/api/
   AbstractIntegrationTest.java  <- Testcontainers + stub Supabase
   ServireApiApplicationTests.java
@@ -2083,7 +2160,8 @@ src/test/java/br/com/servire/api/
   web/RequestIdFilterTest.java, GlobalExceptionHandlerTest.java
   tenant/TenantIsolationIntegrationTest.java  <- teste crítico P0 de isolamento (seção 78/79/80), ampliado na Fase 10
   auth/AuthServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 5
-  voluntario/VoluntarioServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 6
+  pessoa/Pessoas.java, PessoaServiceIntegrationTest.java   <- V030
+  voluntario/VoluntarioServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 6; reescrito na V030
   storage/SupabaseStorageServiceTest.java   <- Fase 10, débito de testes da Fase 7 (achou o Bug real #7)
   inscricao/TurnstileServiceTest.java, InscricaoRateLimiterTest.java, InscricaoServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 8
   escala/EscalaServiceIntegrationTest.java   <- Fase 10, débito de testes da Fase 9
@@ -2093,8 +2171,9 @@ src/test/java/br/com/servire/api/
 Fase 5, substituído por `security/JwtAuthenticationFilter.java`. Os
 pacotes `storage/`, `inscricao/` e `escala/` entraram na Fase 7/8/9; o
 pacote `audit/` (nome próprio deste projeto para a `auditoria/` da
-estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
-`backoffice/`, `arquivo/`, `billing/` da estrutura-alvo completa.
+estrutura-alvo, seção 16) entrou na Fase 11; `backoffice/` e `billing/`
+em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
+`arquivo/` da estrutura-alvo completa.
 
 ## Próximos passos
 
@@ -2287,7 +2366,12 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    Billing (seção 112) começou em 23/09/2026 com o financeiro manual
    (V029, ver seção "Financeiro manual" acima); faltam gateway,
    webhooks e bloqueio automático por atraso.
+8b. ✅ **Cadastro pessoa-primeiro (V030) — implementado em 24/09/2026.**
+   Pacote `pessoa/`, `POST`/`PUT /pessoas`, perfil `Voluntario` `@MapsId`,
+   drop de `responsaveis`. Confirmado nesta máquina: `mvn clean verify`
+   `BUILD SUCCESS`, 186 testes, 0 falhas.
 
    Próximo de código no plano depois desta API: resto do Billing (seção 112),
    Deploy (113), migração de dados (114) e remoção do Supabase direto
-   do Angular (115).
+   do Angular (115). O front precisa trocar o cadastro para `/pessoas`
+   (outro git).

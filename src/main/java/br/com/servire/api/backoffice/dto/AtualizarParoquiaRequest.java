@@ -1,16 +1,20 @@
 package br.com.servire.api.backoffice.dto;
 
+import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
+import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
+import java.util.List;
 
-/** PUT do operador — não mexe em codigo/slug/status (status tem endpoints próprios). */
+/** PUT do operador — não mexe em codigo/slug/status. */
 public record AtualizarParoquiaRequest(
         @NotBlank String nome,
         String razaoSocial,
         String cnpj,
-        String email,
-        String telefone,
+        @Valid List<ContatoEmailRequest> emails,
+        @Valid List<ContatoTelefoneRequest> telefones,
         String cep,
         String cidade,
         String uf,
@@ -19,7 +23,6 @@ public record AtualizarParoquiaRequest(
         String numero,
         String complemento,
         String observacoes,
-        String tipoEmail,
         LocalDate vigenciaAte
 ) {
 }

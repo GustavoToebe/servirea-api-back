@@ -392,7 +392,7 @@ class BillingServiceIntegrationTest extends AbstractIntegrationTest {
         String sufixo = "fin-" + UUID.randomUUID().toString().substring(0, 8);
         return backofficeParoquiaService.criar(new CriarParoquiaRequest(
                 "COD-" + sufixo, sufixo, "Paróquia " + sufixo,
-                null, null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 new CriarParoquiaRequest.AdminInicial("Padre " + sufixo, sufixo + "@teste.com", SENHA)));
     }
 

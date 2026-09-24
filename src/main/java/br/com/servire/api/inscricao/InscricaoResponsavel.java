@@ -1,5 +1,6 @@
 package br.com.servire.api.inscricao;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -8,31 +9,20 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.TenantId;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Responsável informado no formulário público de inscrição (Fase 8, seção
- * 108 do plano mestre) — mapeia {@code inscricao_responsaveis} (V009 +
- * {@code tenant_id} de V021). Mesmo formato de {@link
- * br.com.servire.api.voluntario.Responsavel}, mas para uma
- * {@link Inscricao} em vez de um {@code Voluntario} — os dois viram linhas
- * de {@code responsaveis} de verdade só quando a inscrição é aprovada (ver
- * {@link InscricaoService#aprovar}).
- *
- * <p>Diferente de {@code Responsavel} (V004, sem {@code updated_at}),
- * {@code inscricao_responsaveis} TEM coluna {@code updated_at} com
- * trigger (V009) — mapeada aqui como {@code insertable=false,
- * updatable=false}, gerida só pelo banco.</p>
- *
- * <p>Já nasce com {@code @TenantId} correto (diferente de
- * {@code Responsavel}, cujo bug de {@code tenant_id} ausente só foi
- * corrigido depois de já commitado — ver javadoc de {@code Responsavel})
- * porque esta classe foi escrita depois de reler {@code V021} por
- * completo.</p>
+ * Responsável informado no formulário público. Na aprovação vira
+ * {@code pessoa} com papel RESPONSAVEL (reuso por e-mail principal)
+ * e uma linha em {@code pessoa_relacao}.
  */
 @Entity
 @Table(name = "inscricao_responsaveis")
@@ -53,17 +43,22 @@ public class InscricaoResponsavel {
     @Column(nullable = false)
     private String parentesco;
 
+    @Column(name = "parentesco_inverso")
+    private String parentescoInverso;
+
     @Column(nullable = false)
     private String nome;
 
-    private String telefone;
-
-    private String celular;
-
-    private String email;
-
     @Column(nullable = false)
     private boolean principal = false;
+
+    @OneToMany(mappedBy = "responsavel", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("principal DESC, email ASC")
+    private List<InscricaoResponsavelEmail> emails = new ArrayList<>();
+
+    @OneToMany(mappedBy = "responsavel", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("principal DESC, numero ASC")
+    private List<InscricaoResponsavelTelefone> telefones = new ArrayList<>();
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
@@ -72,15 +67,11 @@ public class InscricaoResponsavel {
     private Instant updatedAt;
 
     protected InscricaoResponsavel() {
-        // JPA
     }
 
-    public InscricaoResponsavel(String parentesco, String nome, String telefone, String celular, String email, boolean principal) {
+    public InscricaoResponsavel(String parentesco, String nome, boolean principal) {
         this.parentesco = parentesco;
         this.nome = nome;
-        this.telefone = telefone;
-        this.celular = celular;
-        this.email = email;
         this.principal = principal;
     }
 
@@ -104,48 +95,28 @@ public class InscricaoResponsavel {
         return parentesco;
     }
 
-    public void setParentesco(String parentesco) {
-        this.parentesco = parentesco;
+    public String getParentescoInverso() {
+        return parentescoInverso;
+    }
+
+    public void setParentescoInverso(String parentescoInverso) {
+        this.parentescoInverso = parentescoInverso;
     }
 
     public String getNome() {
         return nome;
     }
 
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
-    public String getTelefone() {
-        return telefone;
-    }
-
-    public void setTelefone(String telefone) {
-        this.telefone = telefone;
-    }
-
-    public String getCelular() {
-        return celular;
-    }
-
-    public void setCelular(String celular) {
-        this.celular = celular;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     public boolean isPrincipal() {
         return principal;
     }
 
-    public void setPrincipal(boolean principal) {
-        this.principal = principal;
+    public List<InscricaoResponsavelEmail> getEmails() {
+        return emails;
+    }
+
+    public List<InscricaoResponsavelTelefone> getTelefones() {
+        return telefones;
     }
 
     public Instant getCreatedAt() {

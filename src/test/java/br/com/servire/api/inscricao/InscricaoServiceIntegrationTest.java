@@ -6,6 +6,10 @@ import br.com.servire.api.auth.UsuarioRepository;
 import br.com.servire.api.inscricao.dto.InscricaoAtualizarRequest;
 import br.com.servire.api.inscricao.dto.InscricaoPublicaRequest;
 import br.com.servire.api.inscricao.dto.InscricaoResponsavelRequest;
+import br.com.servire.api.pessoa.Pessoa;
+import br.com.servire.api.pessoa.PessoaPapel;
+import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
 import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
@@ -30,25 +34,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.ArgumentMatchers.anyString;
 
-/**
- * Testes de regra de negócio de {@link InscricaoService} (débito técnico
- * da Fase 8, seção 44/45/108 do plano mestre, adiado até esta rodada —
- * 22/09/2026, junto com a Fase 10).
- *
- * <p>{@code TurnstileService}/{@code StorageService} são substituídos por
- * mocks ({@code @MockitoBean}) — igual a
- * {@code VoluntarioServiceIntegrationTest} — porque nenhum dos dois está
- * configurado no profile de teste (fail-closed de propósito, ver javadoc
- * de {@link TurnstileService}); sem o mock, {@code criarPublica} sempre
- * lançaria {@code IllegalStateException} de configuração ausente antes de
- * chegar em qualquer regra de negócio.</p>
- *
- * <p>Cada teste usa um IP diferente nas chamadas a {@code criarPublica} —
- * {@link InscricaoRateLimiter} é um {@code @Component} singleton com
- * estado em memória (seção 45): reaproveitar o mesmo IP entre métodos de
- * teste diferentes contaminaria a contagem de tentativas de um teste com
- * chamadas de outro.</p>
- */
 class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -59,6 +44,9 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private VoluntarioRepository voluntarioRepository;
+
+    @Autowired
+    private PessoaRepository pessoaRepository;
 
     @Autowired
     private TenantRepository tenantRepository;
@@ -87,9 +75,6 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(criada.getId()).isNotNull();
         assertThat(criada.getStatus()).isEqualTo(StatusInscricao.PENDENTE);
-        // criarPublica limpa o TenantContext no finally - confirmamos que
-        // a inscrição foi mesmo gravada no tenant certo consultando com o
-        // contexto setado manualmente (mesmo padrão de TenantIsolationIntegrationTest).
         assertThat(TenantContext.get()).isNull();
         TenantContext.set(tenant.getId());
         assertThat(inscricaoRepository.findById(criada.getId())).isPresent();
@@ -111,9 +96,6 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
                 "TENANT-BLOQUEADO-TESTE", "tenant-bloqueado-teste-" + UUID.randomUUID(),
                 "Paróquia bloqueada (teste)", Tenant.Status.BLOQUEADO));
 
-        // Mesma mensagem/exceção de slug inexistente - nunca revelar que a
-        // paróquia existe mas está bloqueada (mesmo espírito de não
-        // enumerar e-mails cadastrados no login, seção 21/79/80).
         assertThatThrownBy(() -> inscricaoService.criarPublica(
                 tenant.getSlug(), requestPublica("Candidato"), null, "10.0.1.3"))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -123,11 +105,8 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
     void criarPublicaSemExatamenteUmResponsavelPrincipalLancaBadRequestException() {
         doNothing().when(turnstileService).validar(anyString(), anyString());
         Tenant tenant = criarTenant("sem-principal");
-        InscricaoPublicaRequest request = new InscricaoPublicaRequest(
-                "token", "Candidato", null, TipoVoluntario.COROINHA,
-                null, null, null, null, null, null, null, null, null, null, null,
-                false, List.of(),
-                List.of(new InscricaoResponsavelRequest("Mãe", "Fulana", null, null, null, false)));
+        InscricaoPublicaRequest request = requestPublicaComResponsaveis("Candidato",
+                List.of(new InscricaoResponsavelRequest("Mãe", "Filho", "Fulana", null, null, false)));
 
         assertThatThrownBy(() -> inscricaoService.criarPublica(tenant.getSlug(), request, null, "10.0.1.4"))
                 .isInstanceOf(BadRequestException.class)
@@ -140,9 +119,6 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         Tenant tenant = criarTenant("rate-limit");
         String ip = "10.0.1.5";
 
-        // Padrão default é 5 tentativas/hora (servire.rate-limit.inscricao-publica) -
-        // as 5 primeiras devem passar (rate limit é a PRIMEIRA barreira,
-        // antes até do Turnstile mockado), a 6ª estoura o limite.
         for (int i = 0; i < 5; i++) {
             inscricaoService.criarPublica(tenant.getSlug(), requestPublica("Candidato " + i), null, ip);
         }
@@ -153,16 +129,12 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void aprovarCriaVoluntarioRealCopiaResponsaveisEMarcaInscricaoAprovada() {
+    void aprovarCriaPessoaVoluntarioEMarcaInscricaoAprovada() {
         Tenant tenant = criarTenant("aprovar");
         Usuario aprovador = usuarioRepository.saveAndFlush(new Usuario("aprovador-" + UUID.randomUUID() + "@teste.com", "Aprovador"));
 
         TenantContext.set(tenant.getId());
-        Inscricao inscricao = new Inscricao("Candidato a Aprovar");
-        InscricaoResponsavel responsavel = new InscricaoResponsavel("Mãe", "Responsável", null, null, null, true);
-        responsavel.setInscricao(inscricao);
-        inscricao.getResponsaveis().add(responsavel);
-        inscricao = inscricaoRepository.saveAndFlush(inscricao);
+        Inscricao inscricao = inscricaoComResponsavelPrincipal("Candidato a Aprovar");
 
         Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
 
@@ -170,7 +142,39 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         assertThat(aprovada.getAprovadoPor()).isEqualTo(aprovador.getId());
         assertThat(aprovada.getVoluntarioId()).isNotNull();
         assertThat(voluntarioRepository.findById(aprovada.getVoluntarioId()))
-                .get().extracting(Voluntario::getNomeCompleto).isEqualTo("Candidato a Aprovar");
+                .get().extracting(v -> v.getPessoa().getNomeCompleto()).isEqualTo("Candidato a Aprovar");
+        assertThat(pessoaRepository.findById(aprovada.getVoluntarioId())).get()
+                .extracting(Pessoa::getPapel).isEqualTo(PessoaPapel.VOLUNTARIO);
+        TenantContext.clear();
+    }
+
+    @Test
+    void aprovarReusaResponsavelPeloEmailPrincipal() {
+        Tenant tenant = criarTenant("reuse-resp");
+        Usuario aprovador = usuarioRepository.saveAndFlush(new Usuario("aprovador-re-" + UUID.randomUUID() + "@teste.com", "Aprovador"));
+        TenantContext.set(tenant.getId());
+
+        Pessoa existente = new Pessoa(PessoaPapel.RESPONSAVEL, "Mãe Já Cadastrada");
+        br.com.servire.api.pessoa.PessoaEmail email = new br.com.servire.api.pessoa.PessoaEmail(
+                "E-mail pessoal", "mae-reuse@teste.com", true);
+        email.setPessoa(existente);
+        existente.getEmails().add(email);
+        existente = pessoaRepository.saveAndFlush(existente);
+
+        Inscricao inscricao = new Inscricao("Filho Novo");
+        InscricaoResponsavel responsavel = new InscricaoResponsavel("Mãe", "Outro Nome", true);
+        responsavel.setInscricao(inscricao);
+        InscricaoResponsavelEmail emailIr = new InscricaoResponsavelEmail("E-mail pessoal", "mae-reuse@teste.com", true);
+        emailIr.setResponsavel(responsavel);
+        responsavel.getEmails().add(emailIr);
+        inscricao.getResponsaveis().add(responsavel);
+        inscricao = inscricaoRepository.saveAndFlush(inscricao);
+
+        Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
+
+        Pessoa voluntario = pessoaRepository.findById(aprovada.getVoluntarioId()).orElseThrow();
+        assertThat(voluntario.getResponsaveis()).hasSize(1);
+        assertThat(voluntario.getResponsaveis().getFirst().getResponsavel().getId()).isEqualTo(existente.getId());
         TenantContext.clear();
     }
 
@@ -228,29 +232,14 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         Inscricao inscricao = inscricaoComResponsavelPrincipal("Candidato Já Aprovado");
         inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
 
-        InscricaoAtualizarRequest request = new InscricaoAtualizarRequest(
-                "Novo Nome", null, TipoVoluntario.COROINHA,
-                null, null, null, null, null, null, null, null, null, null, null,
-                false, List.of(),
-                List.of(new InscricaoResponsavelRequest("Mãe", "Fulana", null, null, null, true)));
+        InscricaoAtualizarRequest request = requestAtualizar("Novo Nome",
+                List.of(new InscricaoResponsavelRequest("Mãe", "Filho", "Fulana", null, null, true)));
 
         assertThatThrownBy(() -> inscricaoService.atualizarPendente(inscricao.getId(), request))
                 .isInstanceOf(ConflictException.class);
         TenantContext.clear();
     }
 
-    /**
-     * Fecha a lacuna documentada no javadoc de
-     * {@link InscricaoService#substituirResponsaveis} — o fix proativo
-     * (mesmo mecanismo do Bug real #10) nunca tinha sido exercitado por um
-     * teste que realmente TROCA o responsável principal de uma inscrição
-     * já existente via {@code atualizarPendente}. Sem o
-     * {@code entityManager.flush()} entre o {@code clear()} e os novos
-     * {@code INSERT}s, o Hibernate poderia tentar inserir o novo principal
-     * antes de apagar o antigo, violando o índice único parcial
-     * {@code ux_inscricao_responsavel_principal} (V009) — este teste
-     * passar confirma que isso não acontece mais.
-     */
     @Test
     void atualizarPendenteTrocandoOResponsavelPrincipalNaoLancaConflictException() {
         Tenant tenant = criarTenant("trocar-principal");
@@ -258,11 +247,8 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         TenantContext.set(tenant.getId());
         Inscricao inscricao = inscricaoComResponsavelPrincipal("Candidato Troca de Principal");
 
-        InscricaoAtualizarRequest request = new InscricaoAtualizarRequest(
-                inscricao.getNomeCompleto(), null, TipoVoluntario.COROINHA,
-                null, null, null, null, null, null, null, null, null, null, null,
-                false, List.of(),
-                List.of(new InscricaoResponsavelRequest("Pai", "Novo Responsável Principal", null, null, null, true)));
+        InscricaoAtualizarRequest request = requestAtualizar(inscricao.getNomeCompleto(),
+                List.of(new InscricaoResponsavelRequest("Pai", "Filho", "Novo Responsável Principal", null, null, true)));
 
         Inscricao atualizada = inscricaoService.atualizarPendente(inscricao.getId(), request);
 
@@ -274,18 +260,31 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
 
     private Inscricao inscricaoComResponsavelPrincipal(String nome) {
         Inscricao inscricao = new Inscricao(nome);
-        InscricaoResponsavel responsavel = new InscricaoResponsavel("Mãe", "Responsável de " + nome, null, null, null, true);
+        InscricaoResponsavel responsavel = new InscricaoResponsavel("Mãe", "Responsável de " + nome, true);
         responsavel.setInscricao(inscricao);
         inscricao.getResponsaveis().add(responsavel);
         return inscricaoRepository.saveAndFlush(inscricao);
     }
 
     private InscricaoPublicaRequest requestPublica(String nomeCompleto) {
+        return requestPublicaComResponsaveis(nomeCompleto,
+                List.of(new InscricaoResponsavelRequest("Mãe", "Filho", "Responsável de " + nomeCompleto, null, null, true)));
+    }
+
+    private InscricaoPublicaRequest requestPublicaComResponsaveis(String nomeCompleto,
+                                                                  List<InscricaoResponsavelRequest> responsaveis) {
         return new InscricaoPublicaRequest(
-                "token-turnstile-qualquer", nomeCompleto, null, TipoVoluntario.COROINHA,
-                null, null, null, null, null, null, null, null, null, null, null,
-                false, List.of(),
-                List.of(new InscricaoResponsavelRequest("Mãe", "Responsável de " + nomeCompleto, null, null, null, true)));
+                "token-turnstile-qualquer", nomeCompleto, null, null, null, null,
+                TipoVoluntario.COROINHA, null, null, null, null, null, responsaveis,
+                null, null, null, null, null, null, null, null, null, false, List.of());
+    }
+
+    private InscricaoAtualizarRequest requestAtualizar(String nomeCompleto,
+                                                       List<InscricaoResponsavelRequest> responsaveis) {
+        return new InscricaoAtualizarRequest(
+                nomeCompleto, null, null, null, null, TipoVoluntario.COROINHA,
+                null, null, null, null, null, responsaveis,
+                null, null, null, null, null, null, null, null, null, false, List.of());
     }
 
     private Tenant criarTenant(String rotulo) {

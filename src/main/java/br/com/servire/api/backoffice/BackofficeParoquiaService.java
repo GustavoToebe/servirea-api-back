@@ -12,13 +12,21 @@ import br.com.servire.api.backoffice.dto.DashboardResponse;
 import br.com.servire.api.backoffice.dto.FiltroParoquia;
 import br.com.servire.api.billing.BillingService;
 import br.com.servire.api.billing.Cobranca;
+import br.com.servire.api.pessoa.Contatos;
+import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
+import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
 import br.com.servire.api.security.AuthenticatedUser;
 import br.com.servire.api.security.JwtService;
 import br.com.servire.api.security.SecurityProperties;
 import br.com.servire.api.tenant.Tenant;
+import br.com.servire.api.tenant.TenantEmail;
 import br.com.servire.api.tenant.TenantRepository;
+import br.com.servire.api.tenant.TenantTelefone;
 import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -52,6 +60,9 @@ public class BackofficeParoquiaService {
     private final RefreshTokenService refreshTokenService;
     private final SecurityProperties properties;
     private final BillingService billingService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public BackofficeParoquiaService(TenantRepository tenantRepository,
                                       UsuarioRepository usuarioRepository,
@@ -93,7 +104,12 @@ public class BackofficeParoquiaService {
         FiltroParoquia efetivo = filtro == null
                 ? new FiltroParoquia(null, null, null, null, null, null, null, null, null, null, null)
                 : filtro;
-        return tenantRepository.findAll(filtroSpec(efetivo, billingService.hoje()));
+        List<Tenant> tenants = tenantRepository.findAll(filtroSpec(efetivo, billingService.hoje()));
+        tenants.forEach(t -> {
+            t.getEmails().size();
+            t.getTelefones().size();
+        });
+        return tenants;
     }
 
     @Transactional(readOnly = true)
@@ -115,10 +131,10 @@ public class BackofficeParoquiaService {
 
         Tenant tenant = new Tenant(codigo, slug, request.nome().trim(), Tenant.Status.TRIAL);
         tenant.setVigenciaAte(LocalDate.now(ZoneOffset.UTC).plusDays(DIAS_TRIAL));
-        aplicarContato(tenant, request.razaoSocial(), request.cnpj(), request.email(), request.telefone(),
+        aplicarIdentidade(tenant, request.razaoSocial(), request.cnpj(),
                 request.cep(), request.cidade(), request.uf(), request.bairro(),
-                request.logradouro(), request.numero(), request.complemento(), request.observacoes(),
-                request.tipoEmail());
+                request.logradouro(), request.numero(), request.complemento(), request.observacoes());
+        substituirContatos(tenant, request.emails(), request.telefones());
         try {
             tenant = tenantRepository.saveAndFlush(tenant);
         } catch (DataIntegrityViolationException e) {
@@ -137,10 +153,10 @@ public class BackofficeParoquiaService {
     public Tenant atualizar(UUID id, AtualizarParoquiaRequest request) {
         Tenant tenant = buscar(id);
         tenant.setNome(request.nome().trim());
-        aplicarContato(tenant, request.razaoSocial(), request.cnpj(), request.email(), request.telefone(),
+        aplicarIdentidade(tenant, request.razaoSocial(), request.cnpj(),
                 request.cep(), request.cidade(), request.uf(), request.bairro(),
-                request.logradouro(), request.numero(), request.complemento(), request.observacoes(),
-                request.tipoEmail());
+                request.logradouro(), request.numero(), request.complemento(), request.observacoes());
+        substituirContatos(tenant, request.emails(), request.telefones());
         if (request.vigenciaAte() != null) {
             tenant.setVigenciaAte(request.vigenciaAte());
         }
@@ -207,13 +223,11 @@ public class BackofficeParoquiaService {
         });
     }
 
-    private static void aplicarContato(Tenant tenant, String razaoSocial, String cnpj, String email, String telefone,
-                                        String cep, String cidade, String uf, String bairro, String logradouro,
-                                        String numero, String complemento, String observacoes, String tipoEmail) {
+    private static void aplicarIdentidade(Tenant tenant, String razaoSocial, String cnpj,
+                                          String cep, String cidade, String uf, String bairro, String logradouro,
+                                          String numero, String complemento, String observacoes) {
         tenant.setRazaoSocial(opcional(razaoSocial));
         tenant.setCnpj(opcional(cnpj));
-        tenant.setEmail(opcional(email));
-        tenant.setTelefone(opcional(telefone));
         tenant.setCep(opcional(cep));
         tenant.setCidade(opcional(cidade));
         tenant.setUf(opcional(uf));
@@ -222,7 +236,29 @@ public class BackofficeParoquiaService {
         tenant.setNumero(opcional(numero));
         tenant.setComplemento(opcional(complemento));
         tenant.setObservacoes(opcional(observacoes));
-        tenant.setTipoEmail(opcional(tipoEmail) == null ? null : opcional(tipoEmail).toUpperCase());
+    }
+
+    private void substituirContatos(Tenant tenant, List<ContatoEmailRequest> emails,
+                                    List<ContatoTelefoneRequest> telefones) {
+        Contatos.exigirUmPrincipalEmail(emails);
+        Contatos.exigirUmPrincipalTelefone(telefones);
+        tenant.getEmails().clear();
+        tenant.getTelefones().clear();
+        entityManager.flush();
+        if (emails != null) {
+            for (ContatoEmailRequest e : emails) {
+                TenantEmail linha = new TenantEmail(e.tipo().trim(), e.email().trim(), e.principal());
+                linha.setTenant(tenant);
+                tenant.getEmails().add(linha);
+            }
+        }
+        if (telefones != null) {
+            for (ContatoTelefoneRequest t : telefones) {
+                TenantTelefone linha = new TenantTelefone(t.tipo().trim(), t.numero().trim(), t.principal());
+                linha.setTenant(tenant);
+                tenant.getTelefones().add(linha);
+            }
+        }
     }
 
     /**
@@ -266,12 +302,12 @@ public class BackofficeParoquiaService {
             }
             if (filtro.email() != null && !filtro.email().isBlank()) {
                 predicados.add(cb.like(
-                        cb.lower(cb.coalesce(root.get("email"), "")),
+                        cb.lower(root.join("emails", JoinType.LEFT).get("email")),
                         "%" + filtro.email().trim().toLowerCase() + "%"));
             }
             if (filtro.tipoEmail() != null && !filtro.tipoEmail().isBlank()) {
                 predicados.add(cb.equal(
-                        cb.upper(cb.coalesce(root.get("tipoEmail"), "")),
+                        cb.upper(root.join("emails", JoinType.LEFT).get("tipo")),
                         filtro.tipoEmail().trim().toUpperCase()));
             }
             if (filtro.contratadoDe() != null) {

@@ -61,6 +61,10 @@ import br.com.servire.api.AbstractIntegrationTest;
  * <p>Total atualizado de 28 para 29 em 23/09/2026: V029 cria o financeiro
  * manual do backoffice ({@code plano}, {@code preco_plano},
  * {@code assinatura}, {@code cobranca} — tabelas globais).</p>
+ *
+ * <p>Total atualizado de 29 para 30 em 24/09/2026: V030 cria o cadastro
+ * pessoa-primeiro ({@code pessoa}, contatos 1:N, {@code pessoa_relacao},
+ * {@code tenant_email}/{@code tenant_telefone} e o espelho da inscrição).</p>
  */
 class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
 
@@ -75,6 +79,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // Total atualizado de 27 para 28 em 23/09/2026: V028 (filtros da
         // listagem de paróquias no backoffice). De 28 para 29 em 23/09/2026:
         // V029 (financeiro manual: plano, preco_plano, assinatura, cobranca).
+        // De 29 para 30 em 24/09/2026: V030 (pessoa, contato, relação).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -83,10 +88,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(29);
-        assertThat(sucesso).isEqualTo(29);
+        assertThat(total).isEqualTo(30);
+        assertThat(sucesso).isEqualTo(30);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("billing manual");
+        assertThat(descricoes.getLast()).isEqualTo("pessoa contato relacao");
     }
 
     @Test
@@ -94,7 +99,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         Integer count = jdbcTemplate.queryForObject("""
                 SELECT count(*) FROM information_schema.tables
                 WHERE table_schema = 'public'
-                  AND table_name IN ('voluntarios','responsaveis','escalas','escala_eventos',
+                  AND table_name IN ('voluntarios','pessoa','escalas','escala_eventos',
                                       'escala_vagas','inscricoes','inscricao_responsaveis')
                 """, Integer.class);
         assertThat(count).isEqualTo(7);
@@ -107,7 +112,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 JOIN pg_class c ON c.relname = t.tablename
                 JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = t.schemaname
                 WHERE t.schemaname = 'public'
-                  AND t.tablename IN ('voluntarios','responsaveis','escalas','escala_eventos',
+                  AND t.tablename IN ('voluntarios','pessoa','escalas','escala_eventos',
                                        'escala_vagas','inscricoes','inscricao_responsaveis')
                   AND c.relrowsecurity = true
                 """, Integer.class);

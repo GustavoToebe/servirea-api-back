@@ -1,0 +1,3584 @@
+{
+  "author": "servire-api-back",
+  "title": "Servire — schema Postgres 16 (Flyway V001–V030)",
+  "database": "postgresql",
+  "tables": [
+    {
+      "id": 1,
+      "name": "usuario",
+      "x": 40,
+      "y": 48,
+      "width": 268,
+      "fields": [
+        {
+          "id": 1,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 2,
+          "name": "email",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": true,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 3,
+          "name": "senha_hash",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "BCrypt/Argon2 — nunca reversível"
+        },
+        {
+          "id": 4,
+          "name": "nome",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 5,
+          "name": "ativo",
+          "type": "BOOLEAN",
+          "default": "true",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 6,
+          "name": "operador_saas",
+          "type": "BOOLEAN",
+          "default": "false",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "JWT purpose=backoffice sem tenant"
+        },
+        {
+          "id": 7,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 8,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Login global. Pode servir várias paróquias. operador_saas entra só em /admin/auth/login.",
+      "indices": [],
+      "uniqueConstraints": [],
+      "color": "#175e7a"
+    },
+    {
+      "id": 2,
+      "name": "usuario_tenant",
+      "x": 360,
+      "y": 80,
+      "width": 268,
+      "fields": [
+        {
+          "id": 9,
+          "name": "usuario_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 10,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 11,
+          "name": "role",
+          "type": "usuario_tenant_role",
+          "default": "VISUALIZADOR",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 12,
+          "name": "status",
+          "type": "usuario_tenant_status",
+          "default": "ATIVO",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 13,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 14,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Vínculo N:N. PK composta (usuario_id, tenant_id) — sem coluna id.",
+      "indices": [
+        {
+          "name": "idx_usuario_tenant_tenant_id",
+          "unique": false,
+          "fields": [
+            "tenant_id"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#175e7a"
+    },
+    {
+      "id": 3,
+      "name": "tenant",
+      "x": 680,
+      "y": 48,
+      "width": 268,
+      "fields": [
+        {
+          "id": 15,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 16,
+          "name": "codigo",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": true,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 17,
+          "name": "slug",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": true,
+          "notNull": true,
+          "increment": false,
+          "comment": "URL /public/{slug}"
+        },
+        {
+          "id": 18,
+          "name": "nome",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 19,
+          "name": "razao_social",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 20,
+          "name": "cnpj",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 21,
+          "name": "status",
+          "type": "tenant_status",
+          "default": "TRIAL",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "Kill Switch: BLOQUEADO/CANCELADO cortam acesso"
+        },
+        {
+          "id": 22,
+          "name": "email",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 23,
+          "name": "telefone",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 24,
+          "name": "cep",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 25,
+          "name": "cidade",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 26,
+          "name": "uf",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 27,
+          "name": "bairro",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 28,
+          "name": "logradouro",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 29,
+          "name": "numero",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 30,
+          "name": "complemento",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 31,
+          "name": "observacoes",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 32,
+          "name": "tipo_email",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "CONTATO / FINANCEIRO / ADMINISTRATIVO"
+        },
+        {
+          "id": 33,
+          "name": "vigencia_ate",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "Filtro “quando vai acabar”"
+        },
+        {
+          "id": 34,
+          "name": "ultimo_pagamento_em",
+          "type": "TIMESTAMPTZ",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 35,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 36,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Cada linha é uma paróquia. Raiz do multi-tenant — sem tenant_id.",
+      "indices": [],
+      "uniqueConstraints": [],
+      "color": "#175e7a"
+    },
+    {
+      "id": 4,
+      "name": "refresh_token",
+      "x": 40,
+      "y": 430,
+      "width": 268,
+      "fields": [
+        {
+          "id": 37,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 38,
+          "name": "usuario_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 39,
+          "name": "token_hash",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": true,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 40,
+          "name": "expires_at",
+          "type": "TIMESTAMPTZ",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 41,
+          "name": "revoked_at",
+          "type": "TIMESTAMPTZ",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 42,
+          "name": "replaced_by",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "FK para refresh_token.id"
+        },
+        {
+          "id": 43,
+          "name": "ip",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 44,
+          "name": "user_agent",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 45,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Sessão com rotation. Só o hash. Pertence ao usuário, não ao tenant.",
+      "indices": [
+        {
+          "name": "idx_refresh_token_usuario_id",
+          "unique": false,
+          "fields": [
+            "usuario_id"
+          ]
+        },
+        {
+          "name": "idx_refresh_token_expires_at",
+          "unique": false,
+          "fields": [
+            "expires_at"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#175e7a"
+    },
+    {
+      "id": 5,
+      "name": "password_reset_token",
+      "x": 360,
+      "y": 430,
+      "width": 268,
+      "fields": [
+        {
+          "id": 46,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 47,
+          "name": "usuario_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 48,
+          "name": "token_hash",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": true,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 49,
+          "name": "expires_at",
+          "type": "TIMESTAMPTZ",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 50,
+          "name": "used_at",
+          "type": "TIMESTAMPTZ",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 51,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Esqueci a senha. Hash + uso único (used_at).",
+      "indices": [
+        {
+          "name": "idx_password_reset_token_usuario_id",
+          "unique": false,
+          "fields": [
+            "usuario_id"
+          ]
+        },
+        {
+          "name": "idx_password_reset_token_expires_at",
+          "unique": false,
+          "fields": [
+            "expires_at"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#175e7a"
+    },
+    {
+      "id": 6,
+      "name": "backoffice_log",
+      "x": 40,
+      "y": 860,
+      "width": 268,
+      "fields": [
+        {
+          "id": 52,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 53,
+          "name": "user_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "não é operador_id"
+        },
+        {
+          "id": 54,
+          "name": "tenant_alvo_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 55,
+          "name": "acao",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 56,
+          "name": "entidade",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 57,
+          "name": "entidade_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 58,
+          "name": "ip",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 59,
+          "name": "request_id",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 60,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Ações do operador. GLOBAL — sem @TenantId. Distinta de audit_log.",
+      "indices": [
+        {
+          "name": "idx_backoffice_log_created_at",
+          "unique": false,
+          "fields": [
+            "created_at"
+          ]
+        },
+        {
+          "name": "idx_backoffice_log_tenant_alvo",
+          "unique": false,
+          "fields": [
+            "tenant_alvo_id"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#6b21a8"
+    },
+    {
+      "id": 7,
+      "name": "plano",
+      "x": 1100,
+      "y": 48,
+      "width": 268,
+      "fields": [
+        {
+          "id": 61,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 62,
+          "name": "codigo",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": true,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 63,
+          "name": "nome",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 64,
+          "name": "limite_voluntarios",
+          "type": "INTEGER",
+          "default": "",
+          "check": "limite_voluntarios IS NULL OR limite_voluntarios > 0",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 65,
+          "name": "ativo",
+          "type": "BOOLEAN",
+          "default": "true",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 66,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Catálogo. Seed STANDARD e PRO, sem preço. Sem coluna descricao.",
+      "indices": [],
+      "uniqueConstraints": [],
+      "color": "#b45309"
+    },
+    {
+      "id": 8,
+      "name": "preco_plano",
+      "x": 1420,
+      "y": 48,
+      "width": 268,
+      "fields": [
+        {
+          "id": 67,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 68,
+          "name": "plano_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 69,
+          "name": "periodicidade",
+          "type": "plano_periodicidade",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 70,
+          "name": "valor",
+          "type": "NUMERIC",
+          "default": "",
+          "check": "valor >= 0",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "",
+          "size": "10,2"
+        },
+        {
+          "id": 71,
+          "name": "vigente_desde",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 72,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Histórico. Vigente = maior vigente_desde <= hoje.",
+      "indices": [],
+      "uniqueConstraints": [
+        {
+          "name": "preco_plano_plano_id_periodicidade_vigente_desde_key",
+          "fields": [
+            "plano_id",
+            "periodicidade",
+            "vigente_desde"
+          ]
+        }
+      ],
+      "color": "#b45309"
+    },
+    {
+      "id": 9,
+      "name": "assinatura",
+      "x": 1100,
+      "y": 380,
+      "width": 268,
+      "fields": [
+        {
+          "id": 73,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 74,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 75,
+          "name": "plano_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 76,
+          "name": "periodicidade",
+          "type": "plano_periodicidade",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 77,
+          "name": "valor",
+          "type": "NUMERIC",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "Copiado/negociado — não é valor_copiado",
+          "size": "10,2"
+        },
+        {
+          "id": 78,
+          "name": "dia_vencimento",
+          "type": "INTEGER",
+          "default": "",
+          "check": "dia_vencimento BETWEEN 1 AND 28",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 79,
+          "name": "inicio",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 80,
+          "name": "fim",
+          "type": "DATE",
+          "default": "",
+          "check": "fim IS NULL OR fim >= inicio",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 81,
+          "name": "status",
+          "type": "assinatura_status",
+          "default": "ATIVA",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 82,
+          "name": "observacoes",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 83,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 84,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Contrato. tenant_id é FK comum (path /admin), NÃO @TenantId. Uma ATIVA por tenant.",
+      "indices": [
+        {
+          "name": "uq_assinatura_ativa_por_tenant",
+          "unique": true,
+          "fields": [
+            "tenant_id"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#b45309"
+    },
+    {
+      "id": 10,
+      "name": "cobranca",
+      "x": 1420,
+      "y": 380,
+      "width": 268,
+      "fields": [
+        {
+          "id": 85,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 86,
+          "name": "assinatura_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 87,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 88,
+          "name": "competencia_inicio",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 89,
+          "name": "competencia_fim",
+          "type": "DATE",
+          "default": "",
+          "check": "competencia_fim >= competencia_inicio",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 90,
+          "name": "vencimento",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 91,
+          "name": "valor",
+          "type": "NUMERIC",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "",
+          "size": "10,2"
+        },
+        {
+          "id": 92,
+          "name": "status",
+          "type": "cobranca_status",
+          "default": "ABERTA",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 93,
+          "name": "pago_em",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "não é paga_em"
+        },
+        {
+          "id": 94,
+          "name": "valor_pago",
+          "type": "NUMERIC",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "",
+          "size": "10,2"
+        },
+        {
+          "id": 95,
+          "name": "forma_pagamento",
+          "type": "forma_pagamento",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 96,
+          "name": "observacao",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 97,
+          "name": "registrado_por",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 98,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 99,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Uma linha por competência. Pagamento à mão. competencia_inicio + competencia_fim.",
+      "indices": [
+        {
+          "name": "idx_cobranca_tenant_status_vencimento",
+          "unique": false,
+          "fields": [
+            "tenant_id",
+            "status",
+            "vencimento"
+          ]
+        }
+      ],
+      "uniqueConstraints": [
+        {
+          "name": "cobranca_assinatura_id_competencia_inicio_key",
+          "fields": [
+            "assinatura_id",
+            "competencia_inicio"
+          ]
+        }
+      ],
+      "color": "#b45309"
+    },
+    {
+      "id": 11,
+      "name": "voluntarios",
+      "x": 40,
+      "y": 1320,
+      "width": 268,
+      "fields": [
+        {
+          "id": 100,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 101,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "@TenantId + UNIQUE (tenant_id, id)"
+        },
+        {
+          "id": 102,
+          "name": "nome_completo",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 103,
+          "name": "data_nascimento",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 104,
+          "name": "tipo",
+          "type": "tipo_voluntario",
+          "default": "COROINHA",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 105,
+          "name": "ativo",
+          "type": "BOOLEAN",
+          "default": "true",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 106,
+          "name": "foto_path",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "bucket voluntarios-fotos"
+        },
+        {
+          "id": 107,
+          "name": "etapa_catequese",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 108,
+          "name": "eucaristia_ano",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 109,
+          "name": "crisma_ano",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 110,
+          "name": "rua",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 111,
+          "name": "numero",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 112,
+          "name": "bairro",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 113,
+          "name": "telefone",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 114,
+          "name": "celular",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 115,
+          "name": "email",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 116,
+          "name": "horario_estudo",
+          "type": "TEXT",
+          "default": "",
+          "check": "horario_estudo IS NULL OR horario_estudo IN ('MANHA','TARDE','NOITE')",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 117,
+          "name": "observacoes",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 118,
+          "name": "autoriza_whatsapp",
+          "type": "BOOLEAN",
+          "default": "false",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 119,
+          "name": "funcoes_habilitadas",
+          "type": "TEXT",
+          "default": "{}",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "funcao_escala[]"
+        },
+        {
+          "id": 120,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 121,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Coroinha/acólito. Dados de menor — LGPD. UNIQUE (tenant_id, id).",
+      "indices": [
+        {
+          "name": "idx_voluntarios_tenant_id",
+          "unique": false,
+          "fields": [
+            "tenant_id"
+          ]
+        },
+        {
+          "name": "idx_voluntarios_ativo",
+          "unique": false,
+          "fields": [
+            "ativo"
+          ]
+        },
+        {
+          "name": "idx_voluntarios_tipo",
+          "unique": false,
+          "fields": [
+            "tipo"
+          ]
+        }
+      ],
+      "uniqueConstraints": [
+        {
+          "name": "voluntarios_tenant_id_id_key",
+          "fields": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      ],
+      "color": "#2d6a4f"
+    },
+    {
+      "id": 12,
+      "name": "responsaveis",
+      "x": 360,
+      "y": 1320,
+      "width": 268,
+      "fields": [
+        {
+          "id": 122,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 123,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "FK composta (tenant_id, voluntario_id)"
+        },
+        {
+          "id": 124,
+          "name": "voluntario_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 125,
+          "name": "parentesco",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 126,
+          "name": "nome",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 127,
+          "name": "telefone",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 128,
+          "name": "celular",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 129,
+          "name": "email",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 130,
+          "name": "principal",
+          "type": "BOOLEAN",
+          "default": "false",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 131,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Responsável legal. Unique parcial: um principal=true por voluntário.",
+      "indices": [
+        {
+          "name": "uq_responsavel_principal_por_voluntario",
+          "unique": true,
+          "fields": [
+            "voluntario_id"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#2d6a4f"
+    },
+    {
+      "id": 13,
+      "name": "disponibilidade_voluntario",
+      "x": 360,
+      "y": 1800,
+      "width": 268,
+      "fields": [
+        {
+          "id": 132,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 133,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 134,
+          "name": "voluntario_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 135,
+          "name": "dia_semana",
+          "type": "TEXT",
+          "default": "",
+          "check": "dia_semana IN ('MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY')",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 136,
+          "name": "data",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 137,
+          "name": "periodo",
+          "type": "periodo_dia",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 138,
+          "name": "observacao",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 139,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Recorrente XOR pontual. tenant_id é FK simples (não composta).",
+      "indices": [
+        {
+          "name": "ux_disponibilidade_recorrente",
+          "unique": true,
+          "fields": [
+            "voluntario_id",
+            "dia_semana",
+            "periodo"
+          ]
+        },
+        {
+          "name": "ux_disponibilidade_pontual",
+          "unique": true,
+          "fields": [
+            "voluntario_id",
+            "data",
+            "periodo"
+          ]
+        },
+        {
+          "name": "idx_disponibilidade_voluntario_tenant",
+          "unique": false,
+          "fields": [
+            "tenant_id"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#2d6a4f"
+    },
+    {
+      "id": 14,
+      "name": "escalas",
+      "x": 680,
+      "y": 1320,
+      "width": 268,
+      "fields": [
+        {
+          "id": 140,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 141,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "UNIQUE (tenant_id, id)"
+        },
+        {
+          "id": 142,
+          "name": "titulo",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 143,
+          "name": "tipo",
+          "type": "tipo_escala",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 144,
+          "name": "ano",
+          "type": "INTEGER",
+          "default": "",
+          "check": "ano BETWEEN 2020 AND 2100",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 145,
+          "name": "mes",
+          "type": "INTEGER",
+          "default": "",
+          "check": "mes BETWEEN 1 AND 12",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 146,
+          "name": "status",
+          "type": "status_escala",
+          "default": "RASCUNHO",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 147,
+          "name": "observacao",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 148,
+          "name": "created_by",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 149,
+          "name": "version",
+          "type": "BIGINT",
+          "default": "0",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "@Version"
+        },
+        {
+          "id": 150,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 151,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Cabeçalho. version = lock otimista (HTTP 409). created_by → usuario.",
+      "indices": [
+        {
+          "name": "idx_escalas_tenant_id",
+          "unique": false,
+          "fields": [
+            "tenant_id"
+          ]
+        },
+        {
+          "name": "idx_escalas_ano_mes",
+          "unique": false,
+          "fields": [
+            "ano",
+            "mes"
+          ]
+        },
+        {
+          "name": "idx_escalas_status",
+          "unique": false,
+          "fields": [
+            "status"
+          ]
+        }
+      ],
+      "uniqueConstraints": [
+        {
+          "name": "escalas_tenant_id_id_key",
+          "fields": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      ],
+      "color": "#2d6a4f"
+    },
+    {
+      "id": 15,
+      "name": "escala_eventos",
+      "x": 680,
+      "y": 1880,
+      "width": 268,
+      "fields": [
+        {
+          "id": 152,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 153,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "FK composta (tenant_id, escala_id)"
+        },
+        {
+          "id": 154,
+          "name": "escala_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 155,
+          "name": "data",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 156,
+          "name": "horario",
+          "type": "TIME",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 157,
+          "name": "celebracao",
+          "type": "TEXT",
+          "default": "Missa",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 158,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Uma missa. data DATE + horario TIME — não existe data_hora.",
+      "indices": [],
+      "uniqueConstraints": [
+        {
+          "name": "escala_eventos_tenant_id_id_key",
+          "fields": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      ],
+      "color": "#2d6a4f"
+    },
+    {
+      "id": 16,
+      "name": "escala_vagas",
+      "x": 1000,
+      "y": 1880,
+      "width": 268,
+      "fields": [
+        {
+          "id": 159,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 160,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "FK composta (tenant_id, evento_id)"
+        },
+        {
+          "id": 161,
+          "name": "evento_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 162,
+          "name": "funcao",
+          "type": "funcao_escala",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 163,
+          "name": "posicao",
+          "type": "INTEGER",
+          "default": "1",
+          "check": "posicao > 0",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 164,
+          "name": "voluntario_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 165,
+          "name": "presenca",
+          "type": "presenca_vaga",
+          "default": "PENDENTE",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 166,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "UNIQUE (evento_id, funcao, posicao). Um voluntário por missa.",
+      "indices": [
+        {
+          "name": "uq_voluntario_por_evento",
+          "unique": true,
+          "fields": [
+            "evento_id",
+            "voluntario_id"
+          ]
+        }
+      ],
+      "uniqueConstraints": [
+        {
+          "name": "escala_vagas_evento_id_funcao_posicao_key",
+          "fields": [
+            "evento_id",
+            "funcao",
+            "posicao"
+          ]
+        }
+      ],
+      "color": "#2d6a4f"
+    },
+    {
+      "id": 17,
+      "name": "inscricoes",
+      "x": 1000,
+      "y": 1320,
+      "width": 268,
+      "fields": [
+        {
+          "id": 167,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 168,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "UNIQUE (tenant_id, id)"
+        },
+        {
+          "id": 169,
+          "name": "nome_completo",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 170,
+          "name": "data_nascimento",
+          "type": "DATE",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 171,
+          "name": "tipo",
+          "type": "tipo_voluntario",
+          "default": "COROINHA",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 172,
+          "name": "foto_path",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 173,
+          "name": "etapa_catequese",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 174,
+          "name": "eucaristia_ano",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 175,
+          "name": "crisma_ano",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 176,
+          "name": "rua",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 177,
+          "name": "numero",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 178,
+          "name": "bairro",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 179,
+          "name": "telefone",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 180,
+          "name": "celular",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 181,
+          "name": "email",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 182,
+          "name": "horario_estudo",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 183,
+          "name": "observacoes",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 184,
+          "name": "autoriza_whatsapp",
+          "type": "BOOLEAN",
+          "default": "false",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 185,
+          "name": "funcoes_habilitadas",
+          "type": "TEXT",
+          "default": "{}",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "funcao_escala[]"
+        },
+        {
+          "id": 186,
+          "name": "status",
+          "type": "status_inscricao",
+          "default": "PENDENTE",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 187,
+          "name": "data_aprovacao",
+          "type": "TIMESTAMPTZ",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 188,
+          "name": "aprovado_por",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 189,
+          "name": "voluntario_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": true,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 190,
+          "name": "data_rejeicao",
+          "type": "TIMESTAMPTZ",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 191,
+          "name": "rejeitado_por",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 192,
+          "name": "motivo_rejeicao",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 193,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 194,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Fila pública. Aprovada vira voluntario 1:1. CHECKs de auditoria.",
+      "indices": [],
+      "uniqueConstraints": [
+        {
+          "name": "inscricoes_tenant_id_id_key",
+          "fields": [
+            "tenant_id",
+            "id"
+          ]
+        }
+      ],
+      "color": "#2d6a4f"
+    },
+    {
+      "id": 18,
+      "name": "inscricao_responsaveis",
+      "x": 1320,
+      "y": 1320,
+      "width": 268,
+      "fields": [
+        {
+          "id": 195,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 196,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": "FK composta (tenant_id, inscricao_id)"
+        },
+        {
+          "id": 197,
+          "name": "inscricao_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 198,
+          "name": "parentesco",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 199,
+          "name": "nome",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 200,
+          "name": "telefone",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 201,
+          "name": "celular",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 202,
+          "name": "email",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 203,
+          "name": "principal",
+          "type": "BOOLEAN",
+          "default": "false",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 204,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 205,
+          "name": "updated_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Responsáveis da inscrição. Um principal por inscrição. Tem updated_at.",
+      "indices": [
+        {
+          "name": "ux_inscricao_responsavel_principal",
+          "unique": true,
+          "fields": [
+            "inscricao_id"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#2d6a4f"
+    },
+    {
+      "id": 19,
+      "name": "audit_log",
+      "x": 1320,
+      "y": 1840,
+      "width": 268,
+      "fields": [
+        {
+          "id": 206,
+          "name": "id",
+          "type": "UUID",
+          "default": "gen_random_uuid()",
+          "check": "",
+          "primary": true,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 207,
+          "name": "tenant_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 208,
+          "name": "user_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "nulo no form público"
+        },
+        {
+          "id": 209,
+          "name": "acao",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 210,
+          "name": "entidade",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 211,
+          "name": "entidade_id",
+          "type": "UUID",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 212,
+          "name": "changed_fields",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": "text[] — nomes, não valores"
+        },
+        {
+          "id": 213,
+          "name": "ip",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 214,
+          "name": "request_id",
+          "type": "TEXT",
+          "default": "",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": false,
+          "increment": false,
+          "comment": ""
+        },
+        {
+          "id": 215,
+          "name": "created_at",
+          "type": "TIMESTAMPTZ",
+          "default": "now()",
+          "check": "",
+          "primary": false,
+          "unique": false,
+          "notNull": true,
+          "increment": false,
+          "comment": ""
+        }
+      ],
+      "comment": "Trilha da paróquia (@TenantId). Só nomes dos campos, sem dado pessoal. tenant_id simples.",
+      "indices": [
+        {
+          "name": "idx_audit_log_tenant_entidade",
+          "unique": false,
+          "fields": [
+            "tenant_id",
+            "entidade",
+            "entidade_id"
+          ]
+        },
+        {
+          "name": "idx_audit_log_tenant_created_at",
+          "unique": false,
+          "fields": [
+            "tenant_id",
+            "created_at"
+          ]
+        }
+      ],
+      "uniqueConstraints": [],
+      "color": "#6b21a8"
+    }
+  ],
+  "relationships": [
+    {
+      "id": 1,
+      "name": "usuario_tenant_usuario",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 2,
+      "endFieldId": 9,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 2,
+      "name": "usuario_tenant_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 2,
+      "endFieldId": 10,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 3,
+      "name": "refresh_token_usuario",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 4,
+      "endFieldId": 38,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 4,
+      "name": "refresh_token_replaced_by",
+      "startTableId": 4,
+      "startFieldId": 37,
+      "endTableId": 4,
+      "endFieldId": 42,
+      "cardinality": "one_to_one",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Set null"
+    },
+    {
+      "id": 5,
+      "name": "password_reset_token_usuario",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 5,
+      "endFieldId": 47,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 6,
+      "name": "backoffice_log_usuario",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 6,
+      "endFieldId": 53,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Set null"
+    },
+    {
+      "id": 7,
+      "name": "backoffice_log_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 6,
+      "endFieldId": 54,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Set null"
+    },
+    {
+      "id": 8,
+      "name": "voluntarios_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 11,
+      "endFieldId": 101,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 9,
+      "name": "escalas_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 14,
+      "endFieldId": 141,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 10,
+      "name": "inscricoes_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 17,
+      "endFieldId": 168,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 11,
+      "name": "audit_log_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 19,
+      "endFieldId": 207,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 12,
+      "name": "disponibilidade_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 13,
+      "endFieldId": 133,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 13,
+      "name": "responsaveis_voluntario",
+      "startTableId": 11,
+      "startFieldId": 100,
+      "endTableId": 12,
+      "endFieldId": 124,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 14,
+      "name": "disponibilidade_voluntario",
+      "startTableId": 11,
+      "startFieldId": 100,
+      "endTableId": 13,
+      "endFieldId": 134,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 15,
+      "name": "escala_eventos_escala",
+      "startTableId": 14,
+      "startFieldId": 140,
+      "endTableId": 15,
+      "endFieldId": 154,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 16,
+      "name": "escala_vagas_evento",
+      "startTableId": 15,
+      "startFieldId": 152,
+      "endTableId": 16,
+      "endFieldId": 161,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 17,
+      "name": "escala_vagas_voluntario",
+      "startTableId": 11,
+      "startFieldId": 100,
+      "endTableId": 16,
+      "endFieldId": 164,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Set null"
+    },
+    {
+      "id": 18,
+      "name": "inscricoes_voluntario",
+      "startTableId": 11,
+      "startFieldId": 100,
+      "endTableId": 17,
+      "endFieldId": 189,
+      "cardinality": "one_to_one",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Set null"
+    },
+    {
+      "id": 19,
+      "name": "inscricao_responsaveis_inscricao",
+      "startTableId": 17,
+      "startFieldId": 167,
+      "endTableId": 18,
+      "endFieldId": 197,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Cascade"
+    },
+    {
+      "id": 20,
+      "name": "escalas_created_by",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 14,
+      "endFieldId": 148,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Set null"
+    },
+    {
+      "id": 21,
+      "name": "inscricoes_aprovado_por",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 17,
+      "endFieldId": 188,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 22,
+      "name": "inscricoes_rejeitado_por",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 17,
+      "endFieldId": 191,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 23,
+      "name": "audit_log_usuario",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 19,
+      "endFieldId": 208,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Set null"
+    },
+    {
+      "id": 24,
+      "name": "preco_plano_plano",
+      "startTableId": 7,
+      "startFieldId": 61,
+      "endTableId": 8,
+      "endFieldId": 68,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 25,
+      "name": "assinatura_plano",
+      "startTableId": 7,
+      "startFieldId": 61,
+      "endTableId": 9,
+      "endFieldId": 75,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 26,
+      "name": "assinatura_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 9,
+      "endFieldId": 74,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 27,
+      "name": "cobranca_assinatura",
+      "startTableId": 9,
+      "startFieldId": 73,
+      "endTableId": 10,
+      "endFieldId": 86,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 28,
+      "name": "cobranca_tenant",
+      "startTableId": 3,
+      "startFieldId": 15,
+      "endTableId": 10,
+      "endFieldId": 87,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action"
+    },
+    {
+      "id": 29,
+      "name": "cobranca_registrado_por",
+      "startTableId": 1,
+      "startFieldId": 1,
+      "endTableId": 10,
+      "endFieldId": 97,
+      "cardinality": "one_to_many",
+      "updateConstraint": "No action",
+      "deleteConstraint": "Set null"
+    }
+  ],
+  "notes": [
+    {
+      "id": 1,
+      "x": 680,
+      "y": 920,
+      "title": "FKs compostas (V021)",
+      "content": "voluntarios, escalas, escala_eventos, inscricoes têm UNIQUE (tenant_id, id).\nFilhos apontam (tenant_id, fk) — o banco impede cruzar paróquia.\ndisponibilidade_voluntario e audit_log: tenant_id simples.",
+      "color": "#fcf7ac",
+      "height": 160,
+      "width": 300
+    },
+    {
+      "id": 2,
+      "x": 1720,
+      "y": 48,
+      "title": "Billing é global",
+      "content": "plano / preco_plano / assinatura / cobranca NÃO têm @TenantId.\ntenant_id vem do path /admin/paroquias/{id}.\nRLS ligado sem policy (Data API anon não lê).",
+      "color": "#fcf7ac",
+      "height": 150,
+      "width": 280
+    },
+    {
+      "id": 3,
+      "x": 1640,
+      "y": 1840,
+      "title": "Fora do schema",
+      "content": "Fotos: bucket privado voluntarios-fotos.\nView vw_voluntario_compromissos (V010) não filtra RASCUNHO/CANCELADA — a API Java não usa SQL nativo nela.",
+      "color": "#fcf7ac",
+      "height": 140,
+      "width": 280
+    }
+  ],
+  "subjectAreas": [
+    {
+      "id": 1,
+      "name": "1. Identidade (global)",
+      "x": 16,
+      "y": 16,
+      "width": 1040,
+      "height": 1260,
+      "color": "#dbeafe"
+    },
+    {
+      "id": 2,
+      "name": "2. Billing (global, FK de path)",
+      "x": 1076,
+      "y": 16,
+      "width": 940,
+      "height": 1260,
+      "color": "#ffedd5"
+    },
+    {
+      "id": 3,
+      "name": "3. Domínio (tenant-aware)",
+      "x": 16,
+      "y": 1296,
+      "width": 2000,
+      "height": 1160,
+      "color": "#dcfce7"
+    }
+  ],
+  "types": [],
+  "enums": [
+    {
+      "name": "tipo_voluntario",
+      "values": [
+        "COROINHA",
+        "ACOLITO",
+        "AMBOS"
+      ]
+    },
+    {
+      "name": "funcao_escala",
+      "values": [
+        "MISSAL",
+        "CRUZ",
+        "CREDENCIA",
+        "VELA",
+        "COLETA",
+        "SINO",
+        "OUTRO"
+      ]
+    },
+    {
+      "name": "tipo_escala",
+      "values": [
+        "SEMANAL",
+        "MENSAL"
+      ]
+    },
+    {
+      "name": "status_escala",
+      "values": [
+        "RASCUNHO",
+        "FINALIZADA",
+        "CANCELADA"
+      ]
+    },
+    {
+      "name": "status_inscricao",
+      "values": [
+        "PENDENTE",
+        "APROVADA",
+        "REJEITADA"
+      ]
+    },
+    {
+      "name": "tenant_status",
+      "values": [
+        "ATIVO",
+        "TRIAL",
+        "BLOQUEADO",
+        "CANCELADO"
+      ]
+    },
+    {
+      "name": "usuario_tenant_role",
+      "values": [
+        "ADMIN",
+        "COORDENADOR",
+        "VISUALIZADOR"
+      ]
+    },
+    {
+      "name": "usuario_tenant_status",
+      "values": [
+        "ATIVO",
+        "INATIVO"
+      ]
+    },
+    {
+      "name": "presenca_vaga",
+      "values": [
+        "PENDENTE",
+        "PRESENTE",
+        "FALTOU"
+      ]
+    },
+    {
+      "name": "periodo_dia",
+      "values": [
+        "MANHA",
+        "TARDE",
+        "NOITE"
+      ]
+    },
+    {
+      "name": "plano_periodicidade",
+      "values": [
+        "MENSAL",
+        "ANUAL"
+      ]
+    },
+    {
+      "name": "forma_pagamento",
+      "values": [
+        "PIX",
+        "CARTAO_CREDITO",
+        "CARTAO_DEBITO",
+        "DINHEIRO",
+        "TRANSFERENCIA",
+        "BOLETO",
+        "OUTRO"
+      ]
+    },
+    {
+      "name": "assinatura_status",
+      "values": [
+        "ATIVA",
+        "CANCELADA"
+      ]
+    },
+    {
+      "name": "cobranca_status",
+      "values": [
+        "ABERTA",
+        "PAGA",
+        "CANCELADA"
+      ]
+    }
+  ],
+  "views": []
+}

@@ -15,6 +15,6 @@ import java.util.UUID;
 public interface EscalaEventoRepository extends JpaRepository<EscalaEvento, UUID> {
 
     @Override
-    @EntityGraph(attributePaths = {"vagas", "vagas.voluntario"})
+    @EntityGraph(attributePaths = {"vagas", "vagas.voluntario.pessoa"})
     Optional<EscalaEvento> findById(UUID id);
 }

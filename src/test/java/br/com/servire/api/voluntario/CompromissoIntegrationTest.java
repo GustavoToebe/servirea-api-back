@@ -8,6 +8,8 @@ import br.com.servire.api.escala.TipoEscala;
 import br.com.servire.api.escala.dto.EscalaEventoRequest;
 import br.com.servire.api.escala.dto.EscalaRequest;
 import br.com.servire.api.escala.dto.EscalaVagaRequest;
+import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.Pessoas;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
@@ -39,6 +41,9 @@ class CompromissoIntegrationTest extends AbstractIntegrationTest {
     private VoluntarioRepository voluntarioRepository;
 
     @Autowired
+    private PessoaRepository pessoaRepository;
+
+    @Autowired
     private EscalaService escalaService;
 
     @Autowired
@@ -66,14 +71,14 @@ class CompromissoIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void semVagaAlocadaDevolveListaVazia() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Sem Compromisso"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Sem Compromisso");
 
         assertThat(voluntarioService.listarCompromissos(voluntario.getId())).isEmpty();
     }
 
     @Test
     void vagaAlocadaApareceComoCompromisso() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Escalado"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Escalado");
         LocalDate data = LocalDate.of(2026, 10, 4);
         LocalTime horario = LocalTime.of(19, 0);
         Escala escala = escalaService.criar(new EscalaRequest(
@@ -97,8 +102,8 @@ class CompromissoIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void outroVoluntarioNaoVeOCompromisso() {
-        Voluntario escalado = voluntarioRepository.saveAndFlush(new Voluntario("Escalado"));
-        Voluntario outro = voluntarioRepository.saveAndFlush(new Voluntario("Outro"));
+        Voluntario escalado = Pessoas.persistirVoluntario(pessoaRepository, "Escalado");
+        Voluntario outro = Pessoas.persistirVoluntario(pessoaRepository, "Outro");
         escalaService.criar(new EscalaRequest(
                 "Escala", TipoEscala.SEMANAL, 2026, 10, null, null,
                 List.of(new EscalaEventoRequest(LocalDate.of(2026, 10, 4), LocalTime.of(19, 0), "Missa",

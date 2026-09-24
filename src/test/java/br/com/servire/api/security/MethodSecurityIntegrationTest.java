@@ -12,6 +12,9 @@ import br.com.servire.api.escala.EscalaService;
 import br.com.servire.api.escala.EscalaVaga;
 import br.com.servire.api.inscricao.Inscricao;
 import br.com.servire.api.inscricao.InscricaoService;
+import br.com.servire.api.pessoa.Pessoa;
+import br.com.servire.api.pessoa.PessoaPapel;
+import br.com.servire.api.pessoa.PessoaService;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantService;
 import br.com.servire.api.voluntario.DisponibilidadeVoluntarioService;
@@ -95,6 +98,9 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private PessoaService pessoaService;
+
+    @MockitoBean
     private VoluntarioService voluntarioService;
 
     @MockitoBean
@@ -159,7 +165,10 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void coordenadorPodeEscreverEmVoluntarios() throws Exception {
-        when(voluntarioService.setAtivo(any(), anyBoolean())).thenReturn(new Voluntario("Fulano de Tal"));
+        Pessoa pessoa = new Pessoa(PessoaPapel.VOLUNTARIO, "Fulano de Tal");
+        Voluntario voluntario = new Voluntario();
+        pessoa.setVoluntario(voluntario);
+        when(voluntarioService.setAtivo(any(), anyBoolean())).thenReturn(voluntario);
 
         mockMvc.perform(patch("/voluntarios/{id}/ativo", UUID.randomUUID())
                         .param("ativo", "true")

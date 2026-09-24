@@ -63,7 +63,7 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
         TenantContext.set(tenant.getId());
 
         Tenant atualizado = tenantService.atualizar(new TenantRequest(
-                " Paróquia Nova ", " Associação ", " 12.345.678/0001-90 "));
+                " Paróquia Nova ", " Associação ", " 12.345.678/0001-90 ", null, null));
 
         assertThat(atualizado.getNome()).isEqualTo("Paróquia Nova");
         assertThat(atualizado.getRazaoSocial()).isEqualTo("Associação");
@@ -83,7 +83,7 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
         String nomeB = tenantB.getNome();
         TenantContext.set(tenantA.getId());
 
-        tenantService.atualizar(new TenantRequest("Só o A", null, null));
+        tenantService.atualizar(new TenantRequest("Só o A", null, null, null, null));
 
         TenantContext.set(tenantB.getId());
         assertThat(tenantService.buscarAtual().getNome()).isEqualTo(nomeB);

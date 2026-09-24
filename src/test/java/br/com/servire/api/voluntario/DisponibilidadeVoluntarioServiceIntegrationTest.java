@@ -1,6 +1,8 @@
 package br.com.servire.api.voluntario;
 
 import br.com.servire.api.AbstractIntegrationTest;
+import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.Pessoas;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
@@ -41,6 +43,9 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
     private VoluntarioRepository voluntarioRepository;
 
     @Autowired
+    private PessoaRepository pessoaRepository;
+
+    @Autowired
     private TenantRepository tenantRepository;
 
     @BeforeEach
@@ -59,7 +64,7 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
 
     @Test
     void criarComDiaSemanaGravaDisponibilidadeRecorrente() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Disponível"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Disponível");
         DisponibilidadeVoluntarioRequest request =
                 new DisponibilidadeVoluntarioRequest(DayOfWeek.SATURDAY, null, Periodo.TARDE, "prefere sábado à tarde");
 
@@ -75,7 +80,7 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
 
     @Test
     void criarComDataGravaDisponibilidadePontual() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Pontual"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Pontual");
         DisponibilidadeVoluntarioRequest request =
                 new DisponibilidadeVoluntarioRequest(null, LocalDate.of(2026, 12, 25), Periodo.MANHA, "só no Natal");
 
@@ -94,7 +99,7 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
      */
     @Test
     void criarComAmbosDiaSemanaEDataLancaBadRequestException() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Inválido"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Inválido");
         DisponibilidadeVoluntarioRequest request =
                 new DisponibilidadeVoluntarioRequest(DayOfWeek.MONDAY, LocalDate.of(2026, 12, 25), Periodo.MANHA, null);
 
@@ -105,7 +110,7 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
 
     @Test
     void criarComNenhumDiaSemanaNemDataLancaBadRequestException() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Sem Dia"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Sem Dia");
         DisponibilidadeVoluntarioRequest request = new DisponibilidadeVoluntarioRequest(null, null, Periodo.MANHA, null);
 
         assertThatThrownBy(() -> disponibilidadeService.criar(voluntario.getId(), request))
@@ -129,7 +134,7 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
      */
     @Test
     void criarDuplicataDeDiaSemanaEPeriodoLancaConflictException() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Duplicado"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Duplicado");
         DisponibilidadeVoluntarioRequest request =
                 new DisponibilidadeVoluntarioRequest(DayOfWeek.WEDNESDAY, null, Periodo.NOITE, null);
         disponibilidadeService.criar(voluntario.getId(), request);
@@ -140,8 +145,8 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
 
     @Test
     void listarRetornaSomenteDisponibilidadesDoVoluntarioInformado() {
-        Voluntario voluntario1 = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Um"));
-        Voluntario voluntario2 = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Dois"));
+        Voluntario voluntario1 = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Um");
+        Voluntario voluntario2 = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Dois");
         disponibilidadeService.criar(voluntario1.getId(),
                 new DisponibilidadeVoluntarioRequest(DayOfWeek.TUESDAY, null, Periodo.MANHA, null));
         disponibilidadeService.criar(voluntario2.getId(),
@@ -152,7 +157,7 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
 
     @Test
     void excluirRemoveADisponibilidade() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário a Excluir"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário a Excluir");
         DisponibilidadeVoluntario criada = disponibilidadeService.criar(voluntario.getId(),
                 new DisponibilidadeVoluntarioRequest(DayOfWeek.THURSDAY, null, Periodo.TARDE, null));
 
@@ -169,8 +174,8 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
      */
     @Test
     void excluirDisponibilidadeDeOutroVoluntarioLancaResourceNotFoundException() {
-        Voluntario dono = voluntarioRepository.saveAndFlush(new Voluntario("Dono da Disponibilidade"));
-        Voluntario outro = voluntarioRepository.saveAndFlush(new Voluntario("Outro Voluntário"));
+        Voluntario dono = Pessoas.persistirVoluntario(pessoaRepository, "Dono da Disponibilidade");
+        Voluntario outro = Pessoas.persistirVoluntario(pessoaRepository, "Outro Voluntário");
         DisponibilidadeVoluntario criada = disponibilidadeService.criar(dono.getId(),
                 new DisponibilidadeVoluntarioRequest(DayOfWeek.FRIDAY, null, Periodo.MANHA, null));
 
@@ -180,7 +185,7 @@ class DisponibilidadeVoluntarioServiceIntegrationTest extends AbstractIntegratio
 
     @Test
     void excluirDisponibilidadeInexistenteLancaResourceNotFoundException() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Qualquer"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Qualquer");
 
         assertThatThrownBy(() -> disponibilidadeService.excluir(voluntario.getId(), UUID.randomUUID()))
                 .isInstanceOf(ResourceNotFoundException.class);

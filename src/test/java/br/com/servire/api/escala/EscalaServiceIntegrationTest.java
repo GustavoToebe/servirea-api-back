@@ -4,6 +4,8 @@ import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.escala.dto.EscalaEventoRequest;
 import br.com.servire.api.escala.dto.EscalaRequest;
 import br.com.servire.api.escala.dto.EscalaVagaRequest;
+import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.Pessoas;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
@@ -52,6 +54,9 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private VoluntarioRepository voluntarioRepository;
+
+    @Autowired
+    private PessoaRepository pessoaRepository;
 
     @Autowired
     private TenantRepository tenantRepository;
@@ -132,7 +137,7 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void mesmoVoluntarioDuasVagasNoMesmoEventoLancaBadRequestException() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Duplicado"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Duplicado");
         EscalaEventoRequest evento = new EscalaEventoRequest(
                 LocalDate.of(2026, 10, 4), LocalTime.of(19, 0), "Missa",
                 List.of(new EscalaVagaRequest(FuncaoEscala.MISSAL, 1, voluntario.getId()),
@@ -194,7 +199,7 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
      */
     @Test
     void registrarPresencaAtualizaAPresencaDaVaga() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário Presente"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Presente");
         Escala criada = escalaService.criar(requestComUmEventoEVoluntario(voluntario.getId()), null);
         UUID vagaId = criada.getEventos().get(0).getVagas().get(0).getId();
 
@@ -216,7 +221,7 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void registrarPresencaEmEscalaCanceladaLancaConflictException() {
-        Voluntario voluntario = voluntarioRepository.saveAndFlush(new Voluntario("Voluntário da Escala Cancelada"));
+        Voluntario voluntario = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário da Escala Cancelada");
         Escala criada = escalaService.criar(requestComUmEventoEVoluntario(voluntario.getId()), null);
         UUID vagaId = criada.getEventos().get(0).getVagas().get(0).getId();
         escalaService.cancelar(criada.getId());

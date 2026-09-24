@@ -4,6 +4,8 @@ import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.escala.dto.EscalaEventoRequest;
 import br.com.servire.api.escala.dto.EscalaRequest;
 import br.com.servire.api.escala.dto.EscalaVagaRequest;
+import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.Pessoas;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
@@ -40,6 +42,9 @@ class AlocacaoVagaIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private VoluntarioRepository voluntarioRepository;
+
+    @Autowired
+    private PessoaRepository pessoaRepository;
 
     @Autowired
     private TenantRepository tenantRepository;
@@ -178,7 +183,7 @@ class AlocacaoVagaIntegrationTest extends AbstractIntegrationTest {
     }
 
     private Voluntario voluntario(String nome) {
-        return voluntarioRepository.saveAndFlush(new Voluntario(nome));
+        return Pessoas.persistirVoluntario(pessoaRepository, nome);
     }
 
     private Escala criarEscalaComVagaVazia() {

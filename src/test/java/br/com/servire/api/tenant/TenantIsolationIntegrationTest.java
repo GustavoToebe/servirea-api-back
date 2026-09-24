@@ -9,9 +9,12 @@ import br.com.servire.api.escala.TipoEscala;
 import br.com.servire.api.inscricao.Inscricao;
 import br.com.servire.api.inscricao.InscricaoRepository;
 import br.com.servire.api.inscricao.InscricaoResponsavel;
+import br.com.servire.api.pessoa.Pessoa;
+import br.com.servire.api.pessoa.PessoaPapel;
+import br.com.servire.api.pessoa.PessoaRelacao;
+import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.Pessoas;
 import br.com.servire.api.voluntario.FuncaoEscala;
-import br.com.servire.api.voluntario.Responsavel;
-import br.com.servire.api.voluntario.ResponsavelRepository;
 import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.voluntario.VoluntarioRepository;
 import jakarta.persistence.EntityManager;
@@ -48,11 +51,10 @@ import static org.assertj.core.api.Assertions.catchThrowable;
  * <p><b>Fase 10 (seção 110 do plano mestre — "Multi-tenant real"):</b> os
  * métodos {@code tenantNaoDeveEnxergar*} abaixo (adicionados em
  * 22/09/2026) ampliam esta suíte P0 original — que só cobria
- * {@link Voluntario} — para as sete entidades tenant-aware criadas nas
- * Fases 6/7/8/9: {@link Responsavel} (cascata de 1 nível a partir de
- * {@link Voluntario}), {@link Escala}/{@link EscalaEvento}/
- * {@link EscalaVaga} (cascata de 3 níveis) e {@link Inscricao}/
- * {@link InscricaoResponsavel} (cascata de 1 nível). Item "3. validar
+ * {@link Voluntario} — para as entidades tenant-aware: {@link Pessoa}
+ * (responsável e voluntário), {@link PessoaRelacao},
+ * {@link Escala}/{@link EscalaEvento}/{@link EscalaVaga} (cascata de 3
+ * níveis) e {@link Inscricao}/{@link InscricaoResponsavel}. Item "3. validar
  * isolamento" e parte do "4. executar suíte P0" da Fase 10 — os testes
  * usam entidades diretamente via repositório (não via *Service*), mesmo
  * espírito do teste original: provar que o próprio Hibernate/
@@ -77,7 +79,7 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
     private VoluntarioRepository voluntarioRepository;
 
     @Autowired
-    private ResponsavelRepository responsavelRepository;
+    private PessoaRepository pessoaRepository;
 
     @Autowired
     private EscalaRepository escalaRepository;
@@ -102,17 +104,17 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
         UUID tenantB = criarTenantB();
 
         TenantContext.set(tenantA);
-        Voluntario joao = voluntarioRepository.saveAndFlush(new Voluntario("João"));
+        Voluntario joao = Pessoas.persistirVoluntario(pessoaRepository, "João");
         TenantContext.clear();
 
         TenantContext.set(tenantB);
-        Voluntario maria = voluntarioRepository.saveAndFlush(new Voluntario("Maria"));
+        Voluntario maria = Pessoas.persistirVoluntario(pessoaRepository, "Maria");
         TenantContext.clear();
 
         // Tenant A: só enxerga João, mesmo em findAll().
         TenantContext.set(tenantA);
-        assertThat(voluntarioRepository.findAll())
-                .extracting(Voluntario::getNomeCompleto)
+        assertThat(pessoaRepository.findAll().stream().filter(p -> p.getPapel() == PessoaPapel.VOLUNTARIO))
+                .extracting(Pessoa::getNomeCompleto)
                 .containsExactly("João");
         // Cenário P0 (seção 78): buscar pelo ID de Maria (tenant B) estando
         // no contexto do tenant A não pode retornar nada - nem revelar que
@@ -122,8 +124,8 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
         // Tenant B: só enxerga Maria, e não acha o ID de João (tenant A).
         TenantContext.set(tenantB);
-        assertThat(voluntarioRepository.findAll())
-                .extracting(Voluntario::getNomeCompleto)
+        assertThat(pessoaRepository.findAll().stream().filter(p -> p.getPapel() == PessoaPapel.VOLUNTARIO))
+                .extracting(Pessoa::getNomeCompleto)
                 .containsExactly("Maria");
         assertThat(voluntarioRepository.findById(joao.getId())).isEmpty();
         TenantContext.clear();
@@ -141,7 +143,7 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
         assertThat(TenantContext.get()).isNull();
 
         Throwable erro = catchThrowable(
-                () -> voluntarioRepository.saveAndFlush(new Voluntario("Sem Tenant")));
+                () -> pessoaRepository.saveAndFlush(Pessoas.voluntario("Sem Tenant")));
 
         assertThat(erro)
                 .as("INSERT sem TenantContext deveria falhar por FK violation, não suceder silenciosamente")
@@ -150,11 +152,7 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
     /**
      * Fase 10 (seção 110): mesma checagem P0 da Fase 4, agora para
-     * {@link Responsavel} — cascata de 1 nível a partir de
-     * {@link Voluntario}. Como {@code Responsavel} só ganhou
-     * {@code @TenantId} depois do bug real corrigido antes da Fase 7 (ver
-     * javadoc de {@link Responsavel}), este é o primeiro teste automatizado
-     * a provar que a correção realmente funciona contra um Postgres real.
+     * {@link Pessoa} com papel RESPONSAVEL e {@link PessoaRelacao}.
      */
     @Test
     void tenantNaoDeveEnxergarResponsavelDeOutroTenant() {
@@ -162,35 +160,33 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
         UUID tenantB = criarTenant("responsavel-b");
 
         TenantContext.set(tenantA);
-        Voluntario voluntarioA = new Voluntario("Voluntário A");
-        Responsavel respA = new Responsavel("Mãe", "Responsável A", null, null, null, true);
-        respA.setVoluntario(voluntarioA);
-        voluntarioA.getResponsaveis().add(respA);
-        voluntarioRepository.saveAndFlush(voluntarioA);
-        UUID respAId = voluntarioA.getResponsaveis().get(0).getId();
+        Pessoa respA = pessoaRepository.saveAndFlush(new Pessoa(PessoaPapel.RESPONSAVEL, "Responsável A"));
+        Pessoa volA = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário A").getPessoa();
+        volA.getResponsaveis().add(new PessoaRelacao(respA, volA, "Mãe", "Filho", true));
+        pessoaRepository.saveAndFlush(volA);
+        UUID respAId = respA.getId();
         TenantContext.clear();
 
         TenantContext.set(tenantB);
-        Voluntario voluntarioB = new Voluntario("Voluntário B");
-        Responsavel respB = new Responsavel("Pai", "Responsável B", null, null, null, true);
-        respB.setVoluntario(voluntarioB);
-        voluntarioB.getResponsaveis().add(respB);
-        voluntarioRepository.saveAndFlush(voluntarioB);
-        UUID respBId = voluntarioB.getResponsaveis().get(0).getId();
+        Pessoa respB = pessoaRepository.saveAndFlush(new Pessoa(PessoaPapel.RESPONSAVEL, "Responsável B"));
+        Pessoa volB = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário B").getPessoa();
+        volB.getResponsaveis().add(new PessoaRelacao(respB, volB, "Pai", "Filho", true));
+        pessoaRepository.saveAndFlush(volB);
+        UUID respBId = respB.getId();
         TenantContext.clear();
 
         TenantContext.set(tenantA);
-        assertThat(responsavelRepository.findAll())
-                .extracting(Responsavel::getNome)
+        assertThat(pessoaRepository.findAll().stream().filter(p -> p.getPapel() == PessoaPapel.RESPONSAVEL))
+                .extracting(Pessoa::getNomeCompleto)
                 .containsExactly("Responsável A");
-        assertThat(responsavelRepository.findById(respBId)).isEmpty();
+        assertThat(pessoaRepository.findById(respBId)).isEmpty();
         TenantContext.clear();
 
         TenantContext.set(tenantB);
-        assertThat(responsavelRepository.findAll())
-                .extracting(Responsavel::getNome)
+        assertThat(pessoaRepository.findAll().stream().filter(p -> p.getPapel() == PessoaPapel.RESPONSAVEL))
+                .extracting(Pessoa::getNomeCompleto)
                 .containsExactly("Responsável B");
-        assertThat(responsavelRepository.findById(respAId)).isEmpty();
+        assertThat(pessoaRepository.findById(respAId)).isEmpty();
         TenantContext.clear();
     }
 
@@ -291,7 +287,7 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
         TenantContext.set(tenantA);
         Inscricao inscricaoA = new Inscricao("Candidato A");
-        InscricaoResponsavel respA = new InscricaoResponsavel("Mãe", "Responsável Insc A", null, null, null, true);
+        InscricaoResponsavel respA = new InscricaoResponsavel("Mãe", "Responsável Insc A", true);
         respA.setInscricao(inscricaoA);
         inscricaoA.getResponsaveis().add(respA);
         inscricaoRepository.saveAndFlush(inscricaoA);
@@ -299,7 +295,7 @@ class TenantIsolationIntegrationTest extends AbstractIntegrationTest {
 
         TenantContext.set(tenantB);
         Inscricao inscricaoB = new Inscricao("Candidato B");
-        InscricaoResponsavel respB = new InscricaoResponsavel("Pai", "Responsável Insc B", null, null, null, true);
+        InscricaoResponsavel respB = new InscricaoResponsavel("Pai", "Responsável Insc B", true);
         respB.setInscricao(inscricaoB);
         inscricaoB.getResponsaveis().add(respB);
         inscricaoRepository.saveAndFlush(inscricaoB);
