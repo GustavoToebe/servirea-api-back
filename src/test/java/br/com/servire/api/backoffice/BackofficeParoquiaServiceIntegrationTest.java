@@ -110,7 +110,7 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void bloquearImpedeLoginDoPadreEMarcarPagoLibera() {
+    void bloquearImpedeLoginDoPadreEDesbloquearLibera() {
         autenticarOperador();
         String sufixo = UUID.randomUUID().toString().substring(0, 8);
         String emailPadre = "padre-" + sufixo + "@teste.com";
@@ -122,9 +122,10 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
         assertThatThrownBy(() -> authService.login(emailPadre, SENHA, "1.2.3.4", "junit"))
                 .isInstanceOf(UnauthorizedException.class);
 
-        Tenant pago = backofficeParoquiaService.marcarPago(tenant.getId());
-        assertThat(pago.getStatus()).isEqualTo(Tenant.Status.ATIVO);
-        assertThat(pago.getUltimoPagamentoEm()).isNotNull();
+        // "Marcar como pago" saiu na V029 — pagar agora é por cobrança
+        // (BillingServiceIntegrationTest); aqui fica só o desbloqueio manual.
+        Tenant liberado = backofficeParoquiaService.desbloquear(tenant.getId());
+        assertThat(liberado.getStatus()).isEqualTo(Tenant.Status.ATIVO);
         AuthService.LoginResultado login = authService.login(emailPadre, SENHA, "1.2.3.4", "junit");
         assertThat(login.precisaSelecionarTenant()).isFalse();
         assertThat(login.completo().tenantAtual().id()).isEqualTo(tenant.getId());
@@ -174,32 +175,32 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
         Tenant outro = backofficeParoquiaService.criar(novaParoquia("outro-" + sufixo, "outro-" + sufixo + "@teste.com"));
 
         List<Tenant> bloqueados = backofficeParoquiaService.listar(new FiltroParoquia(
-                null, SituacaoParoquia.INADIMPLENTES, null, null, null, null, null, null, null, null));
+                null, SituacaoParoquia.INADIMPLENTES, null, null, null, null, null, null, null, null, null));
         assertThat(bloqueados).extracting(Tenant::getId).contains(alvo.getId()).doesNotContain(outro.getId());
 
         List<Tenant> porCnpj = backofficeParoquiaService.listar(new FiltroParoquia(
-                null, null, null, "12345678000190", null, null, null, null, null, null));
+                null, null, null, "12345678000190", null, null, null, null, null, null, null));
         assertThat(porCnpj).extracting(Tenant::getId).contains(alvo.getId());
 
         List<Tenant> porEmail = backofficeParoquiaService.listar(new FiltroParoquia(
-                null, null, null, null, "contato-" + sufixo, null, null, null, null, null));
+                null, null, null, null, "contato-" + sufixo, null, null, null, null, null, null));
         assertThat(porEmail).extracting(Tenant::getId).contains(alvo.getId()).doesNotContain(outro.getId());
 
         List<Tenant> porTipo = backofficeParoquiaService.listar(new FiltroParoquia(
-                null, null, null, null, null, "CONTATO", null, null, null, null));
+                null, null, null, null, null, "CONTATO", null, null, null, null, null));
         assertThat(porTipo).extracting(Tenant::getId).contains(alvo.getId());
 
         List<Tenant> porNome = backofficeParoquiaService.listar(new FiltroParoquia(
-                null, null, "Filtro " + sufixo, null, null, null, null, null, null, null));
+                null, null, "Filtro " + sufixo, null, null, null, null, null, null, null, null));
         assertThat(porNome).extracting(Tenant::getId).containsExactly(alvo.getId());
 
         java.time.LocalDate hoje = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
         List<Tenant> contratadasHoje = backofficeParoquiaService.listar(new FiltroParoquia(
-                null, null, "Filtro " + sufixo, null, null, null, hoje, hoje, null, null));
+                null, null, "Filtro " + sufixo, null, null, null, hoje, hoje, null, null, null));
         assertThat(contratadasHoje).extracting(Tenant::getId).contains(alvo.getId());
 
         List<Tenant> vigencia = backofficeParoquiaService.listar(new FiltroParoquia(
-                null, null, "Filtro " + sufixo, null, null, null, null, null, hoje, hoje.plusDays(10)));
+                null, null, "Filtro " + sufixo, null, null, null, null, null, hoje, hoje.plusDays(10), null));
         assertThat(vigencia).extracting(Tenant::getId).contains(alvo.getId());
     }
 

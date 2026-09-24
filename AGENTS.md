@@ -53,8 +53,9 @@ seção "Onde está o código (disco + GitHub)".
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
 | `backoffice/` | painel do operador do SaaS (`/admin/**`): login sem tenant, paróquias, logins, logs globais, sessão de suporte |
+| `billing/` | financeiro manual do painel: `Plano`/`PrecoPlano` (`/admin/planos`), `Assinatura`/`Cobranca` (`/admin/paroquias/{id}/financeiro`, pagamentos, estorno, isenção), `BillingJob` diário |
 
-Migrations: `src/main/resources/db/migration/V001..V028`. **V001–V015 são o baseline, nunca editar.**
+Migrations: `src/main/resources/db/migration/V001..V029`. **V001–V015 são o baseline, nunca editar.**
 Mudança de schema = nova migration `V0NN__descricao.sql`.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
@@ -65,7 +66,9 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
   suporte (`purpose=access` + `suporte=true`) seta o `TenantContext` da paróquia escolhida **sem**
   `usuario_tenant` — só `operador_saas`, ação auditada em `backoffice_log`. Suporte **aceita
   tenant `BLOQUEADO`** (Kill Switch normal negaria). `backoffice_log` é tabela **global**
-  (sem `@TenantId`); não “consertar” virando `audit_log`.
+  (sem `@TenantId`); não “consertar” virando `audit_log`. Idem `plano`, `preco_plano`,
+  `assinatura` e `cobranca` (V029): `tenant_id` ali é FK comum vinda do path `/admin/paroquias/{id}`,
+  não `@TenantId`. Toda cobrança é buscada junto com o tenant do path (`findByIdInAndTenantId`).
 - Sem `TenantContext`, o resolver devolve o sentinela `SEM_TENANT` (UUID zero): leituras vêm vazias e
   escritas falham por FK. Não "consertar" isso lançando exceção no resolver (quebra o bootstrap).
 - O Hibernate fixa o tenant **quando a sessão abre** (entrada do `@Transactional`). Código que define
@@ -107,7 +110,14 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
   `@PreAuthorize` negado vira 500.
 - Supabase Storage: enviar **os dois** headers `Authorization: Bearer` e `apikey`; não usar template `{caminho}` na URI (codifica `/`).
 - Enum nativo do Postgres: `@Enumerated(STRING)` + `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`; array de enum:
-  `@JdbcTypeCode(ARRAY)` + `@ColumnTransformer(write = "?::tipo[]")`.
+  `@JdbcTypeCode(ARRAY)` + `@ColumnTransformer(write = "?::tipo[]")`. Em JPQL, enum **sempre por
+  parâmetro** (`c.status = :status`), nunca literal (`Cobranca.Status.ABERTA`): o literal vira
+  `cast(... as status)` (nome da classe Java) e quebra com `type "status" does not exist`.
+- Coluna `smallint` não valida contra campo `int` (`ddl-auto: validate`); use `integer`.
+- Tabela nova em `public` (que não seja tenant-aware com policy): `ENABLE ROW LEVEL SECURITY` sem
+  policy, senão a Data API do Supabase (chave anon) lê/grava. A API Java é dona das tabelas e não é afetada.
+- Bloqueio por atraso é **manual**: `BillingJob` só gera cobranças, nunca bloqueia paróquia
+  (decisão de 23/09/2026; os 3 dias da seção 131.3 ficam para depois).
 - Role `ADMIN` da paróquia **não** pode ganhar `PERM_BACKOFFICE`. Se `RolePermissoes`
   usar `EnumSet.allOf(Permissao.class)`, o padre acessa `/admin/**`.
 - Operador SaaS entra só em `POST /admin/auth/login`; `POST /auth/login` recusa

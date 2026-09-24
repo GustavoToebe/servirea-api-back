@@ -1786,7 +1786,7 @@ Voluntários **não** são CRUD no backoffice.
 - `GET /admin/dashboard`; CRUD `/admin/paroquias` (filtros: situação
   ativos/inadimplentes/inativos, nome, CNPJ, e-mail, tipo de e-mail,
   contratadoDe/Ate, vigenciaDe/Ate; criar + primeiro admin, bloquear,
-  desbloquear, marcar pago, suporte).
+  desbloquear, suporte). O "marcar pago" original saiu na V029 (abaixo).
 - CRUD `/admin/usuarios` + `PUT /admin/usuarios/{id}/paroquias`.
 - `GET /admin/logs` (`backoffice_log`, tabela global).
 - Seed do operador em profile `dev` via
@@ -1798,6 +1798,49 @@ Voluntários **não** são CRUD no backoffice.
 depois da config do tenant; o backoffice soma os testes novos de
 `backoffice/*`, JWT/filtro de suporte e `@PreAuthorize` de
 `PERM_BACKOFFICE`).
+
+### Financeiro manual (V029, 23/09/2026 — início da seção 112)
+
+O "marcar como pago" só gravava `tenant.ultimo_pagamento_em`, sem
+histórico. Agora é um financeiro de verdade, ainda **sem gateway**
+(PIX manual, seção 131.3). Pacote `billing/`, migration `V029`
+(`plano`, `preco_plano`, `assinatura`, `cobranca` — tabelas globais,
+com RLS ligado sem policy).
+
+Decisões com o usuário:
+- **Catálogo + ajuste:** Standard/Pro semeados **sem preço** (valores
+  ainda não definidos). O operador cadastra o preço com data de início
+  em `/admin/planos`. A assinatura copia o valor vigente ou aceita um
+  valor negociado. Reajuste nunca altera contrato antigo (seção 63).
+- **Cobrança por período:** mensal = uma por mês de calendário; anual =
+  uma a cada 12 meses. Geradas até "hoje + 1 mês" ao abrir o financeiro
+  e por um job diário (03:00, Brasília). Idempotente pelo unique
+  `(assinatura_id, competencia_inicio)`.
+- **Pagamento:** uma ou várias cobranças de uma vez, com data, forma
+  (PIX, cartão de crédito/débito, dinheiro, transferência, boleto,
+  outro), valor pago e observação. Atualiza `ultimo_pagamento_em`,
+  estende `vigencia_ate` e tira TRIAL/BLOQUEADO para ATIVO **só se não
+  sobrar nada vencido**. Estornar e isentar existem para corrigir.
+- **Atraso só é sinalizado:** listagem (`emAtraso=true`, colunas plano
+  e dias de atraso) e dashboard (`emAtraso`, `recebidoNoMes`). O
+  bloqueio automático após 3 dias (131.3) **não** foi feito; bloquear
+  continua manual.
+
+Rotas (todas `PERM_BACKOFFICE`): `GET/POST /admin/planos`,
+`PUT /admin/planos/{id}`, `POST /admin/planos/{id}/precos`,
+`GET /admin/paroquias/{id}/financeiro`,
+`POST /admin/paroquias/{id}/assinatura` (e `/assinatura/cancelar`),
+`POST /admin/paroquias/{id}/cobrancas/gerar`,
+`POST /admin/paroquias/{id}/pagamentos`,
+`POST /admin/paroquias/{id}/cobrancas/{cid}/estornar` e `/isentar`.
+`POST /admin/paroquias/{id}/marcar-pago` **foi removido**.
+
+✅ Confirmado nesta máquina em 23/09/2026: `mvn verify` com
+`BUILD SUCCESS`, `Tests run: 183, Failures: 0, Errors: 0` (19 novos em
+`BillingServiceIntegrationTest`, 2 em `MethodSecurityIntegrationTest`).
+Também foi testado de ponta a ponta contra o `servire-dev-db` (login do
+operador, preço, assinatura, pagamento de dois meses, filtro "em
+atraso", dashboard e `backoffice_log`).
 
 ## Onde está o código (disco + GitHub) — 23/09/2026
 
@@ -2220,6 +2263,10 @@ estrutura-alvo, seção 16) entrou na Fase 11. Ainda não existem `config/`,
    paróquia) ficam no front. Confirmado nesta máquina: `mvn test`
    `BUILD SUCCESS`, 161 testes, 0 falhas.
 
-   Próximo de código no plano depois desta API: Billing (seção 112),
+   Billing (seção 112) começou em 23/09/2026 com o financeiro manual
+   (V029, ver seção "Financeiro manual" acima); faltam gateway,
+   webhooks e bloqueio automático por atraso.
+
+   Próximo de código no plano depois desta API: resto do Billing (seção 112),
    Deploy (113), migração de dados (114) e remoção do Supabase direto
    do Angular (115).

@@ -57,6 +57,10 @@ import br.com.servire.api.AbstractIntegrationTest;
  * <p>Total atualizado de 27 para 28 em 23/09/2026: V028 soma
  * {@code tenant.vigencia_ate} e {@code tenant.tipo_email} para os filtros
  * da listagem de paróquias no backoffice.</p>
+ *
+ * <p>Total atualizado de 28 para 29 em 23/09/2026: V029 cria o financeiro
+ * manual do backoffice ({@code plano}, {@code preco_plano},
+ * {@code assinatura}, {@code cobranca} — tabelas globais).</p>
  */
 class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
 
@@ -69,7 +73,8 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // (ex.: se normaliza "001" para "1" ou mantém os zeros à esquerda) —
         // o que importa é que as migrations rodaram e nenhuma falhou.
         // Total atualizado de 27 para 28 em 23/09/2026: V028 (filtros da
-        // listagem de paróquias no backoffice).
+        // listagem de paróquias no backoffice). De 28 para 29 em 23/09/2026:
+        // V029 (financeiro manual: plano, preco_plano, assinatura, cobranca).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -78,10 +83,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(28);
-        assertThat(sucesso).isEqualTo(28);
+        assertThat(total).isEqualTo(29);
+        assertThat(sucesso).isEqualTo(29);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("filtro paroquia");
+        assertThat(descricoes.getLast()).isEqualTo("billing manual");
     }
 
     @Test

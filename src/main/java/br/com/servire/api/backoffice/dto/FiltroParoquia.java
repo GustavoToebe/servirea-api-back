@@ -20,6 +20,8 @@ public record FiltroParoquia(
         LocalDate contratadoDe,
         LocalDate contratadoAte,
         LocalDate vigenciaDe,
-        LocalDate vigenciaAte
+        LocalDate vigenciaAte,
+        /** {@code true} = só paróquias com cobrança vencida em aberto (V029). */
+        Boolean emAtraso
 ) {
 }

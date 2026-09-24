@@ -10,15 +10,18 @@ import br.com.servire.api.backoffice.dto.AtualizarParoquiaRequest;
 import br.com.servire.api.backoffice.dto.CriarParoquiaRequest;
 import br.com.servire.api.backoffice.dto.DashboardResponse;
 import br.com.servire.api.backoffice.dto.FiltroParoquia;
+import br.com.servire.api.billing.BillingService;
+import br.com.servire.api.billing.Cobranca;
 import br.com.servire.api.security.AuthenticatedUser;
 import br.com.servire.api.security.JwtService;
 import br.com.servire.api.security.SecurityProperties;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantRepository;
-import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,7 +29,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -49,6 +51,7 @@ public class BackofficeParoquiaService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final SecurityProperties properties;
+    private final BillingService billingService;
 
     public BackofficeParoquiaService(TenantRepository tenantRepository,
                                       UsuarioRepository usuarioRepository,
@@ -57,7 +60,8 @@ public class BackofficeParoquiaService {
                                       BackofficeLogService backofficeLogService,
                                       JwtService jwtService,
                                       RefreshTokenService refreshTokenService,
-                                      SecurityProperties properties) {
+                                      SecurityProperties properties,
+                                      BillingService billingService) {
         this.tenantRepository = tenantRepository;
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
@@ -66,6 +70,7 @@ public class BackofficeParoquiaService {
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.properties = properties;
+        this.billingService = billingService;
     }
 
     @Transactional(readOnly = true)
@@ -75,7 +80,9 @@ public class BackofficeParoquiaService {
                 tenantRepository.countByStatus(Tenant.Status.ATIVO),
                 tenantRepository.countByStatus(Tenant.Status.TRIAL),
                 tenantRepository.countByStatus(Tenant.Status.BLOQUEADO),
-                tenantRepository.countByStatus(Tenant.Status.CANCELADO));
+                tenantRepository.countByStatus(Tenant.Status.CANCELADO),
+                billingService.contarParoquiasEmAtraso(),
+                billingService.recebidoNoMes());
     }
 
     /** Trial do MVP (seção 131.3) — gravado em {@code vigencia_ate} na criação. */
@@ -84,9 +91,9 @@ public class BackofficeParoquiaService {
     @Transactional(readOnly = true)
     public List<Tenant> listar(FiltroParoquia filtro) {
         FiltroParoquia efetivo = filtro == null
-                ? new FiltroParoquia(null, null, null, null, null, null, null, null, null, null)
+                ? new FiltroParoquia(null, null, null, null, null, null, null, null, null, null, null)
                 : filtro;
-        return tenantRepository.findAll(filtroSpec(efetivo));
+        return tenantRepository.findAll(filtroSpec(efetivo, billingService.hoje()));
     }
 
     @Transactional(readOnly = true)
@@ -157,18 +164,6 @@ public class BackofficeParoquiaService {
         return tenant;
     }
 
-    @Transactional
-    public Tenant marcarPago(UUID id) {
-        Tenant tenant = buscar(id);
-        if (tenant.getStatus() == Tenant.Status.CANCELADO) {
-            throw new BadRequestException("Paróquia cancelada não pode ser marcada como paga.");
-        }
-        tenant.setStatus(Tenant.Status.ATIVO);
-        tenant.setUltimoPagamentoEm(Instant.now());
-        backofficeLogService.registrar("MARCAR_PAGO", "TENANT", tenant.getId(), tenant.getId());
-        return tenant;
-    }
-
     /**
      * Emite access token da paróquia com {@code suporte=true} e um refresh
      * para o cookie {@code /auth} (o app da paróquia renova por lá).
@@ -230,7 +225,11 @@ public class BackofficeParoquiaService {
         tenant.setTipoEmail(opcional(tipoEmail) == null ? null : opcional(tipoEmail).toUpperCase());
     }
 
-    private static Specification<Tenant> filtroSpec(FiltroParoquia filtro) {
+    /**
+     * {@code hoje} vem do {@code BillingService} (fuso do Brasil) para o
+     * filtro "em atraso" bater com o que a tela do financeiro mostra.
+     */
+    private static Specification<Tenant> filtroSpec(FiltroParoquia filtro, LocalDate hoje) {
         return (root, query, cb) -> {
             List<Predicate> predicados = new ArrayList<>();
             if (filtro.status() != null) {
@@ -290,6 +289,15 @@ public class BackofficeParoquiaService {
             }
             if (filtro.vigenciaAte() != null) {
                 predicados.add(cb.lessThanOrEqualTo(root.get("vigenciaAte"), filtro.vigenciaAte()));
+            }
+            if (Boolean.TRUE.equals(filtro.emAtraso())) {
+                Subquery<Integer> vencida = query.subquery(Integer.class);
+                Root<Cobranca> cobranca = vencida.from(Cobranca.class);
+                vencida.select(cb.literal(1)).where(
+                        cb.equal(cobranca.get("tenantId"), root.get("id")),
+                        cb.equal(cobranca.get("status"), Cobranca.Status.ABERTA),
+                        cb.lessThan(cobranca.get("vencimento"), hoje));
+                predicados.add(cb.exists(vencida));
             }
             return cb.and(predicados.toArray(Predicate[]::new));
         };

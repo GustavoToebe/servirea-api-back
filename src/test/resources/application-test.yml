@@ -40,6 +40,11 @@ servire:
   # poder trocar isso.
   email:
     provider: log
+  # Job diário de cobranças (V029) desligado: os testes chamam o
+  # BillingService direto e não podem ter um job gerando no meio.
+  billing:
+    job:
+      enabled: false
 
 logging:
   level:
