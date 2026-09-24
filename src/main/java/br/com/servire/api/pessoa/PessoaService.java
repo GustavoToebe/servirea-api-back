@@ -3,16 +3,19 @@ package br.com.servire.api.pessoa;
 import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
 import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
+import br.com.servire.api.pessoa.dto.NovaPessoaRequest;
 import br.com.servire.api.pessoa.dto.PessoaRequest;
 import br.com.servire.api.pessoa.dto.RelacaoRequest;
 import br.com.servire.api.pessoa.dto.VoluntarioPerfilRequest;
 import br.com.servire.api.voluntario.FuncaoEscala;
 import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.web.BadRequestException;
+import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.Predicate;
+import org.hibernate.Hibernate;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -31,6 +35,9 @@ import java.util.UUID;
  */
 @Service
 public class PessoaService {
+
+    /** Coluna {@code parentesco} é NOT NULL; usado quando a tela do responsável não diz o que ele é. */
+    static final String RESPONSAVEL_SEM_ROTULO = "Responsável";
 
     private final PessoaRepository pessoaRepository;
     private final AuditLogService auditLogService;
@@ -46,10 +53,7 @@ public class PessoaService {
     @Transactional(readOnly = true)
     public List<Pessoa> buscar(PessoaPapel papel, String nome) {
         List<Pessoa> pessoas = pessoaRepository.findAll(filtro(papel, nome), Sort.by(Sort.Direction.ASC, "nomeCompleto"));
-        pessoas.forEach(p -> {
-            p.getEmails().size();
-            p.getTelefones().size();
-        });
+        pessoas.forEach(PessoaService::inicializarFicha);
         return pessoas;
     }
 
@@ -68,8 +72,32 @@ public class PessoaService {
         };
     }
 
+    /**
+     * Ficha completa para {@code PessoaResponse}: inicializa contatos,
+     * relações e o nome/papéis da outra ponta de cada relação ainda dentro
+     * da transação ({@code open-in-view: false}).
+     */
     @Transactional(readOnly = true)
     public Pessoa buscarPorId(UUID id) {
+        return inicializarFicha(carregar(id));
+    }
+
+    /**
+     * Tudo que {@code PessoaResponse.de} lê. A listagem também precisa: o
+     * {@code GET /pessoas} estourava {@code LazyInitializationException}
+     * (500) assim que existia qualquer pessoa, porque só e-mails/telefones
+     * eram tocados (bug de 24/09/2026, achado no teste de ponta a ponta).
+     * O {@code default_batch_fetch_size} junta as coleções em poucos SELECTs.
+     */
+    private static Pessoa inicializarFicha(Pessoa pessoa) {
+        Hibernate.initialize(pessoa.getEmails());
+        Hibernate.initialize(pessoa.getTelefones());
+        pessoa.getResponsaveis().forEach(r -> Hibernate.initialize(r.getResponsavel()));
+        pessoa.getDependentes().forEach(r -> Hibernate.initialize(r.getVoluntario()));
+        return pessoa;
+    }
+
+    private Pessoa carregar(UUID id) {
         return pessoaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
     }
@@ -83,11 +111,8 @@ public class PessoaService {
         substituirContatos(pessoa, request.emails(), request.telefones());
         if (pessoa.isVoluntario()) {
             aplicarPerfilVoluntario(pessoa, request.voluntario());
-            substituirRelacoesDoVoluntario(pessoa, request.relacoes());
         }
-        if (pessoa.isResponsavel()) {
-            substituirRelacoesDoResponsavel(pessoa, request.relacoes(), pessoa.isVoluntario());
-        }
+        substituirRelacoes(pessoa, request);
         pessoa = pessoaRepository.save(pessoa);
         auditLogService.registrar("CRIACAO", "PESSOA", pessoa.getId(), null);
         return buscarPorId(pessoa.getId());
@@ -95,7 +120,7 @@ public class PessoaService {
 
     @Transactional
     public Pessoa atualizar(UUID id, PessoaRequest request) {
-        Pessoa pessoa = buscarPorId(id);
+        Pessoa pessoa = carregar(id);
         Set<PessoaPapel> novos = papeisDe(request);
         if (pessoa.isVoluntario() && !novos.contains(PessoaPapel.VOLUNTARIO)) {
             throw new BadRequestException("Não é possível remover o papel VOLUNTARIO.");
@@ -109,13 +134,10 @@ public class PessoaService {
         substituirContatos(pessoa, request.emails(), request.telefones());
         if (pessoa.isVoluntario()) {
             aplicarPerfilVoluntario(pessoa, request.voluntario());
-            substituirRelacoesDoVoluntario(pessoa, request.relacoes());
         }
-        if (pessoa.isResponsavel()) {
-            substituirRelacoesDoResponsavel(pessoa, request.relacoes(), pessoa.isVoluntario());
-        }
+        substituirRelacoes(pessoa, request);
         pessoaRepository.save(pessoa);
-        auditLogService.registrar("ATUALIZACAO", "PESSOA", id, List.of("identidade", "contatos", "relacoes", "papeis"));
+        auditLogService.registrar("ATUALIZACAO", "PESSOA", id, List.of("identidade", "contatos", "responsaveis", "dependentes", "papeis"));
         return buscarPorId(id);
     }
 
@@ -132,28 +154,71 @@ public class PessoaService {
         if (papeis.contains(PessoaPapel.VOLUNTARIO) && request.voluntario() == null) {
             throw new BadRequestException("O bloco de voluntário é obrigatório quando o papel inclui VOLUNTARIO.");
         }
-        validarPrincipaisDasRelacoes(request.relacoes());
+        List<RelacaoRequest> responsaveis = lista(request.responsaveis());
+        List<RelacaoRequest> dependentes = lista(request.dependentes());
+        if (!responsaveis.isEmpty() && !papeis.contains(PessoaPapel.VOLUNTARIO)) {
+            throw new BadRequestException("Só quem tem o papel VOLUNTARIO pode ter responsáveis.");
+        }
+        if (!dependentes.isEmpty() && !papeis.contains(PessoaPapel.RESPONSAVEL)) {
+            throw new BadRequestException("Só quem tem o papel RESPONSAVEL pode ter dependentes.");
+        }
+        validarPrincipaisDosResponsaveis(responsaveis);
+        Set<UUID> idsResponsaveis = idsSemRepeticao(responsaveis, "responsável");
+        Set<UUID> idsDependentes = idsSemRepeticao(dependentes, "dependente");
+        if (idsResponsaveis.stream().anyMatch(idsDependentes::contains)) {
+            throw new BadRequestException("A mesma pessoa não pode ser responsável e dependente ao mesmo tempo.");
+        }
+        for (RelacaoRequest r : responsaveis) {
+            exigirPessoaOuNova(r);
+        }
+        for (RelacaoRequest r : dependentes) {
+            if (r.pessoaId() == null) {
+                throw new BadRequestException(
+                        "Escolha um dependente já cadastrado — o voluntário novo precisa do próprio cadastro.");
+            }
+        }
+    }
+
+    private static void exigirPessoaOuNova(RelacaoRequest r) {
+        if ((r.pessoaId() == null) == (r.novaPessoa() == null)) {
+            throw new BadRequestException(
+                    "Cada responsável precisa ou de uma pessoa já cadastrada ou dos dados de uma pessoa nova.");
+        }
     }
 
     /**
-     * Relação é opcional. Se vier alguma, no máximo um principal — e se
-     * houver mais de uma, exige exatamente um principal (contato da família).
+     * Responsável é opcional. Se vier algum, no máximo um principal — e se
+     * houver mais de um, exige exatamente um principal (contato da família).
      */
-    private static void validarPrincipaisDasRelacoes(List<RelacaoRequest> relacoes) {
-        List<RelacaoRequest> lista = relacoes == null ? List.of() : relacoes;
-        if (lista.isEmpty()) {
+    private static void validarPrincipaisDosResponsaveis(List<RelacaoRequest> responsaveis) {
+        if (responsaveis.isEmpty()) {
             return;
         }
-        long principais = lista.stream().filter(RelacaoRequest::principal).count();
+        long principais = responsaveis.stream().filter(RelacaoRequest::principal).count();
         if (principais > 1) {
             throw new BadRequestException(
                     "Deve existir no máximo um responsável principal — recebido: " + principais + ".");
         }
-        if (lista.size() > 1 && principais != 1) {
+        if (responsaveis.size() > 1 && principais != 1) {
             throw new BadRequestException(
-                    "Quando há mais de uma relação, deve existir exatamente um responsável principal — recebido: "
+                    "Quando há mais de um responsável, deve existir exatamente um principal — recebido: "
                             + principais + ".");
         }
+    }
+
+    /** Par repetido bateria em {@code pessoa_relacao_par_key} (500) — vira 400 aqui. */
+    private static Set<UUID> idsSemRepeticao(List<RelacaoRequest> relacoes, String rotulo) {
+        Set<UUID> ids = new HashSet<>();
+        for (RelacaoRequest r : relacoes) {
+            if (r.pessoaId() != null && !ids.add(r.pessoaId())) {
+                throw new BadRequestException("A mesma pessoa aparece mais de uma vez como " + rotulo + ".");
+            }
+        }
+        return ids;
+    }
+
+    private static <T> List<T> lista(List<T> valores) {
+        return valores == null ? List.of() : valores;
     }
 
     private void aplicarIdentidade(Pessoa pessoa, PessoaRequest request) {
@@ -210,16 +275,29 @@ public class PessoaService {
         }
     }
 
-    private void substituirRelacoesDoVoluntario(Pessoa voluntario, List<RelacaoRequest> requests) {
+    /**
+     * "Apaga tudo e reinsere" de cada lado que a pessoa tem. Quem tem os
+     * dois papéis tem as duas listas substituídas, cada uma com a sua
+     * direção — ver {@link RelacaoRequest} para o sentido de
+     * {@code parentesco}/{@code parentescoInverso}.
+     */
+    private void substituirRelacoes(Pessoa pessoa, PessoaRequest request) {
+        if (pessoa.isVoluntario()) {
+            substituirResponsaveis(pessoa, lista(request.responsaveis()));
+        }
+        if (pessoa.isResponsavel()) {
+            substituirDependentes(pessoa, lista(request.dependentes()));
+        }
+    }
+
+    private void substituirResponsaveis(Pessoa voluntario, List<RelacaoRequest> requests) {
         voluntario.getResponsaveis().clear();
         entityManager.flush();
-        if (requests == null) {
-            return;
-        }
         for (RelacaoRequest r : requests) {
-            Pessoa responsavel = buscarPorId(r.pessoaId());
+            Pessoa responsavel = r.pessoaId() != null ? carregar(r.pessoaId()) : criarResponsavelNovo(r.novaPessoa());
             if (!responsavel.isResponsavel()) {
-                throw new BadRequestException("A relação do voluntário precisa apontar para alguém com papel RESPONSAVEL.");
+                throw new BadRequestException(
+                        responsavel.getNomeCompleto() + " não tem o papel RESPONSAVEL — marque o papel na ficha dele primeiro.");
             }
             if (responsavel.getId().equals(voluntario.getId())) {
                 throw new BadRequestException("Uma pessoa não pode se relacionar consigo mesma.");
@@ -231,29 +309,61 @@ public class PessoaService {
     }
 
     /**
-     * @param relacoesJaAplicadasNoVoluntario quando a pessoa é os dois papéis,
-     *        as relações do request são as do lado voluntário; o lado
-     *        responsável não é substituído pelo mesmo payload.
+     * Lado do responsável: o request fala do ponto de vista dele
+     * ({@code parentesco} = o que o dependente é), então a coluna
+     * {@code parentesco} (o "é" do responsável) recebe o
+     * {@code parentescoInverso} do request, e vice-versa.
+     *
+     * <p>Marcar como principal aqui não pode roubar o posto de outro
+     * responsável do mesmo voluntário ({@code uq_pessoa_relacao_principal}
+     * viraria 500) — vira 409 com o nome de quem já é o principal.</p>
      */
-    private void substituirRelacoesDoResponsavel(Pessoa responsavel, List<RelacaoRequest> requests,
-                                                 boolean relacoesJaAplicadasNoVoluntario) {
-        if (relacoesJaAplicadasNoVoluntario) {
-            return;
-        }
+    private void substituirDependentes(Pessoa responsavel, List<RelacaoRequest> requests) {
         responsavel.getDependentes().clear();
         entityManager.flush();
-        if (requests == null || requests.isEmpty()) {
-            return;
-        }
         for (RelacaoRequest r : requests) {
-            Pessoa voluntario = buscarPorId(r.pessoaId());
+            Pessoa voluntario = carregar(r.pessoaId());
             if (!voluntario.isVoluntario()) {
-                throw new BadRequestException("A relação do responsável precisa apontar para alguém com papel VOLUNTARIO.");
+                throw new BadRequestException(
+                        voluntario.getNomeCompleto() + " não tem o papel VOLUNTARIO — só voluntário pode ser dependente.");
             }
-            PessoaRelacao relacao = new PessoaRelacao(responsavel, voluntario, r.parentesco().trim(),
-                    opcional(r.parentescoInverso()), r.principal());
+            if (voluntario.getId().equals(responsavel.getId())) {
+                throw new BadRequestException("Uma pessoa não pode se relacionar consigo mesma.");
+            }
+            if (r.principal()) {
+                voluntario.getResponsaveis().stream()
+                        .filter(outra -> outra.isPrincipal() && !outra.getResponsavel().getId().equals(responsavel.getId()))
+                        .findFirst()
+                        .ifPresent(outra -> {
+                            throw new ConflictException(voluntario.getNomeCompleto() + " já tem "
+                                    + outra.getResponsavel().getNomeCompleto()
+                                    + " como responsável principal — troque na ficha do voluntário.");
+                        });
+            }
+            String esteE = opcional(r.parentescoInverso());
+            PessoaRelacao relacao = new PessoaRelacao(responsavel, voluntario,
+                    esteE == null ? RESPONSAVEL_SEM_ROTULO : esteE, opcional(r.parentesco()), r.principal());
             responsavel.getDependentes().add(relacao);
         }
+    }
+
+    private Pessoa criarResponsavelNovo(NovaPessoaRequest nova) {
+        Pessoa pessoa = new Pessoa(Set.of(PessoaPapel.RESPONSAVEL), nova.nomeCompleto().trim());
+        String email = opcional(nova.email());
+        if (email != null) {
+            PessoaEmail linha = new PessoaEmail("E-mail pessoal", email, true);
+            linha.setPessoa(pessoa);
+            pessoa.getEmails().add(linha);
+        }
+        String telefone = opcional(nova.telefone());
+        if (telefone != null) {
+            PessoaTelefone linha = new PessoaTelefone("celular", telefone, true);
+            linha.setPessoa(pessoa);
+            pessoa.getTelefones().add(linha);
+        }
+        pessoa = pessoaRepository.saveAndFlush(pessoa);
+        auditLogService.registrar("CRIACAO", "PESSOA", pessoa.getId(), null);
+        return pessoa;
     }
 
     private static String opcional(String valor) {

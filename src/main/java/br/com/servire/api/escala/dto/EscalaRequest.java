@@ -30,5 +30,5 @@ public record EscalaRequest(
         @Min(1) @Max(12) Integer mes,
         String observacao,
         Long version,
-        @NotEmpty @Valid List<EscalaEventoRequest> eventos) {
+        @NotEmpty List<@Valid EscalaEventoRequest> eventos) {
 }

@@ -1935,6 +1935,54 @@ Teste de voluntário: `Pessoas.persistirVoluntario(pessoaRepository,
 `PessoaServiceIntegrationTest` e
 `InscricaoServiceIntegrationTest.aprovarReusaResponsavelPeloEmailPrincipal`.
 
+## Revisão de 24/09/2026 — V031 + front migrado (Bugs reais #18–#26)
+
+Revisão depois da V031 e da troca do login do Angular para a API. Todos
+reproduzidos antes de corrigir; testes de regressão em
+`InscricaoServiceIntegrationTest`, `PessoaServiceIntegrationTest` e no novo
+`FluxoHttpIntegrationTest` (HTTP real, JWT de verdade, sem mock nem `csrf()`).
+
+- **#18 Aprovar inscrição → 500.** Depois da V031 a busca por e-mail
+  principal deixou de filtrar RESPONSAVEL. Criança inscrita com o e-mail da
+  mãe virava responsável de si mesma (`pessoa_relacao_distintos`); e-mail
+  principal repetido dava `IncorrectResultSizeDataAccessException`. Agora a
+  busca devolve lista, ignora o voluntário recém-criado, prefere quem já é
+  RESPONSAVEL e só promove voluntário se o nome também bater.
+- **#19 Parentesco invertido a cada gravação.** A ficha do responsável
+  recebia "Filho/Mãe" e o back gravava de volta sem desinverter. Agora
+  `parentesco` é sempre o que a *outra* pessoa é, nas duas direções.
+- **#20 Quem tinha os dois papéis não salvava a ficha.** Uma lista só
+  (`relacoes`) misturava os dois lados. Virou `responsaveis` + `dependentes`.
+- **#21 Toda escrita do app da paróquia → 403.** `csrf.spa()` exigia
+  `X-XSRF-TOKEN` e o Angular não manda para URL absoluta. Requisição com
+  `Authorization: Bearer` fora de `/auth/**` dispensa o token;
+  `CSRF_COOKIE_DOMAIN` para o refresh em produção.
+- **#22 `GET /pessoas/{id}` de voluntário com responsável → 500.**
+  `@EntityGraph` com quatro bags não carregava as relações. Coleções
+  inicializadas no service.
+- **#23 `EntityFilterException` ao carregar responsável sem perfil.**
+  Lado `mappedBy` do 1:1 `@MapsId` + `@TenantId`. `@Fetch(FetchMode.JOIN)`.
+- **#24 API de escalas nunca tinha rodado via HTTP.** Todo endpoint
+  estourava `LazyInitializationException` no controller e a listagem usava
+  `(:p IS NULL OR ...)`. Grafo inicializado no service + `Specification`.
+
+- **#25 `GET /pessoas` → 500 assim que existia qualquer pessoa.** A
+  listagem só inicializava e-mails/telefones; o `PessoaResponse.de` lia as
+  relações fora da transação.
+- **#26 Fila `GET /inscricoes` → 500 sempre.** `@EntityGraph` com as bags
+  da inscrição e dos responsáveis: "Could not generate fetch". Grafo
+  removido, coleções inicializadas no service, `Specification` no status.
+
+Achados #25 e #26 no teste de ponta a ponta no navegador (Playwright, API
+com profile `dev` + Postgres descartável + `ng serve`): login JWT, ficha
+com responsável novo, ida e volta do parentesco, responsável virando
+voluntário, ciclo da escala (criar, salvar com `version`, finalizar,
+reabrir, cancelar, excluir) e refresh de token com dois 401 simultâneos
+(um único `POST /auth/refresh`, aceito com `X-XSRF-TOKEN`).
+
+V032 remove o enum órfão `pessoa_papel`. Pessoa "nova" na ficha do
+voluntário agora é criada na mesma transação (`novaPessoa`), sem órfãos.
+
 ## Onde está o código (disco + GitHub) — 23/09/2026
 
 Dois repositórios **irmãos** (não é monorepo). A pasta `servire` existe

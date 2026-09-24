@@ -9,6 +9,7 @@ import br.com.servire.api.inscricao.dto.InscricaoResponsavelRequest;
 import br.com.servire.api.pessoa.Pessoa;
 import br.com.servire.api.pessoa.PessoaPapel;
 import br.com.servire.api.pessoa.PessoaRepository;
+import br.com.servire.api.pessoa.PessoaService;
 import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
 import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.tenant.Tenant;
@@ -47,6 +48,9 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private PessoaRepository pessoaRepository;
+
+    @Autowired
+    private PessoaService pessoaService;
 
     @Autowired
     private TenantRepository tenantRepository;
@@ -184,10 +188,96 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
 
         Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
 
-        Pessoa voluntario = pessoaRepository.findById(aprovada.getVoluntarioId()).orElseThrow();
+        Pessoa voluntario = pessoaService.buscarPorId(aprovada.getVoluntarioId());
         assertThat(voluntario.getResponsaveis()).hasSize(1);
         assertThat(voluntario.getResponsaveis().getFirst().getResponsavel().getId()).isEqualTo(existente.getId());
         TenantContext.clear();
+    }
+
+    @Test
+    void aprovarComFilhoUsandoOEmailDaMaeNaoRelacionaOVoluntarioConsigoMesmo() {
+        Tenant tenant = criarTenant("email-da-mae");
+        Usuario aprovador = usuarioRepository.saveAndFlush(new Usuario("aprovador-em-" + UUID.randomUUID() + "@teste.com", "Aprovador"));
+        TenantContext.set(tenant.getId());
+        String emailDaMae = "mae-" + UUID.randomUUID() + "@teste.com";
+
+        Inscricao inscricao = new Inscricao("Filho Com Email Da Mae");
+        InscricaoEmail emailDoFilho = new InscricaoEmail("E-mail pessoal", emailDaMae, true);
+        emailDoFilho.setInscricao(inscricao);
+        inscricao.getEmails().add(emailDoFilho);
+        inscricao.getResponsaveis().add(responsavelComEmail(inscricao, "Mãe Do Filho", emailDaMae, true));
+        inscricao = inscricaoRepository.saveAndFlush(inscricao);
+
+        Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
+
+        Pessoa voluntario = pessoaService.buscarPorId(aprovada.getVoluntarioId());
+        assertThat(voluntario.isResponsavel()).isFalse();
+        assertThat(voluntario.getResponsaveis()).hasSize(1);
+        Pessoa mae = voluntario.getResponsaveis().getFirst().getResponsavel();
+        assertThat(mae.getId()).isNotEqualTo(voluntario.getId());
+        assertThat(mae.getNomeCompleto()).isEqualTo("Mãe Do Filho");
+    }
+
+    @Test
+    void aprovarComEmailPrincipalRepetidoPrefereQuemJaEResponsavelENaoPromoveIrmao() {
+        Tenant tenant = criarTenant("email-repetido");
+        Usuario aprovador = usuarioRepository.saveAndFlush(new Usuario("aprovador-rep-" + UUID.randomUUID() + "@teste.com", "Aprovador"));
+        TenantContext.set(tenant.getId());
+        String email = "familia-" + UUID.randomUUID() + "@teste.com";
+        Pessoa irmao = pessoaRepository.saveAndFlush(pessoaComEmail(PessoaPapel.VOLUNTARIO, "Irmão Mais Velho", email));
+        Pessoa mae = pessoaRepository.saveAndFlush(pessoaComEmail(PessoaPapel.RESPONSAVEL, "Mãe Da Família", email));
+
+        Inscricao inscricao = new Inscricao("Irmão Mais Novo");
+        inscricao.getResponsaveis().add(responsavelComEmail(inscricao, "Mãe Da Família", email, true));
+        inscricao = inscricaoRepository.saveAndFlush(inscricao);
+
+        Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
+
+        Pessoa voluntario = pessoaService.buscarPorId(aprovada.getVoluntarioId());
+        assertThat(voluntario.getResponsaveis()).extracting(r -> r.getResponsavel().getId())
+                .containsExactly(mae.getId());
+        assertThat(pessoaRepository.findById(irmao.getId()).orElseThrow().isResponsavel()).isFalse();
+    }
+
+    @Test
+    void aprovarPromoveVoluntarioAdultoAResponsavelQuandoEmailENomeBatem() {
+        Tenant tenant = criarTenant("ministra-mae");
+        Usuario aprovador = usuarioRepository.saveAndFlush(new Usuario("aprovador-min-" + UUID.randomUUID() + "@teste.com", "Aprovador"));
+        TenantContext.set(tenant.getId());
+        String email = "ministra-" + UUID.randomUUID() + "@teste.com";
+        Pessoa ministra = pessoaRepository.saveAndFlush(pessoaComEmail(PessoaPapel.VOLUNTARIO, "Maria José", email));
+
+        Inscricao inscricao = new Inscricao("Filha Da Ministra");
+        inscricao.getResponsaveis().add(responsavelComEmail(inscricao, "  maria  jose ", email, true));
+        inscricao = inscricaoRepository.saveAndFlush(inscricao);
+
+        Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
+
+        Pessoa voluntario = pessoaService.buscarPorId(aprovada.getVoluntarioId());
+        assertThat(voluntario.getResponsaveis()).extracting(r -> r.getResponsavel().getId())
+                .containsExactly(ministra.getId());
+        Pessoa promovida = pessoaRepository.findById(ministra.getId()).orElseThrow();
+        assertThat(promovida.isVoluntario()).isTrue();
+        assertThat(promovida.isResponsavel()).isTrue();
+    }
+
+    @Test
+    void aprovarComDoisResponsaveisDeMesmoEmailCriaUmaSoRelacaoPrincipal() {
+        Tenant tenant = criarTenant("resp-duplicado");
+        Usuario aprovador = usuarioRepository.saveAndFlush(new Usuario("aprovador-dup-" + UUID.randomUUID() + "@teste.com", "Aprovador"));
+        TenantContext.set(tenant.getId());
+        String email = "casal-" + UUID.randomUUID() + "@teste.com";
+
+        Inscricao inscricao = new Inscricao("Filho Do Casal");
+        inscricao.getResponsaveis().add(responsavelComEmail(inscricao, "Pai Do Casal", email, false));
+        inscricao.getResponsaveis().add(responsavelComEmail(inscricao, "Mãe Do Casal", email, true));
+        inscricao = inscricaoRepository.saveAndFlush(inscricao);
+
+        Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
+
+        Pessoa voluntario = pessoaService.buscarPorId(aprovada.getVoluntarioId());
+        assertThat(voluntario.getResponsaveis()).hasSize(1);
+        assertThat(voluntario.getResponsaveis().getFirst().isPrincipal()).isTrue();
     }
 
     @Test
@@ -268,6 +358,30 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         assertThat(atualizada.getResponsaveis().get(0).getNome()).isEqualTo("Novo Responsável Principal");
         assertThat(atualizada.getResponsaveis().get(0).isPrincipal()).isTrue();
         TenantContext.clear();
+    }
+
+    private static InscricaoResponsavel responsavelComEmail(Inscricao inscricao, String nome, String email,
+                                                            boolean principal) {
+        InscricaoResponsavel responsavel = new InscricaoResponsavel("Mãe", nome, principal);
+        responsavel.setInscricao(inscricao);
+        InscricaoResponsavelEmail linha = new InscricaoResponsavelEmail("E-mail pessoal", email, true);
+        linha.setResponsavel(responsavel);
+        responsavel.getEmails().add(linha);
+        return responsavel;
+    }
+
+    private static Pessoa pessoaComEmail(PessoaPapel papel, String nome, String email) {
+        Pessoa pessoa = new Pessoa(papel, nome);
+        br.com.servire.api.pessoa.PessoaEmail linha = new br.com.servire.api.pessoa.PessoaEmail(
+                "E-mail pessoal", email, true);
+        linha.setPessoa(pessoa);
+        pessoa.getEmails().add(linha);
+        if (papel == PessoaPapel.VOLUNTARIO) {
+            Voluntario perfil = new Voluntario();
+            perfil.setTipo(TipoVoluntario.COROINHA);
+            pessoa.setVoluntario(perfil);
+        }
+        return pessoa;
     }
 
     private Inscricao inscricaoComResponsavelPrincipal(String nome) {

@@ -9,7 +9,8 @@ Este repo é o `servire-api-back`; o Angular é o irmão `servire-api-front`
 - Plano de produto: `plano_mestre_servire_v2_mvp_baixo_custo.md`
 
 **Última confirmação nesta máquina (24/09/2026):** `mvn test` com
-`BUILD SUCCESS`, 190 testes, 0 falhas (V031 incluída).
+`BUILD SUCCESS`, 207 testes, 0 falhas (V032 incluída, com `FluxoHttpIntegrationTest`
+exercitando `/pessoas` e `/escalas` via HTTP com JWT real).
 
 ## Estado atual
 
@@ -17,15 +18,15 @@ Este repo é o `servire-api-back`; o Angular é o irmão `servire-api-front`
 |---|---|---|
 | Auth (`/auth/**`) | Pronto | Login, refresh em cookie, reset de senha (Resend) |
 | Tenant (`/tenant`) | Pronto | `GET`/`PUT`; e-mails e telefones em lista 1:N |
-| Pessoas (`/pessoas/**`) | Pronto (V030+V031) | Cadastro. **Substitui** `POST`/`PUT /voluntarios` |
+| Pessoas (`/pessoas/**`) | Pronto (V030–V032) | Cadastro. **Substitui** `POST`/`PUT /voluntarios` |
 | Voluntários (`/voluntarios/**`) | Perfil só | Lista, ativo, foto, commitments — sem criar/editar identidade |
 | Inscrições | Pronto | Público + fila; responsável **opcional**; aprovar materializa `Pessoa` |
-| Escalas | Pronto | Eventos, vagas, presença, picker, alocação |
+| Escalas (`/escalas/**`) | Pronto | Eventos, vagas, presença, picker, alocação. Front já usa a API |
 | Storage | Pronto | Bucket privado `voluntarios-fotos` |
 | Auditoria | Pronto | `GET /audit-log` (ADMIN da paróquia) |
 | Backoffice (`/admin/**`) | Pronto | Operador SaaS, paróquias, suporte |
 | Billing | Manual | Planos, assinatura, cobrança, PIX manual. Sem gateway / bloqueio automático |
-| Front Angular | **Quebrado até migrar** | Ainda fala com `POST`/`PUT /voluntarios` e tabela `responsaveis` |
+| Front Angular | Migrado | Login JWT, `/pessoas`, inscrições e escalas pela API. Sem Supabase direto para dados |
 
 ## Cadastro pessoa-primeiro — contrato para o Angular
 
@@ -45,7 +46,14 @@ Quebra deliberada. Não há shim dos endpoints antigos.
   "nomeCompleto": "Maria Silva",
   "emails": [{ "tipo": "E-mail pessoal", "email": "maria@paroquia.org", "principal": true }],
   "telefones": [{ "tipo": "celular", "numero": "11999990000", "principal": true }],
-  "relacoes": [],
+  "responsaveis": [
+    { "pessoaId": "…uuid…", "parentesco": "Mãe", "parentescoInverso": "Filha", "principal": true },
+    { "novaPessoa": { "nomeCompleto": "Avó Nova", "email": null, "telefone": null },
+      "parentesco": "Avó", "parentescoInverso": "Neta", "principal": false }
+  ],
+  "dependentes": [
+    { "pessoaId": "…uuid…", "parentesco": "Filho", "parentescoInverso": "Mãe", "principal": true }
+  ],
   "voluntario": { "tipo": "COROINHA", "ativo": true, "autorizaWhatsapp": false, "funcoesHabilitadas": [] }
 }
 ```
@@ -53,17 +61,36 @@ Quebra deliberada. Não há shim dos endpoints antigos.
 Regras de negócio (V031):
 - Uma pessoa pode ser **os dois** (ministro que também é pai/mãe).
 - Dá para **acrescentar** papel; não dá para remover.
-- `relacoes` é **opcional**. Adulto/ministro entra sem responsável.
-- Se vier mais de uma relação, exatamente uma `principal: true`.
+- Relações em **duas listas**, uma por lado: `responsaveis` (quem
+  responde por esta pessoa — exige `VOLUNTARIO`) e `dependentes` (por quem
+  ela responde — exige `RESPONSAVEL`). A resposta vem no mesmo formato, então
+  o front reenvia o que recebeu. Lista vazia/nula apaga aquele lado.
+- Em cada item, `parentesco` = o que a **outra** pessoa é; `parentescoInverso`
+  = o que **esta** pessoa é para ela. Mesmo sentido nas duas listas.
+- `novaPessoa` (só em `responsaveis`) cria o responsável na mesma transação.
+- Responsáveis são **opcionais**. Adulto/ministro entra sem nenhum. Se vier
+  mais de um, exatamente um `principal: true`.
+- Dependente marcado `principal` quando o voluntário já tem outro principal → 409.
 - `GET /pessoas?papel=VOLUNTARIO` inclui quem também é responsável.
 
 Inscrição pública: `responsaveis` também é opcional. Se mandar a lista,
-exatamente um principal. Aprovar reusa a pessoa pelo e-mail principal
-(e acrescenta `RESPONSAVEL` se ela só era voluntária).
+exatamente um principal. Aprovar reusa, pelo e-mail principal, quem já é
+`RESPONSAVEL`; só promove um voluntário a responsável se o **nome** também
+bater (criança inscrita com o e-mail da mãe não vira responsável de si
+mesma nem do irmão). Sem candidato, cria a pessoa.
 
-### Antes de aplicar V030/V031 em produção
+## CSRF
 
-1. Migrar o Angular para `/pessoas` (este repo não tem o front).
+`csrf.spa()` com uma exceção: requisição com `Authorization: Bearer` fora de
+`/auth/**` e `/admin/auth/**` não precisa de `X-XSRF-TOKEN` (o token mora em
+`sessionStorage`, não é credencial ambiente). `refresh`/`logout` usam o cookie
+HttpOnly e continuam exigindo o header. Em produção, front e API em hosts
+diferentes: `CSRF_COOKIE_DOMAIN=servirea.com.br` para o front conseguir ler o
+cookie `XSRF-TOKEN`.
+
+### Antes de aplicar V030–V032 em produção
+
+1. Subir junto o front que já usa `/pessoas` e `/escalas` (repo irmão).
 2. Rodar Flyway numa **cópia** do Postgres real e conferir o backfill
    (voluntários → `pessoa` com o mesmo `id`; responsáveis antigos →
    `pessoa` + `pessoa_relacao`; e-mails/telefones viram listas).
@@ -124,12 +151,12 @@ GitHub: [servire-api-back](https://github.com/GustavoToebe/servire-api-back),
 [servire-api-front](https://github.com/GustavoToebe/servire-api-front).
 
 Stack: Java 21 · Spring Boot 4.1.1 · Hibernate 7.4 · PostgreSQL 16 ·
-Flyway V001–V031 · JJWT 0.13 · Testcontainers 2.x.
+Flyway V001–V032 · JJWT 0.13 · Testcontainers 2.x.
 
 ## Próximos passos
 
-1. Front: cadastro em `/pessoas`, listas de contato, papéis múltiplos.
-2. Ensaio do backfill V030/V031 numa cópia do banco real.
+1. Ensaio do backfill V030–V032 numa cópia do banco real.
+2. Definir `CSRF_COOKIE_DOMAIN` no deploy.
 3. Conferir Nginx/Caddy de produção com o snippet acima.
 4. Resto do billing (gateway, webhooks, bloqueio por atraso).
 5. Deploy (seção 113) e corte do acesso direto do Angular ao Supabase (115).

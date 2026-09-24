@@ -22,7 +22,8 @@ import java.util.List;
  * (falhar alto e cedo em vez de assinar tokens com uma chave fraca).</p>
  */
 @ConfigurationProperties(prefix = "servire.security")
-public record SecurityProperties(Jwt jwt, Duration refreshTokenTtl, Duration passwordResetTokenTtl, Cors cors) {
+public record SecurityProperties(Jwt jwt, Duration refreshTokenTtl, Duration passwordResetTokenTtl, Cors cors,
+                                 Csrf csrf) {
 
     public record Jwt(String secret, Duration accessTokenTtl, Duration tenantSelectionTokenTtl) {
     }
@@ -34,5 +35,16 @@ public record SecurityProperties(Jwt jwt, Duration refreshTokenTtl, Duration pas
      * {@code CORS_ALLOWED_ORIGINS} (lista separada por vírgula).
      */
     public record Cors(List<String> allowedOrigins) {
+    }
+
+    /**
+     * {@code cookieDomain}: domínio do cookie {@code XSRF-TOKEN}. Vazio =
+     * cookie só do host da API (dev: {@code localhost} vale para todas as
+     * portas). Em produção a API ({@code api.servirea.com.br}) e o front
+     * ficam em hosts diferentes, e o JavaScript do front só lê o cookie se
+     * ele for do domínio pai ({@code servirea.com.br}) — ver
+     * {@code CSRF_COOKIE_DOMAIN} em {@code application-prod.yml}.
+     */
+    public record Csrf(String cookieDomain) {
     }
 }

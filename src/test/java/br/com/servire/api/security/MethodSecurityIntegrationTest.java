@@ -68,12 +68,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * javadoc da classe), então a autenticação injetada pelo teste chega
  * intacta ao {@code @PreAuthorize}.</p>
  *
- * <p><b>CSRF:</b> {@code SecurityConfig} usa {@code csrf.spa()}, que NÃO
- * isenta nenhuma rota de negócio (só {@code /auth/**} e {@code /public/**})
- * — toda chamada de escrita aqui precisa de
+ * <p><b>CSRF:</b> desde 24/09/2026 {@code SecurityConfig} só dispensa o
+ * token CSRF quando a requisição traz {@code Authorization: Bearer}. Este
+ * teste injeta a autenticação direto (sem header), então toda chamada de
+ * escrita aqui continua precisando de
  * {@link SecurityMockMvcRequestPostProcessors#csrf()}, senão o
  * {@code CsrfFilter} barra a requisição com 403 antes mesmo de chegar em
- * {@code @PreAuthorize}, mascarando o que este teste quer medir.</p>
+ * {@code @PreAuthorize}, mascarando o que este teste quer medir. O fluxo
+ * com Bearer de verdade está em {@code FluxoHttpIntegrationTest}.</p>
  *
  * <p><b>Ordem @Valid vs @PreAuthorize (achado desta rodada, não um bug):</b>
  * a validação de {@code @RequestBody @Valid} roda durante a resolução dos

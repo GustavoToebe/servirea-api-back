@@ -1,8 +1,10 @@
 package br.com.servire.api.security;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -11,11 +13,13 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Configuração de segurança da Fase 5 (seção 32/105 do plano mestre).
@@ -39,6 +43,17 @@ import java.util.List;
  * e {@code /admin/auth/logout} dependem do cookie HttpOnly do refresh
  * token (seção 92) e por isso continuam protegidos —
  * ver a javadoc de {@code AuthController}.</p>
+ *
+ * <p><b>CSRF x Bearer (correção de 24/09/2026):</b> fora de
+ * {@code /auth/**} e {@code /admin/auth/**}, requisição com
+ * {@code Authorization: Bearer} não exige token CSRF — o access token
+ * mora em {@code sessionStorage} e o navegador nunca o envia sozinho,
+ * então não há credencial ambiente para forjar (um site de terceiro não
+ * consegue pôr esse header sem passar pelo preflight do CORS). Antes todo
+ * POST/PUT/DELETE de negócio exigia {@code X-XSRF-TOKEN}, e o Angular não
+ * manda esse header para URL absoluta (a API fica em outra origem):
+ * salvar pessoa ou aprovar inscrição voltava 403. As rotas do cookie de
+ * refresh continuam exigindo o token mesmo com Bearer.</p>
  *
  * <p><b>CORS:</b> só libera as origens vindas de
  * {@code servire.security.cors.allowed-origins} (nunca {@code *} — seção
@@ -84,6 +99,8 @@ public class SecurityConfig {
     // vê 401 path=/error em vez do 500 real (Bug real #15).
     // /admin/auth/login é o equivalente do /auth/login para o operador
     // (seção 111) — o JWT ainda não existe nesse momento.
+    private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "TRACE", "OPTIONS");
+
     private static final String[] ROTAS_PUBLICAS = {
             "/auth/**", "/admin/auth/**", "/public/**", "/actuator/health", "/error"};
 
@@ -116,11 +133,14 @@ public class SecurityConfig {
                                                      JwtAuthenticationFilter jwtAuthenticationFilter,
                                                      CorsConfigurationSource corsConfigurationSource,
                                                      RestAuthenticationEntryPoint authenticationEntryPoint,
-                                                     RestAccessDeniedHandler accessDeniedHandler) throws Exception {
+                                                     RestAccessDeniedHandler accessDeniedHandler,
+                                                     SecurityProperties properties) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf
                         .spa()
+                        .csrfTokenRepository(csrfTokenRepository(properties))
+                        .requireCsrfProtectionMatcher(SecurityConfig::exigeCsrf)
                         .ignoringRequestMatchers(
                                 "/auth/login", "/auth/select-tenant",
                                 "/auth/forgot-password", "/auth/reset-password",
@@ -136,5 +156,28 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /** Mesmo repositório do {@code spa()} ({@code XSRF-TOKEN} legível por JS), com domínio configurável. */
+    static CookieCsrfTokenRepository csrfTokenRepository(SecurityProperties properties) {
+        CookieCsrfTokenRepository repositorio = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        String dominio = properties.csrf() == null ? null : properties.csrf().cookieDomain();
+        if (dominio != null && !dominio.isBlank()) {
+            repositorio.setCookieCustomizer(cookie -> cookie.domain(dominio.trim()));
+        }
+        return repositorio;
+    }
+
+    /** Ver "CSRF x Bearer" na javadoc da classe. */
+    static boolean exigeCsrf(HttpServletRequest request) {
+        if (METODOS_SEGUROS.contains(request.getMethod())) {
+            return false;
+        }
+        String caminho = request.getRequestURI().substring(request.getContextPath().length());
+        if (caminho.startsWith("/auth/") || caminho.startsWith("/admin/auth/")) {
+            return true;
+        }
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        return authorization == null || !authorization.regionMatches(true, 0, "Bearer ", 0, 7);
     }
 }

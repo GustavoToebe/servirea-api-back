@@ -21,6 +21,9 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+        # Coleção/proxy lazy carregado em lote (IN com até 50 ids) em vez de
+        # um SELECT por linha — listagem de escalas com eventos/vagas.
+        default_batch_fetch_size: 50
 
   flyway:
     locations: classpath:db/migration

@@ -12,5 +12,5 @@ public record EscalaEventoRequest(
         @NotNull LocalDate data,
         @NotNull LocalTime horario,
         String celebracao,
-        @NotEmpty @Valid List<EscalaVagaRequest> vagas) {
+        @NotEmpty List<@Valid EscalaVagaRequest> vagas) {
 }

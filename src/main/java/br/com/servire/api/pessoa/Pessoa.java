@@ -12,6 +12,8 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.TenantId;
 
 import java.time.Instant;
@@ -88,7 +90,19 @@ public class Pessoa {
     @OneToMany(mappedBy = "responsavel", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PessoaRelacao> dependentes = new ArrayList<>();
 
+    /**
+     * Só existe quando {@code e_voluntario}. {@code @Fetch(JOIN)} é
+     * obrigatório (bug de 24/09/2026): com {@code @MapsId} o Hibernate 7
+     * trata o id da própria pessoa como "FK" do lado {@code mappedBy} e,
+     * ao inicializar um responsável por select separado (proxy de
+     * {@link PessoaRelacao#getResponsavel()}), a ausência da linha em
+     * {@code voluntarios} + o filtro do {@code @TenantId} viravam
+     * {@code EntityFilterException}. Com LEFT JOIN a ausência é só
+     * {@code null}. ({@code @NotFound(IGNORE)} não resolve no lado
+     * {@code mappedBy} — testado.)
+     */
     @OneToOne(mappedBy = "pessoa", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.JOIN)
     private Voluntario voluntario;
 
     @Column(name = "created_at", insertable = false, updatable = false)

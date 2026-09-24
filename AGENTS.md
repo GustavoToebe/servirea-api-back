@@ -9,7 +9,7 @@ e commits: **português**.
 - Referência de produto/arquitetura: `plano_mestre_servire_v2_mvp_baixo_custo.md` (~4000 linhas).
   O código cita "seção N" desse arquivo o tempo todo — use `grep -n "^# N\." ` para achar.
 - Estado atual (módulos, contrato do front, como rodar): `README.md`.
-- Histórico de fases, decisões e bugs reais (#1–#17): `HISTORICO.md`. Atenção: a
+- Histórico de fases, decisões e bugs reais (#1–#26): `HISTORICO.md`. Atenção: a
   numeração de "Fase 11" dali (permissões/faltas/disponibilidade/auditoria/e-mail)
   **não** é a "FASE 11 — Backoffice" da seção 111 do plano mestre.
 
@@ -58,8 +58,8 @@ seção "Onde está o código (disco + GitHub)".
 | `backoffice/` | painel do operador do SaaS (`/admin/**`): login sem tenant, paróquias, logins, logs globais, sessão de suporte |
 | `billing/` | financeiro manual do painel: `Plano`/`PrecoPlano` (`/admin/planos`), `Assinatura`/`Cobranca` (`/admin/paroquias/{id}/financeiro`, pagamentos, estorno, isenção), `BillingJob` diário |
 
-Migrations: `src/main/resources/db/migration/V001..V031`. **V001–V015 são o baseline, nunca editar.**
-Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. **Não aplicar V030/V031 em produção** sem o front em `/pessoas` e um ensaio do backfill numa cópia do banco real.
+Migrations: `src/main/resources/db/migration/V001..V032`. **V001–V015 são o baseline, nunca editar.**
+Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`. **Não aplicar V030–V032 em produção** sem o front em `/pessoas` e um ensaio do backfill numa cópia do banco real.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
@@ -98,10 +98,21 @@ Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + cont
 ## Armadilhas já pagas (não repetir)
 - `open-in-view: false` → acessar coleção lazy no controller dá `LazyInitializationException`. Use
   `@EntityGraph`/`JOIN FETCH` no repositório (ex.: `VoluntarioRepository.findById`).
-- Criteria/`JOIN FETCH` em **duas** coleções `List` da mesma raiz (`emails` + `telefones`)
-  explode em `MultipleBagFetchException`. Não fetchar as duas; inicialize as coleções
-  dentro do `@Transactional` do service (`PessoaService.buscar`,
-  `BackofficeParoquiaService.listar`).
+- Criteria/`JOIN FETCH`/`@EntityGraph` em **duas** coleções `List` da mesma raiz (`emails` + `telefones`)
+  explode em `MultipleBagFetchException` ou, no grafo, simplesmente não carrega. Não fetchar as duas;
+  inicialize as coleções dentro do `@Transactional` do service (`PessoaService.buscarPorId`,
+  `EscalaService.buscarPorId`, `InscricaoService.buscar`, `BackofficeParoquiaService.listar`).
+  `default_batch_fetch_size: 50` evita N+1. Grafo com várias bags numa query dá "Could not generate fetch".
+- Todo `XResponse.de(entidade)` roda no controller, **fora** da transação: o service devolve a entidade
+  já inicializada. Endpoint novo ganha teste HTTP real em `FluxoHttpIntegrationTest` (teste de service não pega isso).
+- `Pessoa.voluntario` (lado `mappedBy` do 1:1 `@MapsId`) precisa de `@Fetch(FetchMode.JOIN)`: sem isso,
+  inicializar o proxy de um responsável sem perfil dá `EntityFilterException` (o `@TenantId` "filtra" a linha
+  inexistente). `@NotFound(IGNORE)` não resolve.
+- Relações de pessoa: `PessoaRequest`/`PessoaResponse` têm `responsaveis` e `dependentes` separados; em cada item
+  `parentesco` = o que a **outra** pessoa é. Não voltar para uma lista só (quem tem os dois papéis não salvava).
+- `pessoaRepository.findPorEmailPrincipal` devolve **lista**: e-mail principal não é único (criança usa o da mãe).
+- CSRF: `SecurityConfig.exigeCsrf` dispensa o token para `Authorization: Bearer` fora de `/auth/**` e
+  `/admin/auth/**`. Não remover — o Angular não manda `X-XSRF-TOKEN` para URL absoluta.
 - Rate limit / IP: use `ClientIp.de(request)` (= `getRemoteAddr()`). **Nunca** ler
   `X-Forwarded-For` no código — o cliente forja e esvazia o limitador. Em prod,
   `server.forward-headers-strategy: native` + `internal-proxies` (Nginx/Caddy no

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
-public record SubstituirVinculosRequest(@NotNull @Valid List<Vinculo> vinculos) {
+public record SubstituirVinculosRequest(@NotNull List<@Valid Vinculo> vinculos) {
 
     public record Vinculo(
             @NotNull UUID tenantId,

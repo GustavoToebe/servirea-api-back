@@ -15,7 +15,7 @@ public record TenantRequest(
         @NotBlank String nome,
         String razaoSocial,
         String cnpj,
-        @Valid List<ContatoEmailRequest> emails,
-        @Valid List<ContatoTelefoneRequest> telefones
+        List<@Valid ContatoEmailRequest> emails,
+        List<@Valid ContatoTelefoneRequest> telefones
 ) {
 }

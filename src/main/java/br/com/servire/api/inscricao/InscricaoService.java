@@ -25,7 +25,10 @@ import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.hibernate.Hibernate;
 import org.slf4j.MDC;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,17 +38,21 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
+import java.text.Normalizer;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
 /**
  * Inscrição pública e fila de aprovação. Responsável é opcional
  * (adulto/ministro). Aprovar materializa {@code pessoa} voluntária +
- * perfil e reusa, pelo e-mail principal, uma pessoa já cadastrada
- * (acrescenta o papel RESPONSAVEL se ainda não tiver).
+ * perfil e reusa, pelo e-mail principal, uma pessoa já cadastrada —
+ * ver {@link #resolverResponsavel} para as regras de desempate.
  */
 @Service
 public class InscricaoService {
@@ -131,15 +138,34 @@ public class InscricaoService {
         return inscricao;
     }
 
+    /**
+     * Fila, mais recente primeiro. Filtro por {@link Specification} (a JPQL
+     * {@code :status IS NULL OR ...} é a armadilha do Hibernate 7) e coleções
+     * inicializadas aqui para o {@code InscricaoResponse.de} no controller.
+     */
     @Transactional(readOnly = true)
     public List<Inscricao> buscar(StatusInscricao status) {
-        return inscricaoRepository.buscar(status);
+        Specification<Inscricao> filtro = (root, query, cb) ->
+                status == null ? cb.conjunction() : cb.equal(root.get("status"), status);
+        List<Inscricao> inscricoes = inscricaoRepository.findAll(filtro, Sort.by(Sort.Direction.DESC, "createdAt"));
+        inscricoes.forEach(InscricaoService::inicializar);
+        return inscricoes;
     }
 
     @Transactional(readOnly = true)
     public Inscricao buscarPorId(UUID id) {
-        return inscricaoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
+        return inicializar(inscricaoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada.")));
+    }
+
+    private static Inscricao inicializar(Inscricao inscricao) {
+        Hibernate.initialize(inscricao.getEmails());
+        Hibernate.initialize(inscricao.getTelefones());
+        for (InscricaoResponsavel responsavel : inscricao.getResponsaveis()) {
+            Hibernate.initialize(responsavel.getEmails());
+            Hibernate.initialize(responsavel.getTelefones());
+        }
+        return inscricao;
     }
 
     @Transactional
@@ -162,7 +188,8 @@ public class InscricaoService {
 
     /**
      * Materializa pessoa VOLUNTARIO + perfil e reusa/cria RESPONSAVEL
-     * pelo e-mail principal de cada responsável da inscrição.
+     * pelo e-mail principal de cada responsável da inscrição (ver
+     * {@link #resolverResponsavel}).
      */
     @Transactional
     public Inscricao aprovar(UUID id, UUID usuarioIdAprovador) {
@@ -199,8 +226,17 @@ public class InscricaoService {
 
         voluntarioPessoa = pessoaRepository.saveAndFlush(voluntarioPessoa);
 
-        for (InscricaoResponsavel ir : inscricao.getResponsaveis()) {
-            Pessoa responsavel = resolverResponsavel(ir);
+        // Principal primeiro: se dois responsáveis da ficha caírem na mesma
+        // pessoa (mesmo e-mail principal), a relação que fica é a principal.
+        List<InscricaoResponsavel> responsaveis = inscricao.getResponsaveis().stream()
+                .sorted(Comparator.comparing(InscricaoResponsavel::isPrincipal).reversed())
+                .toList();
+        Set<UUID> jaRelacionados = new HashSet<>();
+        for (InscricaoResponsavel ir : responsaveis) {
+            Pessoa responsavel = resolverResponsavel(ir, voluntarioPessoa);
+            if (!jaRelacionados.add(responsavel.getId())) {
+                continue;
+            }
             PessoaRelacao relacao = new PessoaRelacao(responsavel, voluntarioPessoa, ir.getParentesco(),
                     opcional(ir.getParentescoInverso()), ir.isPrincipal());
             voluntarioPessoa.getResponsaveis().add(relacao);
@@ -232,18 +268,48 @@ public class InscricaoService {
         return inscricao;
     }
 
-    private Pessoa resolverResponsavel(InscricaoResponsavel ir) {
+    /**
+     * Reusa uma pessoa já cadastrada com o mesmo e-mail principal do
+     * responsável, ou cria uma nova.
+     *
+     * <p>O e-mail principal não é único no tenant — é comum a criança se
+     * inscrever com o e-mail da mãe. Por isso (bug de 24/09/2026, depois
+     * da V031): o voluntário que acabou de ser criado nunca é candidato
+     * (viraria responsável de si mesmo e bateria em
+     * {@code pessoa_relacao_distintos}); quem já é RESPONSAVEL tem
+     * preferência; e alguém que ainda não é responsável (ministro adulto,
+     * irmão cadastrado com o e-mail da mãe) só é promovido se o nome
+     * também bater — senão um irmão viraria "responsável" do outro.</p>
+     */
+    private Pessoa resolverResponsavel(InscricaoResponsavel ir, Pessoa voluntarioPessoa) {
         String emailPrincipal = ir.getEmails().stream()
                 .filter(InscricaoResponsavelEmail::isPrincipal)
                 .map(InscricaoResponsavelEmail::getEmail)
                 .findFirst()
                 .orElse(null);
-        if (emailPrincipal != null) {
-            return pessoaRepository.findPorEmailPrincipal(emailPrincipal)
-                    .map(this::marcarComoResponsavel)
-                    .orElseGet(() -> criarPessoaResponsavel(ir));
+        if (emailPrincipal == null) {
+            return criarPessoaResponsavel(ir);
         }
-        return criarPessoaResponsavel(ir);
+        List<Pessoa> candidatos = pessoaRepository.findPorEmailPrincipal(emailPrincipal.trim()).stream()
+                .filter(p -> !p.getId().equals(voluntarioPessoa.getId()))
+                .toList();
+        return candidatos.stream()
+                .filter(Pessoa::isResponsavel)
+                .findFirst()
+                .or(() -> candidatos.stream()
+                        .filter(p -> mesmoNome(p.getNomeCompleto(), ir.getNome()))
+                        .findFirst()
+                        .map(this::marcarComoResponsavel))
+                .orElseGet(() -> criarPessoaResponsavel(ir));
+    }
+
+    private static boolean mesmoNome(String a, String b) {
+        return a != null && b != null && normalizarNome(a).equals(normalizarNome(b));
+    }
+
+    private static String normalizarNome(String nome) {
+        String semAcento = Normalizer.normalize(nome, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return semAcento.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     private Pessoa marcarComoResponsavel(Pessoa pessoa) {

@@ -69,6 +69,9 @@ import br.com.servire.api.AbstractIntegrationTest;
  * <p>Total atualizado de 30 para 31 em 24/09/2026: V031 troca o papel
  * exclusivo por {@code e_voluntario}/{@code e_responsavel} (papéis
  * concomitantes; responsável opcional).</p>
+ *
+ * <p>Total atualizado de 31 para 32 em 24/09/2026: V032 remove o tipo
+ * enum {@code pessoa_papel}, órfão desde a V031.</p>
  */
 class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
 
@@ -85,6 +88,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // V029 (financeiro manual: plano, preco_plano, assinatura, cobranca).
         // De 29 para 30 em 24/09/2026: V030 (pessoa, contato, relação).
         // De 30 para 31 em 24/09/2026: V031 (papéis flexíveis).
+        // De 31 para 32 em 24/09/2026: V032 (drop do enum pessoa_papel).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -93,10 +97,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(31);
-        assertThat(sucesso).isEqualTo(31);
+        assertThat(total).isEqualTo(32);
+        assertThat(sucesso).isEqualTo(32);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("pessoa papeis flexiveis");
+        assertThat(descricoes.getLast()).isEqualTo("drop tipo pessoa papel");
     }
 
     @Test

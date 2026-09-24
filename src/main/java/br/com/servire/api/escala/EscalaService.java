@@ -14,12 +14,17 @@ import br.com.servire.api.voluntario.VoluntarioRepository;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
+import jakarta.persistence.criteria.Predicate;
+import org.hibernate.Hibernate;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -56,15 +61,75 @@ public class EscalaService {
         this.auditLogService = auditLogService;
     }
 
+    /** Mais recente primeiro; escala sem ano/mês vai para o fim. */
+    private static final Comparator<Escala> ORDEM_DA_LISTA = Comparator
+            .comparing(Escala::getAno, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(Escala::getMes, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(Escala::getTitulo, Comparator.nullsLast(Comparator.naturalOrder()));
+
+    /**
+     * Filtros opcionais via {@link Specification} — a JPQL anterior
+     * ({@code :tipo IS NULL OR ...}) é a armadilha conhecida do Hibernate 7
+     * + Postgres. Cada escala volta com eventos e vagas inicializados
+     * ({@link #inicializar}); o {@code default_batch_fetch_size} evita um
+     * SELECT por escala.
+     */
     @Transactional(readOnly = true)
     public List<Escala> buscar(TipoEscala tipo, StatusEscala status, Integer ano, Integer mes) {
-        return escalaRepository.buscar(tipo, status, ano, mes);
+        List<Escala> escalas = new ArrayList<>(escalaRepository.findAll(filtro(tipo, status, ano, mes)));
+        escalas.sort(ORDEM_DA_LISTA);
+        escalas.forEach(EscalaService::inicializar);
+        return escalas;
     }
 
+    private static Specification<Escala> filtro(TipoEscala tipo, StatusEscala status, Integer ano, Integer mes) {
+        return (root, query, cb) -> {
+            List<Predicate> predicados = new ArrayList<>();
+            if (tipo != null) {
+                predicados.add(cb.equal(root.get("tipo"), tipo));
+            }
+            if (status != null) {
+                predicados.add(cb.equal(root.get("status"), status));
+            }
+            if (ano != null) {
+                predicados.add(cb.equal(root.get("ano"), ano));
+            }
+            if (mes != null) {
+                predicados.add(cb.equal(root.get("mes"), mes));
+            }
+            return cb.and(predicados.toArray(Predicate[]::new));
+        };
+    }
+
+    /** Escala pronta para {@code EscalaResponse} ({@code open-in-view: false}). */
     @Transactional(readOnly = true)
     public Escala buscarPorId(UUID id) {
+        return inicializar(carregar(id));
+    }
+
+    private Escala carregar(UUID id) {
         return escalaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Escala não encontrada."));
+    }
+
+    /**
+     * Toca eventos → vagas → voluntário → nome ainda dentro da transação.
+     * Sem isto o {@code EscalaResponse.de} no controller estourava
+     * {@code LazyInitializationException} (bug de 24/09/2026 — a API de
+     * escalas só tinha teste de service, nunca tinha sido chamada via HTTP).
+     */
+    private static Escala inicializar(Escala escala) {
+        for (EscalaEvento evento : escala.getEventos()) {
+            evento.getVagas().forEach(EscalaService::inicializar);
+        }
+        return escala;
+    }
+
+    private static EscalaVaga inicializar(EscalaVaga vaga) {
+        if (vaga.getVoluntario() != null) {
+            Hibernate.initialize(vaga.getVoluntario().getPessoa());
+        }
+        return vaga;
     }
 
     /**
@@ -149,7 +214,7 @@ public class EscalaService {
         substituirEventos(escala, request.eventos());
         escala = escalaRepository.save(escala);
         auditLogService.registrar("CRIACAO", "ESCALA", escala.getId(), null);
-        return escala;
+        return inicializar(escala);
     }
 
     /**
@@ -169,7 +234,7 @@ public class EscalaService {
      */
     @Transactional
     public Escala atualizar(UUID id, EscalaRequest request) {
-        Escala escala = buscarPorId(id);
+        Escala escala = carregar(id);
         if (escala.getStatus() != StatusEscala.RASCUNHO) {
             throw new ConflictException(
                     "Só é possível editar uma escala em RASCUNHO — reabra a escala antes de editar.");
@@ -185,47 +250,47 @@ public class EscalaService {
         substituirEventos(escala, request.eventos());
         auditLogService.registrar("ATUALIZACAO", "ESCALA", escala.getId(),
                 List.of("titulo", "tipo", "ano", "mes", "observacao", "eventos"));
-        return escala;
+        return inicializar(escala);
     }
 
     @Transactional
     public Escala finalizar(UUID id) {
-        Escala escala = buscarPorId(id);
+        Escala escala = carregar(id);
         if (escala.getStatus() != StatusEscala.RASCUNHO) {
             throw new ConflictException("Só é possível finalizar uma escala em RASCUNHO.");
         }
         escala.setStatus(StatusEscala.FINALIZADA);
         auditLogService.registrar("FINALIZACAO", "ESCALA", id, List.of("status"));
-        return escala;
+        return inicializar(escala);
     }
 
     @Transactional
     public Escala cancelar(UUID id) {
-        Escala escala = buscarPorId(id);
+        Escala escala = carregar(id);
         if (escala.getStatus() == StatusEscala.CANCELADA) {
             throw new ConflictException("Esta escala já está cancelada.");
         }
         escala.setStatus(StatusEscala.CANCELADA);
         auditLogService.registrar("CANCELAMENTO", "ESCALA", id, List.of("status"));
-        return escala;
+        return inicializar(escala);
     }
 
     /** Volta uma escala {@code FINALIZADA} (ou {@code CANCELADA}, para permitir corrigir um cancelamento por engano) para {@code RASCUNHO}, liberando edição de novo. */
     @Transactional
     public Escala reabrir(UUID id) {
-        Escala escala = buscarPorId(id);
+        Escala escala = carregar(id);
         if (escala.getStatus() == StatusEscala.RASCUNHO) {
             throw new ConflictException("Esta escala já está em RASCUNHO.");
         }
         escala.setStatus(StatusEscala.RASCUNHO);
         auditLogService.registrar("REABERTURA", "ESCALA", id, List.of("status"));
-        return escala;
+        return inicializar(escala);
     }
 
     /** Só permite excluir de fato uma escala {@code CANCELADA} (seção 109 — regra explícita do plano mestre). */
     @Transactional
     public void excluir(UUID id) {
-        Escala escala = buscarPorId(id);
+        Escala escala = carregar(id);
         if (escala.getStatus() != StatusEscala.CANCELADA) {
             throw new ConflictException("Só é possível excluir uma escala CANCELADA.");
         }
@@ -253,7 +318,7 @@ public class EscalaService {
         }
         vaga.setPresenca(presenca);
         auditLogService.registrar("PRESENCA_REGISTRADA", "ESCALA_VAGA", vagaId, List.of("presenca"));
-        return vaga;
+        return inicializar(vaga);
     }
 
     /**
@@ -269,6 +334,10 @@ public class EscalaService {
      */
     @Transactional
     public EscalaVaga alocarVaga(UUID vagaId, UUID voluntarioId) {
+        return inicializar(alocar(vagaId, voluntarioId));
+    }
+
+    private EscalaVaga alocar(UUID vagaId, UUID voluntarioId) {
         EscalaVaga vaga = escalaVagaRepository.findById(vagaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaga não encontrada."));
         if (vaga.getEvento().getEscala().getStatus() != StatusEscala.RASCUNHO) {

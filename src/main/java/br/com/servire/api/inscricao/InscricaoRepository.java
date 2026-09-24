@@ -1,31 +1,15 @@
 package br.com.servire.api.inscricao;
 
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-public interface InscricaoRepository extends JpaRepository<Inscricao, UUID> {
-
-    @Override
-    @EntityGraph(attributePaths = {
-            "emails", "telefones",
-            "responsaveis.emails", "responsaveis.telefones"
-    })
-    Optional<Inscricao> findById(UUID id);
-
-    @EntityGraph(attributePaths = {
-            "emails", "telefones",
-            "responsaveis.emails", "responsaveis.telefones"
-    })
-    @Query("""
-            SELECT i FROM Inscricao i
-            WHERE (:status IS NULL OR i.status = :status)
-            ORDER BY i.createdAt DESC
-            """)
-    List<Inscricao> buscar(@Param("status") StatusInscricao status);
+/**
+ * Sem {@code @EntityGraph}: e-mails, telefones e responsáveis (com os
+ * contatos deles) são bags — o grafo com todas fazia o Hibernate falhar em
+ * "Could not generate fetch" e o {@code GET /inscricoes} voltava 500 sempre.
+ * {@code InscricaoService} inicializa as coleções dentro da transação.
+ */
+public interface InscricaoRepository extends JpaRepository<Inscricao, UUID>, JpaSpecificationExecutor<Inscricao> {
 }

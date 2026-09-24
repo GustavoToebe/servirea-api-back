@@ -12,7 +12,7 @@ public record InscricaoResponsavelRequest(
         @NotBlank String parentesco,
         String parentescoInverso,
         @NotBlank String nome,
-        @Valid List<ContatoEmailRequest> emails,
-        @Valid List<ContatoTelefoneRequest> telefones,
+        List<@Valid ContatoEmailRequest> emails,
+        List<@Valid ContatoTelefoneRequest> telefones,
         boolean principal) {
 }
