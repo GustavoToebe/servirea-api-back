@@ -133,4 +133,7 @@ Mudança de schema = nova migration `V0NN__descricao.sql`.
 - Autorização HTTP: `MethodSecurityIntegrationTest` (MockMvc + `@MockitoBean` nos services). Clientes HTTP
   externos: `MockRestServiceServer`, sem contexto Spring.
 - Ao adicionar migration: atualizar total e descrição da última em `FlywayMigrationIntegrationTest`.
+- Billing (`BillingServiceIntegrationTest`): as tabelas são globais, então cada teste cria **o próprio plano**
+  (código aleatório) além da paróquia; as datas são relativas a `billingService.hoje()`. O `BillingJob` fica
+  desligado no profile `test` (`servire.billing.job.enabled: false`).
 - Nomes de teste em português, descritivos (`atualizarComVersaoDivergenteLancaConflictException`).

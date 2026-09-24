@@ -1835,6 +1835,27 @@ Rotas (todas `PERM_BACKOFFICE`): `GET/POST /admin/planos`,
 `POST /admin/paroquias/{id}/cobrancas/{cid}/estornar` e `/isentar`.
 `POST /admin/paroquias/{id}/marcar-pago` **foi removido**.
 
+Detalhes que pegam:
+- "Hoje" do vencimento é o dia do Brasil: bean `Clock` em
+  `America/Sao_Paulo` (`BillingConfiguration`), não UTC. Depois das 21h
+  de Brasília o UTC já virou o dia, e uma cobrança venceria antes da hora.
+- "Vencida" não é status gravado: é `ABERTA` com `vencimento < hoje`.
+  Estornar um pagamento antigo faz a cobrança voltar a aparecer vencida.
+- O job liga e desliga por `servire.billing.job.enabled` (padrão
+  ligado; `false` no profile `test`).
+- Estornar não mexe no status nem na vigência da paróquia; ajuste à mão
+  se for o caso.
+- As telas (Financeiro na ficha da paróquia e `/admin/planos`) estão no
+  `servire-api-front`.
+
+⚠️ **Pendência de segurança encontrada nesta rodada (não corrigida):**
+as tabelas criadas de V016 em diante (`tenant`, `usuario`,
+`usuario_tenant`, `refresh_token`, `password_reset_token`, `audit_log`,
+`backoffice_log`...) **não têm RLS**. No Supabase, tabela em `public`
+sem RLS pode ser lida e gravada pela Data API com a chave anon. As da
+V029 já nascem com RLS. Falta uma migration que ligue RLS (sem policy)
+nas outras e a conferência de que a Data API está exposta em prod.
+
 ✅ Confirmado nesta máquina em 23/09/2026: `mvn verify` com
 `BUILD SUCCESS`, `Tests run: 183, Failures: 0, Errors: 0` (19 novos em
 `BillingServiceIntegrationTest`, 2 em `MethodSecurityIntegrationTest`).
