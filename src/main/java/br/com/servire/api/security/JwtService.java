@@ -53,6 +53,7 @@ public class JwtService {
     static final String PURPOSE_ACCESS = "access";
     static final String PURPOSE_TENANT_SELECTION = "tenant_selection";
     static final String PURPOSE_BACKOFFICE = "backoffice";
+    static final String PURPOSE_SUPORTE_APP = "suporte_app";
     static final String CLAIM_TENANT = "tenant";
     static final String CLAIM_ROLES = "roles";
     static final String CLAIM_SUPORTE = "suporte";
@@ -101,6 +102,37 @@ public class JwtService {
             builder.claim(CLAIM_SUPORTE, true);
         }
         return builder.compact();
+    }
+
+    /** Sessão curta da Central, sem refresh e sem exigir operador_saas. */
+    public String gerarTokenSuporte(UUID codigoId, UUID tenantId, String operadorNome, String operadorEmail, String motivo) {
+        Instant agora = Instant.now();
+        return Jwts.builder()
+                .subject(codigoId.toString())
+                .claim(CLAIM_TENANT, tenantId.toString())
+                .claim(CLAIM_PURPOSE, PURPOSE_SUPORTE_APP)
+                .claim("operadorNome", operadorNome)
+                .claim("operadorEmail", operadorEmail)
+                .claim("motivo", motivo)
+                .issuedAt(Date.from(agora))
+                .expiration(Date.from(agora.plusSeconds(suporteTtlSegundos())))
+                .signWith(key)
+                .compact();
+    }
+
+    public long suporteTtlSegundos() {
+        return 1800;
+    }
+
+    public SuporteAppClaims validarTokenSuporte(String token) {
+        Claims claims = parseClaims(token);
+        exigirPurpose(claims, PURPOSE_SUPORTE_APP);
+        return new SuporteAppClaims(
+                parseUuidClaim(claims.getSubject(), "sub"),
+                parseUuidClaim(String.valueOf(claims.get(CLAIM_TENANT)), CLAIM_TENANT),
+                claims.get("operadorNome", String.class),
+                claims.get("operadorEmail", String.class),
+                claims.get("motivo", String.class));
     }
 
     public String gerarBackofficeToken(UUID usuarioId) {
@@ -211,5 +243,8 @@ public class JwtService {
     }
 
     public record AccessTokenClaims(UUID usuarioId, UUID tenantId, UsuarioTenant.Role role, boolean suporte) {
+    }
+
+    public record SuporteAppClaims(UUID codigoId, UUID tenantId, String operadorNome, String operadorEmail, String motivo) {
     }
 }

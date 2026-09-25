@@ -47,6 +47,9 @@ public class PasswordResetToken {
     @Column(name = "used_at")
     private Instant usedAt;
 
+    @Column(nullable = false)
+    private String finalidade = "RESET";
+
     protected PasswordResetToken() {
         // JPA
     }
@@ -83,6 +86,10 @@ public class PasswordResetToken {
 
     public void setUsedAt(Instant usedAt) {
         this.usedAt = usedAt;
+    }
+
+    public void setFinalidade(String finalidade) {
+        this.finalidade = finalidade;
     }
 
     public boolean isUsado() {

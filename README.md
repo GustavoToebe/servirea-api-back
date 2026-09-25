@@ -24,9 +24,9 @@ exercitando `/pessoas` e `/escalas` via HTTP com JWT real).
 | Escalas (`/escalas/**`) | Pronto | Eventos, vagas, presença, picker, alocação. Front já usa a API |
 | Storage | Pronto | Bucket privado `voluntarios-fotos` |
 | Auditoria | Pronto | `GET /audit-log` (ADMIN da paróquia) |
-| Backoffice (`/admin/**`) | Pronto | Operador SaaS, paróquias, suporte |
-| Billing | Manual | Planos, assinatura, cobrança, PIX manual. Sem gateway / bloqueio automático |
-| Front Angular | Migrado | Login JWT, `/pessoas`, inscrições e escalas pela API. Sem Supabase direto para dados |
+| Perfis e usuários | Etapa 1 | `/perfis`, `/usuarios` (convite, sem senha no formulário), `/me` |
+| Integração Central | Etapa 2 | `/integracao/v1` com HMAC. Sem chave configurada, a rota recusa; sem `direitos_locais`, a paróquia segue no status do tenant |
+| Front Angular | Migrado | Login JWT, `/pessoas`, inscrições, escalas, perfis, usuários e meu perfil. O painel `/admin` saiu |
 
 ## Cadastro pessoa-primeiro — contrato para o Angular
 

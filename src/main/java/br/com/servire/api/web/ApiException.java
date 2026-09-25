@@ -28,4 +28,9 @@ public abstract class ApiException extends RuntimeException {
     public HttpStatus getStatus() {
         return status;
     }
+
+    /** Código estável para a máquina. Nulo no restante da API. */
+    public String getCodigo() {
+        return null;
+    }
 }

@@ -47,4 +47,19 @@ public class LoggingEmailSender implements EmailSender {
         log.debug("[STUB — sem provedor de e-mail configurado, ver javadoc de LoggingEmailSender] "
                 + "Link de reset de senha para {}: {}", destinatario, linkComToken);
     }
+
+    @Override
+    public void enviarConvite(String destinatario, String linkComToken) {
+        log.debug("[STUB] Convite para {}: {}", destinatario, linkComToken);
+    }
+
+    @Override
+    public void enviarAvisoAcesso(String destinatario, String nomeParoquia) {
+        log.debug("[STUB] Acesso concedido a {} na paróquia {}", destinatario, nomeParoquia);
+    }
+
+    @Override
+    public void enviarAlertaIntegracao(String destinatario, String mensagem) {
+        log.debug("[STUB] Alerta de integração para {}: {}", destinatario, mensagem);
+    }
 }

@@ -94,6 +94,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // De 30 para 31 em 24/09/2026: V031 (papéis flexíveis).
         // De 31 para 32 em 24/09/2026: V032 (drop do enum pessoa_papel).
         // De 32 para 34 em 25/09/2026: V033 (MESC) e V034 (mandato e diocese).
+        // De 34 para 36 em 25/09/2026: V035 (perfis e convite) e V036 (integracao v1).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -102,10 +103,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(34);
-        assertThat(sucesso).isEqualTo(34);
+        assertThat(total).isEqualTo(36);
+        assertThat(sucesso).isEqualTo(36);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("mandato e diocese");
+        assertThat(descricoes.getLast()).isEqualTo("integracao v1");
     }
 
     @Test

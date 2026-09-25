@@ -101,7 +101,7 @@ class JwtAuthenticationFilterIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(get("/admin/paroquias")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
 
         mockMvc.perform(get("/voluntarios")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -142,7 +142,7 @@ class JwtAuthenticationFilterIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(get("/admin/paroquias")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
 
     private Usuario operador(String rotulo) {

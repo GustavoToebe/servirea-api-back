@@ -46,7 +46,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApiException(ApiException ex, HttpServletRequest request) {
         log.warn("Erro de negócio tratado: status={} message={}", ex.getStatus(), ex.getMessage());
-        return build(ex.getStatus(), ex.getMessage(), request, null);
+        return build(ex.getStatus(), ex.getMessage(), ex.getCodigo(), request, null);
     }
 
     /**
@@ -63,7 +63,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiError> handleOptimisticLocking(ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
         log.warn("Conflito de edição concorrente (controle otimista): {}", ex.getMessage());
-        return build(HttpStatus.CONFLICT, "A escala foi alterada por outro usuário. Atualize a página.", request, null);
+        return build(HttpStatus.CONFLICT, "A escala foi alterada por outro usuário. Atualize a página.", null, request, null);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -71,7 +71,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         List<ApiError.FieldError> fieldErrors = ex.getConstraintViolations().stream()
                 .map(v -> new ApiError.FieldError(v.getPropertyPath().toString(), v.getMessage()))
                 .toList();
-        return build(HttpStatus.BAD_REQUEST, "Requisição inválida.", request, fieldErrors);
+        return build(HttpStatus.BAD_REQUEST, "Requisição inválida.", "DADOS_INVALIDOS", request, fieldErrors);
     }
 
     /**
@@ -133,7 +133,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         log.error("Erro não tratado ao processar requisição", ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Ocorreu um erro inesperado. Tente novamente ou contate o suporte informando o requestId.",
-                request, null);
+                null, request, null);
     }
 
     @Override
@@ -144,7 +144,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .toList();
         HttpServletRequest httpRequest = ((org.springframework.web.context.request.ServletWebRequest) request)
                 .getRequest();
-        ApiError body = buildBody(HttpStatus.BAD_REQUEST, "Um ou mais campos são inválidos.", httpRequest, fieldErrors);
+        ApiError body = buildBody(HttpStatus.BAD_REQUEST, "Um ou mais campos são inválidos.", "DADOS_INVALIDOS", httpRequest, fieldErrors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
@@ -153,7 +153,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         HttpServletRequest httpRequest = ((org.springframework.web.context.request.ServletWebRequest) request)
                 .getRequest();
-        ApiError body = buildBody(HttpStatus.BAD_REQUEST, "Corpo da requisição malformado ou ilegível.", httpRequest, null);
+        ApiError body = buildBody(HttpStatus.BAD_REQUEST, "Corpo da requisição malformado ou ilegível.", "DADOS_INVALIDOS", httpRequest, null);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
@@ -161,18 +161,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ApiError.FieldError(fe.getField(), fe.getDefaultMessage());
     }
 
-    private ResponseEntity<ApiError> build(HttpStatus status, String message, HttpServletRequest request,
+    private ResponseEntity<ApiError> build(HttpStatus status, String message, String codigo, HttpServletRequest request,
                                             List<ApiError.FieldError> fieldErrors) {
-        return ResponseEntity.status(status).body(buildBody(status, message, request, fieldErrors));
+        return ResponseEntity.status(status).body(buildBody(status, message, codigo, request, fieldErrors));
     }
 
-    private ApiError buildBody(HttpStatus status, String message, HttpServletRequest request,
+    private ApiError buildBody(HttpStatus status, String message, String codigo, HttpServletRequest request,
                                 List<ApiError.FieldError> fieldErrors) {
         return new ApiError(
                 Instant.now(),
                 status.value(),
                 status.name(),
                 message,
+                codigo,
                 request != null ? request.getRequestURI() : null,
                 MDC.get(br.com.servire.api.web.RequestIdFilter.MDC_KEY),
                 fieldErrors

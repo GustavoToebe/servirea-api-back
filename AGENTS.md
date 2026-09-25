@@ -55,27 +55,27 @@ seção "Onde está o código (disco + GitHub)".
 | `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila `/inscricoes/**`; aprovar materializa `Pessoa` e reusa RESPONSAVEL por e-mail principal |
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
-| `backoffice/` | painel do operador do SaaS (`/admin/**`): login sem tenant, paróquias, logins, logs globais, sessão de suporte |
-| `billing/` | financeiro manual do painel: `Plano`/`PrecoPlano` (`/admin/planos`), `Assinatura`/`Cobranca` (`/admin/paroquias/{id}/financeiro`, pagamentos, estorno, isenção), `BillingJob` diário |
-| `diocese/` | catálogo global (`/admin/dioceses`): nome, UF e cota de servidores ativos. Paróquia liga por `tenant.diocese_id` |
+| `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me`. `PermissoesDaSessao` traduz o perfil (ou a role antiga, se `perfil_id` for nulo) nas `PERM_*` que os controllers já usam |
+| `integracao/` | contrato v1 com a Central: HMAC em `/integracao/**`, provisionamento idempotente, `direitos_locais`, webhook, sync de 8h, código de suporte |
+| `diocese/` | cota de servidores (`CotaDioceseService`). O catálogo `/admin/dioceses` saiu junto com o backoffice |
 
-Migrations: `src/main/resources/db/migration/V001..V032`. **V001–V015 são o baseline, nunca editar.**
+Migrations: `src/main/resources/db/migration/V001..V036`. **V001–V015 são o baseline, nunca editar.**
 Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`.
 **Produção está na V032** desde 24/09/2026 (banco recriado do zero por script manual, com `flyway_schema_history`
 gerado com os checksums reais — ver README, "Produção (banco)"). **Nunca editar migration já aplicada** (checksum
-diferente = a API não sobe). Daqui em diante tudo é `V033+` pelo Flyway.
+diferente = a API não sobe). V033/V034 (MESC, mandato, diocese) já estão no `main`. V035 (perfil e convite) e
+V036 (integração v1) são aditivas: as tabelas de billing continuam no banco até a Central existir para recebê-las.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
   `Tenant` e `Usuario` são globais. FKs compostas `(tenant_id, id)` no banco (V021).
 - Tenant vem **só do JWT** (`JwtAuthenticationFilter` → `TenantContext`). Nunca de body, path ou header.
-  Exceção deliberada: JWT `purpose=backoffice` não tem tenant (operador no painel). JWT de
-  suporte (`purpose=access` + `suporte=true`) seta o `TenantContext` da paróquia escolhida **sem**
-  `usuario_tenant` — só `operador_saas`, ação auditada em `backoffice_log`. Suporte **aceita
-  tenant `BLOQUEADO`** (Kill Switch normal negaria). `backoffice_log` é tabela **global**
-  (sem `@TenantId`); não “consertar” virando `audit_log`. Idem `plano`, `preco_plano`,
-  `assinatura` e `cobranca` (V029): `tenant_id` ali é FK comum vinda do path `/admin/paroquias/{id}`,
-  não `@TenantId`. Toda cobrança é buscada junto com o tenant do path (`findByIdInAndTenantId`).
+  Exceção deliberada: JWT `purpose=suporte_app` (código de uso único da Central) seta o
+  `TenantContext` da paróquia **sem** `usuario_tenant` e aceita paróquia bloqueada. A entrada
+  e as ações seguintes vão para `audit_log` com nome, e-mail e motivo do operador.
+  `perfil` é global (FK `tenant_id`, sem `@TenantId`) porque o filtro JWT lê fora de transação.
+  Sem linha em `direitos_locais`, o Kill Switch continua no status do tenant. Com a linha,
+  libera se `acesso_liberado` e a confirmação tiver no máximo a tolerância (72h).
   Idem `tenant_email`/`tenant_telefone` (V030): globais, sem `@TenantId`.
 - Sem `TenantContext`, o resolver devolve o sentinela `SEM_TENANT` (UUID zero): leituras vêm vazias e
   escritas falham por FK. Não "consertar" isso lançando exceção no resolver (quebra o bootstrap).

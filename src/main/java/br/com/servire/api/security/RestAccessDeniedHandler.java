@@ -44,6 +44,7 @@ public class RestAccessDeniedHandler implements AccessDeniedHandler {
                 HttpStatus.FORBIDDEN.value(),
                 HttpStatus.FORBIDDEN.name(),
                 "Acesso negado.",
+                null,
                 request.getRequestURI(),
                 MDC.get(RequestIdFilter.MDC_KEY),
                 null);

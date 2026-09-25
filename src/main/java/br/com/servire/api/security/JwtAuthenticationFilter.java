@@ -1,6 +1,11 @@
 package br.com.servire.api.security;
 
+import br.com.servire.api.acesso.PermissoesDaSessao;
 import br.com.servire.api.auth.Usuario;
+import br.com.servire.api.integracao.DireitosLocais;
+import br.com.servire.api.integracao.DireitosLocaisRepository;
+import br.com.servire.api.integracao.IntegracaoProperties;
+import br.com.servire.api.integracao.SuporteSessao;
 import br.com.servire.api.auth.UsuarioRepository;
 import br.com.servire.api.auth.UsuarioTenant;
 import br.com.servire.api.auth.UsuarioTenantRepository;
@@ -22,6 +27,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -77,15 +84,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioTenantRepository usuarioTenantRepository;
     private final TenantRepository tenantRepository;
+    private final DireitosLocaisRepository direitosLocaisRepository;
+    private final IntegracaoProperties integracaoProperties;
 
     public JwtAuthenticationFilter(JwtService jwtService,
                                     UsuarioRepository usuarioRepository,
                                     UsuarioTenantRepository usuarioTenantRepository,
-                                    TenantRepository tenantRepository) {
+                                    TenantRepository tenantRepository,
+                                    DireitosLocaisRepository direitosLocaisRepository,
+                                    IntegracaoProperties integracaoProperties) {
         this.jwtService = jwtService;
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
         this.tenantRepository = tenantRepository;
+        this.direitosLocaisRepository = direitosLocaisRepository;
+        this.integracaoProperties = integracaoProperties;
     }
 
     @Override
@@ -113,6 +126,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } finally {
             MDC.remove(MDC_KEY);
             TenantContext.clear();
+            SuporteSessao.clear();
         }
     }
 
@@ -138,6 +152,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (JwtService.PURPOSE_BACKOFFICE.equals(purpose)) {
             return autenticarBackoffice(token);
+        }
+        if (JwtService.PURPOSE_SUPORTE_APP.equals(purpose)) {
+            return autenticarSuporteApp(token);
         }
         if (JwtService.PURPOSE_ACCESS.equals(purpose)) {
             return autenticarAccess(token);
@@ -177,16 +194,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         Optional<UsuarioTenant> vinculo =
-                usuarioTenantRepository.findByUsuario_IdAndTenant_Id(claims.usuarioId(), claims.tenantId());
+                usuarioTenantRepository.findComPerfilByUsuario_IdAndTenant_Id(claims.usuarioId(), claims.tenantId());
         if (vinculo.isEmpty() || vinculo.get().getStatus() != UsuarioTenant.Status.ATIVO) {
             return Optional.empty();
         }
 
-        // tenant precisa já vir inicializado pelo repositório (EntityGraph
-        // em findByUsuario_IdAndTenant_Id) — este filtro não é @Transactional
-        // e open-in-view está desligado.
+        // tenant e perfil precisam já vir inicializados pelo repositório
+        // (EntityGraph) — este filtro não é @Transactional e open-in-view
+        // está desligado.
         Tenant tenant = vinculo.get().getTenant();
-        if (tenant.getStatus() != Tenant.Status.ATIVO && tenant.getStatus() != Tenant.Status.TRIAL) {
+        if (!paroquiaLiberada(tenant)) {
             return Optional.empty();
         }
 
@@ -208,6 +225,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return Optional.of(AuthenticatedUser.suporte(usuario.getId(), claims.tenantId()));
     }
 
+    /** Código de uso único da Central. Aceita paróquia bloqueada. */
+    private Optional<AuthenticatedUser> autenticarSuporteApp(String token) {
+        JwtService.SuporteAppClaims claims;
+        try {
+            claims = jwtService.validarTokenSuporte(token);
+        } catch (RuntimeException e) {
+            return Optional.empty();
+        }
+        if (!tenantRepository.existsById(claims.tenantId())) {
+            return Optional.empty();
+        }
+        SuporteSessao.set(new SuporteSessao.Dados(claims.operadorNome(), claims.operadorEmail(), claims.motivo()));
+        return Optional.of(AuthenticatedUser.suporte(claims.codigoId(), claims.tenantId()));
+    }
+
+    /**
+     * Sem linha em {@code direitos_locais}, vale o status do tenant (a
+     * Central ainda não provisionou esta paróquia). Com a linha, obedece
+     * a Central e a tolerância de 72h.
+     */
+    private boolean paroquiaLiberada(Tenant tenant) {
+        Optional<DireitosLocais> direitos = direitosLocaisRepository.findById(tenant.getId());
+        if (direitos.isEmpty()) {
+            return tenant.getStatus() == Tenant.Status.ATIVO || tenant.getStatus() == Tenant.Status.TRIAL;
+        }
+        DireitosLocais locais = direitos.get();
+        return locais.isAcessoLiberado()
+                && !Instant.now().isAfter(locais.getConfirmadoEm().plus(integracaoProperties.tolerancia(), ChronoUnit.HOURS));
+    }
+
     /**
      * Monta as {@link GrantedAuthority} do usuário autenticado (seção 31 do
      * plano mestre). Operador no painel recebe só {@code PERM_BACKOFFICE}
@@ -221,10 +268,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             authorities.add(new SimpleGrantedAuthority("PERM_BACKOFFICE"));
             return authorities;
         }
-        authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.role().name()));
-        for (Permissao permissao : RolePermissoes.de(usuario.role())) {
-            authorities.add(new SimpleGrantedAuthority("PERM_" + permissao.name()));
+        if (usuario.suporte()) {
+            return PermissoesDaSessao.acessoTotal();
         }
-        return authorities;
+        return usuarioTenantRepository
+                .findComPerfilByUsuario_IdAndTenant_Id(usuario.usuarioId(), usuario.tenantId())
+                .map(PermissoesDaSessao::de)
+                .orElseGet(() -> {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.role().name()));
+                    for (Permissao permissao : RolePermissoes.de(usuario.role())) {
+                        authorities.add(new SimpleGrantedAuthority("PERM_" + permissao.name()));
+                    }
+                    return authorities;
+                });
     }
 }

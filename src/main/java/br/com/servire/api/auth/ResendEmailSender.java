@@ -91,6 +91,45 @@ public class ResendEmailSender implements EmailSender {
         }
     }
 
+    @Override
+    public void enviarConvite(String destinatario, String linkComToken) {
+        enviar(destinatario, "Convite — Servire",
+                "<p>Você foi convidado a acessar o Servire. Defina sua senha neste link:</p><p><a href=\""
+                        + linkComToken + "\">" + linkComToken + "</a></p>");
+    }
+
+    @Override
+    public void enviarAvisoAcesso(String destinatario, String nomeParoquia) {
+        enviar(destinatario, "Acesso concedido — Servire",
+                "<p>Seu usuário agora também acessa a paróquia " + nomeParoquia + ".</p>");
+    }
+
+    @Override
+    public void enviarAlertaIntegracao(String destinatario, String mensagem) {
+        enviar(destinatario, "Servire sem confirmação da Central", "<p>" + mensagem + "</p>");
+    }
+
+    private void enviar(String destinatario, String assunto, String html) {
+        requireConfigurado();
+        Map<String, Object> corpo = Map.of(
+                "from", properties.from(),
+                "to", destinatario,
+                "subject", assunto,
+                "html", html);
+        try {
+            restClient.post()
+                    .uri(properties.apiUrl())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(corpo)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientException e) {
+            log.error("Falha ao enviar e-mail via Resend para {}", destinatario, e);
+            throw new EmailException("Não foi possível enviar o e-mail no momento.", e);
+        }
+    }
+
     private String corpoHtml(String linkComToken) {
         return "<p>Você pediu para redefinir sua senha no Servire.</p>"
                 + "<p><a href=\"" + linkComToken + "\">Clique aqui para escolher uma nova senha</a>.</p>"

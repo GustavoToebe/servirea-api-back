@@ -57,6 +57,7 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
                 HttpStatus.UNAUTHORIZED.value(),
                 HttpStatus.UNAUTHORIZED.name(),
                 "Autenticação necessária, ou token ausente/inválido/expirado.",
+                null,
                 request.getRequestURI(),
                 MDC.get(RequestIdFilter.MDC_KEY),
                 null);

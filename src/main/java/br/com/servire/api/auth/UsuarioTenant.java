@@ -1,5 +1,6 @@
 package br.com.servire.api.auth;
 
+import br.com.servire.api.acesso.Perfil;
 import br.com.servire.api.tenant.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
@@ -75,6 +76,10 @@ public class UsuarioTenant {
     @Column(nullable = false)
     private Role role;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "perfil_id")
+    private Perfil perfil;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
@@ -123,6 +128,14 @@ public class UsuarioTenant {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public Perfil getPerfil() {
+        return perfil;
+    }
+
+    public void setPerfil(Perfil perfil) {
+        this.perfil = perfil;
     }
 
     public Status getStatus() {

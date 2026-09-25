@@ -1,5 +1,6 @@
 package br.com.servire.api.audit;
 
+import br.com.servire.api.integracao.SuporteSessao;
 import br.com.servire.api.security.AuthenticatedUser;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.web.BadRequestException;
@@ -89,7 +90,14 @@ public class AuditLogService {
             return;
         }
         String[] campos = (changedFields == null || changedFields.isEmpty()) ? null : changedFields.toArray(new String[0]);
-        AuditLog registro = new AuditLog(usuarioAtualId(), acao, entidade, entidadeId, campos, ipAtual(), requestIdAtual());
+        UUID userId = usuarioAtualId();
+        String acaoFinal = acao;
+        SuporteSessao.Dados suporte = SuporteSessao.atual();
+        if (suporte != null) {
+            userId = null;
+            acaoFinal = acao + " [suporte " + suporte.nome() + " <" + suporte.email() + ">: " + suporte.motivo() + "]";
+        }
+        AuditLog registro = new AuditLog(userId, acaoFinal, entidade, entidadeId, campos, ipAtual(), requestIdAtual());
         auditLogRepository.save(registro);
     }
 

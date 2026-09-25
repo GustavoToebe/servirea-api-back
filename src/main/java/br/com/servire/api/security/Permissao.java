@@ -26,6 +26,36 @@ public enum Permissao {
      * Painel do operador do SaaS ({@code /admin/**}, seção 111). NÃO entra
      * no mapeamento das roles da paróquia — um ADMIN da paróquia não
      * acessa o backoffice. Concedida só pelo JWT {@code purpose=backoffice}.
+     * O backoffice saiu do Servire na etapa 1 da Central; o valor fica
+     * para um token antigo não virar permissão de paróquia por acidente.
      */
-    BACKOFFICE
+    BACKOFFICE,
+    PERFIL,
+    PERFIL_CRIAR,
+    PERFIL_ALTERAR,
+    USUARIO,
+    USUARIO_CRIAR,
+    USUARIO_ALTERAR,
+    USUARIO_REENVIAR_CONVITE,
+    PAROQUIA,
+    PAROQUIA_ALTERAR,
+    PESSOA,
+    PESSOA_CRIAR,
+    PESSOA_ALTERAR,
+    PESSOA_EXCLUIR,
+    PESSOA_ATIVAR_INATIVAR,
+    ESCALA,
+    ESCALA_CRIAR,
+    ESCALA_ALTERAR,
+    ESCALA_EXCLUIR,
+    ESCALA_FINALIZAR_REABRIR,
+    ESCALA_CANCELAR,
+    VAGA,
+    VAGA_ALOCAR,
+    VAGA_PRESENCA,
+    INSCRICAO,
+    INSCRICAO_ALTERAR,
+    INSCRICAO_APROVAR,
+    INSCRICAO_REJEITAR,
+    AUDITORIA
 }

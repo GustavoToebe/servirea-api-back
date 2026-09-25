@@ -3,11 +3,6 @@ package br.com.servire.api.security;
 import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.auth.UsuarioTenant;
-import br.com.servire.api.backoffice.BackofficeLogService;
-import br.com.servire.api.backoffice.BackofficeParoquiaService;
-import br.com.servire.api.backoffice.BackofficeUsuarioService;
-import br.com.servire.api.billing.BillingService;
-import br.com.servire.api.billing.PlanoService;
 import br.com.servire.api.escala.EscalaService;
 import br.com.servire.api.escala.EscalaVaga;
 import br.com.servire.api.inscricao.Inscricao;
@@ -119,21 +114,6 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
 
     @MockitoBean
     private TenantService tenantService;
-
-    @MockitoBean
-    private BackofficeParoquiaService backofficeParoquiaService;
-
-    @MockitoBean
-    private BackofficeUsuarioService backofficeUsuarioService;
-
-    @MockitoBean
-    private BackofficeLogService backofficeLogService;
-
-    @MockitoBean
-    private BillingService billingService;
-
-    @MockitoBean
-    private PlanoService planoService;
 
     @Test
     void semAutenticacaoRecebe401() throws Exception {
@@ -316,60 +296,6 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    @Test
-    void padreNaoAcessaBackoffice() throws Exception {
-        mockMvc.perform(get("/admin/paroquias").with(comoUsuario(UsuarioTenant.Role.ADMIN)))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void operadorAcessaBackofficeMasNaoVoluntariosSemTokenDeSuporte() throws Exception {
-        when(backofficeParoquiaService.listar(any())).thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/paroquias").with(comoOperador()))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get("/voluntarios").with(comoOperador()))
-                .andExpect(status().isForbidden());
-    }
-
-    /**
-     * Financeiro (V029): a role ADMIN da paróquia NÃO enxerga nem registra
-     * pagamento — nem o da própria paróquia. Só o JWT do operador.
-     */
-    @Test
-    void padreNaoAcessaFinanceiroNemPlanos() throws Exception {
-        UUID paroquia = UUID.randomUUID();
-        mockMvc.perform(get("/admin/paroquias/" + paroquia + "/financeiro")
-                        .with(comoUsuario(UsuarioTenant.Role.ADMIN)))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(post("/admin/paroquias/" + paroquia + "/pagamentos")
-                        .with(comoUsuario(UsuarioTenant.Role.ADMIN))
-                        .with(csrf())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cobrancaIds\":[\"" + UUID.randomUUID()
-                                + "\"],\"pagoEm\":\"2026-09-01\",\"formaPagamento\":\"PIX\"}"))
-                .andExpect(status().isForbidden());
-        mockMvc.perform(get("/admin/planos").with(comoUsuario(UsuarioTenant.Role.ADMIN)))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void operadorAcessaFinanceiroEPlanos() throws Exception {
-        when(planoService.listar()).thenReturn(List.of());
-
-        mockMvc.perform(get("/admin/paroquias/" + UUID.randomUUID() + "/financeiro").with(comoOperador()))
-                .andExpect(status().isOk());
-        mockMvc.perform(get("/admin/planos").with(comoOperador()))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void visualizadorNaoAcessaLogsDoBackoffice() throws Exception {
-        mockMvc.perform(get("/admin/logs").with(comoUsuario(UsuarioTenant.Role.VISUALIZADOR)))
-                .andExpect(status().isForbidden());
-    }
-
     /**
      * Monta a mesma {@link UsernamePasswordAuthenticationToken} que
      * {@link JwtAuthenticationFilter#doFilterInternal} monta a partir de um
@@ -386,12 +312,5 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
         }
         return SecurityMockMvcRequestPostProcessors.authentication(
                 new UsernamePasswordAuthenticationToken(usuario, null, authorities));
-    }
-
-    private RequestPostProcessor comoOperador() {
-        AuthenticatedUser usuario = AuthenticatedUser.backoffice(UUID.randomUUID());
-        return SecurityMockMvcRequestPostProcessors.authentication(
-                new UsernamePasswordAuthenticationToken(
-                        usuario, null, List.of(new SimpleGrantedAuthority("PERM_BACKOFFICE"))));
     }
 }

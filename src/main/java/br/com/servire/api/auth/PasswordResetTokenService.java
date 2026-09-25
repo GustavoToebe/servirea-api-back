@@ -35,6 +35,16 @@ public class PasswordResetTokenService {
         return tokenBruto;
     }
 
+    @Transactional
+    public String gerarConvite(Usuario usuario) {
+        String tokenBruto = gerar(usuario);
+        repository.findByTokenHash(OpaqueTokenGenerator.hash(tokenBruto)).ifPresent(token -> {
+            token.setFinalidade("CONVITE");
+            repository.save(token);
+        });
+        return tokenBruto;
+    }
+
     /**
      * Valida e consome (marca como usado) o token — uso único: uma
      * segunda tentativa com o mesmo token, mesmo dentro da validade,

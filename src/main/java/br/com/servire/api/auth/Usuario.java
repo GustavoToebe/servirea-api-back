@@ -53,6 +53,11 @@ public class Usuario {
     @Column(name = "operador_saas", nullable = false)
     private boolean operadorSaas = false;
 
+    private String telefone;
+
+    @Column(name = "tipo_telefone")
+    private String tipoTelefone;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -110,6 +115,22 @@ public class Usuario {
 
     public void setOperadorSaas(boolean operadorSaas) {
         this.operadorSaas = operadorSaas;
+    }
+
+    public String getTelefone() {
+        return telefone;
+    }
+
+    public void setTelefone(String telefone) {
+        this.telefone = telefone;
+    }
+
+    public String getTipoTelefone() {
+        return tipoTelefone;
+    }
+
+    public void setTipoTelefone(String tipoTelefone) {
+        this.tipoTelefone = tipoTelefone;
     }
 
     public Instant getCreatedAt() {

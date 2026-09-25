@@ -1,5 +1,6 @@
 package br.com.servire.api.security;
 
+import br.com.servire.api.integracao.IntegracaoFiltro;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -102,7 +103,7 @@ public class SecurityConfig {
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "TRACE", "OPTIONS");
 
     private static final String[] ROTAS_PUBLICAS = {
-            "/auth/**", "/admin/auth/**", "/public/**", "/actuator/health", "/error"};
+            "/auth/**", "/admin/auth/**", "/public/**", "/integracao/**", "/actuator/health", "/error"};
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -131,6 +132,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                      JwtAuthenticationFilter jwtAuthenticationFilter,
+                                                     IntegracaoFiltro integracaoFiltro,
                                                      CorsConfigurationSource corsConfigurationSource,
                                                      RestAuthenticationEntryPoint authenticationEntryPoint,
                                                      RestAccessDeniedHandler accessDeniedHandler,
@@ -145,6 +147,8 @@ public class SecurityConfig {
                                 "/auth/login", "/auth/select-tenant",
                                 "/auth/forgot-password", "/auth/reset-password",
                                 "/admin/auth/login",
+                                "/auth/suporte/trocar",
+                                "/integracao/**",
                                 "/public/**"))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exceptions -> exceptions
@@ -153,6 +157,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(ROTAS_PUBLICAS).permitAll()
                         .anyRequest().authenticated())
+                .addFilterBefore(integracaoFiltro, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

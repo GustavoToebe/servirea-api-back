@@ -24,6 +24,7 @@ public record ApiError(
         int status,
         String error,
         String message,
+        String codigo,
         String path,
         String requestId,
         List<FieldError> fieldErrors

@@ -98,6 +98,14 @@ servire:
       max-tentativas: 5
       janela: PT1H
 
+  integracao:
+    chaves-entrada: ${SERVIRE_INTEGRACAO_CHAVES_ENTRADA:}
+    chave-saida-id: ${SERVIRE_INTEGRACAO_CHAVE_SAIDA_ID:}
+    chave-saida-segredo: ${SERVIRE_INTEGRACAO_CHAVE_SAIDA_SEGREDO:}
+    central-url: ${SERVIRE_INTEGRACAO_CENTRAL_URL:}
+    tolerancia-horas: ${SERVIRE_INTEGRACAO_TOLERANCIA_HORAS:72}
+    alerta-email: ${SERVIRE_INTEGRACAO_ALERTA_EMAIL:}
+
 server:
   port: ${PORT:8080}
   # Dev/test: não confiar em X-Forwarded-For (um cliente forjaria o IP do

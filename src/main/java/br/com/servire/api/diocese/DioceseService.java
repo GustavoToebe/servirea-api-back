@@ -1,6 +1,5 @@
 package br.com.servire.api.diocese;
 
-import br.com.servire.api.backoffice.BackofficeLogService;
 import br.com.servire.api.diocese.dto.DioceseRequest;
 import br.com.servire.api.diocese.dto.DioceseResponse;
 import br.com.servire.api.web.ConflictException;
@@ -19,14 +18,11 @@ public class DioceseService {
 
     private final DioceseRepository dioceseRepository;
     private final CotaDioceseService cotaDioceseService;
-    private final BackofficeLogService backofficeLogService;
 
     public DioceseService(DioceseRepository dioceseRepository,
-                          CotaDioceseService cotaDioceseService,
-                          BackofficeLogService backofficeLogService) {
+                          CotaDioceseService cotaDioceseService) {
         this.dioceseRepository = dioceseRepository;
         this.cotaDioceseService = cotaDioceseService;
-        this.backofficeLogService = backofficeLogService;
     }
 
     @Transactional(readOnly = true)
@@ -45,7 +41,6 @@ public class DioceseService {
         } catch (DataIntegrityViolationException e) {
             throw new ConflictException("Já existe uma diocese com este nome.");
         }
-        backofficeLogService.registrar("CRIAR", "DIOCESE", diocese.getId(), null);
         return DioceseResponse.de(diocese, 0);
     }
 
@@ -59,7 +54,6 @@ public class DioceseService {
         } catch (DataIntegrityViolationException e) {
             throw new ConflictException("Já existe uma diocese com este nome.");
         }
-        backofficeLogService.registrar("ATUALIZAR", "DIOCESE", diocese.getId(), null);
         return DioceseResponse.de(diocese, cotaDioceseService.uso(diocese.getId()));
     }
 

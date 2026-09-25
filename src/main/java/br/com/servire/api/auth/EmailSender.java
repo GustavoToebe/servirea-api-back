@@ -10,4 +10,10 @@ package br.com.servire.api.auth;
 public interface EmailSender {
 
     void enviarLinkResetSenha(String destinatario, String linkComToken);
+
+    void enviarConvite(String destinatario, String linkComToken);
+
+    void enviarAvisoAcesso(String destinatario, String nomeParoquia);
+
+    void enviarAlertaIntegracao(String destinatario, String mensagem);
 }

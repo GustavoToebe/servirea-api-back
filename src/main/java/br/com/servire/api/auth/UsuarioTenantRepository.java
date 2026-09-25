@@ -28,4 +28,16 @@ public interface UsuarioTenantRepository extends JpaRepository<UsuarioTenant, Us
      */
     @EntityGraph(attributePaths = "tenant")
     Optional<UsuarioTenant> findByUsuario_IdAndTenant_Id(UUID usuarioId, UUID tenantId);
+
+    @EntityGraph(attributePaths = {"tenant", "perfil", "perfil.permissoes"})
+    Optional<UsuarioTenant> findComPerfilByUsuario_IdAndTenant_Id(UUID usuarioId, UUID tenantId);
+
+    @EntityGraph(attributePaths = {"usuario", "perfil"})
+    List<UsuarioTenant> findComUsuarioByTenant_Id(UUID tenantId);
+
+    long countByPerfil_IdAndStatus(UUID perfilId, UsuarioTenant.Status status);
+
+    long countByTenant_IdAndStatusAndPerfil_AcessoTotalTrue(UUID tenantId, UsuarioTenant.Status status);
+
+    long countByTenant_IdAndStatus(UUID tenantId, UsuarioTenant.Status status);
 }
