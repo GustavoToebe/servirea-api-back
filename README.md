@@ -169,7 +169,7 @@ Documents/servire/
 GitHub: [servire-api-back](https://github.com/GustavoToebe/servire-api-back),
 [servire-api-front](https://github.com/GustavoToebe/servire-api-front).
 
-Stack: Java 21 · Spring Boot 4.1.1 · Hibernate 7.4 · PostgreSQL 16 ·
+Stack: Java 21 · Spring Boot 4.1.1 · Hibernate 7.4 · PostgreSQL 17 (Supabase) ·
 Flyway V001–V037 · JJWT 0.13 · Testcontainers 2.x.
 
 ## Próximos passos

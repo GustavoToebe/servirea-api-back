@@ -26,7 +26,7 @@ o `CLAUDE.md` só importa este (`@AGENTS.md`). Edite **só aqui**.
 
 ## Stack
 Java 21 · Spring Boot **4.1.1** (Spring Framework 7, Security 7, Jakarta EE 11) · Hibernate 7.4 ·
-PostgreSQL 16 (Supabase em prod) · Flyway · JJWT 0.13 · Testcontainers 2.x · Maven (sem wrapper).
+PostgreSQL 17 (Supabase em prod: 17.6 em 25/09/2026) · Flyway · JJWT 0.13 · Testcontainers 2.x · Maven (sem wrapper).
 Virtual Threads ligadas; Spring MVC síncrono (nada de WebFlux).
 
 ## Comandos
@@ -163,7 +163,8 @@ V037 tira a cota da diocese (gatilho, `tenant.voluntarios_ativos` e `diocese.cot
   não existe mais no app (coluna `usuario.operador_saas` fica no banco até o corte, sem mapeamento).
 
 ## Testes (`src/test/java/...`)
-- Integração estende `AbstractIntegrationTest`: um Postgres 16 singleton (sem `@Container`, de propósito),
+- Integração estende `AbstractIntegrationTest`: um Postgres 17 singleton (sem `@Container`, de propósito;
+  mesma versão major da produção — ao atualizar o Supabase, atualizar a imagem junto),
   stub do Supabase aplicado uma vez, profile `test` (e-mail fixo em `log`, storage/turnstile vazios).
 - Cada teste cria seu **próprio tenant descartável** com `codigo`/`slug` aleatórios e faz
   `TenantContext.set(...)` no `@BeforeEach` / `clear()` no `@AfterEach`. Não há rollback automático.

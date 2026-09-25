@@ -15,7 +15,7 @@ import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Base para testes de integração: sobe um PostgreSQL 16 real via
+ * Base para testes de integração: sobe um PostgreSQL 17 real via
  * Testcontainers (seção 77 do plano mestre — "Integração: Testcontainers
  * PostgreSQL"), com o container compartilhado ("singleton container
  * pattern") entre TODAS as subclasses/classes de teste do módulo, para não
@@ -92,7 +92,7 @@ public abstract class AbstractIntegrationTest {
 
     private static final AtomicBoolean SUPABASE_STUB_APPLIED = new AtomicBoolean(false);
 
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine")
             .withDatabaseName("servire_test")
             .withUsername("servire_test")
             .withPassword("servire_test");

@@ -2187,7 +2187,7 @@ mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
 >
 > ```powershell
 > # 1) Sobe um Postgres local descartável (só precisa rodar uma vez)
-> docker run --name servire-dev-db -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=servire_dev -p 5432:5432 -d postgres:16
+> docker run --name servire-dev-db -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=servire_dev -p 5432:5432 -d postgres:17
 >
 > # 2) Aplica o stub que simula o mínimo do Supabase (auth.users, storage.*,
 > #    os três roles) — mesmo arquivo usado pelos testes de integração via
