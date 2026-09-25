@@ -9,7 +9,7 @@ e commits: **português**.
 - Referência de produto/arquitetura: `plano_mestre_servire_v2_mvp_baixo_custo.md` (~4000 linhas).
   O código cita "seção N" desse arquivo o tempo todo — use `grep -n "^# N\." ` para achar.
 - Estado atual (módulos, contrato do front, como rodar): `README.md`.
-- Histórico de fases, decisões e bugs reais (#1–#26): `HISTORICO.md`. Atenção: a
+- Histórico de fases, decisões e bugs reais (#1–#28): `HISTORICO.md`. Atenção: a
   numeração de "Fase 11" dali (permissões/faltas/disponibilidade/auditoria/e-mail)
   **não** é a "FASE 11 — Backoffice" da seção 111 do plano mestre.
 
@@ -59,8 +59,11 @@ seção "Onde está o código (disco + GitHub)".
 | `billing/` | financeiro manual do painel: `Plano`/`PrecoPlano` (`/admin/planos`), `Assinatura`/`Cobranca` (`/admin/paroquias/{id}/financeiro`, pagamentos, estorno, isenção), `BillingJob` diário |
 | `diocese/` | catálogo global (`/admin/dioceses`): nome, UF e cota de servidores ativos. Paróquia liga por `tenant.diocese_id` |
 
-Migrations: `src/main/resources/db/migration/V001..V034`. **V001–V015 são o baseline, nunca editar.**
-Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`. V033: `MESC` em `tipo_voluntario` (fora de transação). V034: `voluntarios.mandato_inicio`/`mandato_fim`, tabela global `diocese` (`cota_voluntarios` nulo = sem teto) e `tenant.diocese_id` + `voluntarios_ativos` (trigger). A cota só impede **novo** ativo acima do teto; não desativa quem já está. **Não aplicar V030–V034 em produção** sem o front correspondente e um ensaio numa cópia do banco real.
+Migrations: `src/main/resources/db/migration/V001..V032`. **V001–V015 são o baseline, nunca editar.**
+Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`.
+**Produção está na V032** desde 24/09/2026 (banco recriado do zero por script manual, com `flyway_schema_history`
+gerado com os checksums reais — ver README, "Produção (banco)"). **Nunca editar migration já aplicada** (checksum
+diferente = a API não sobe). Daqui em diante tudo é `V033+` pelo Flyway.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
@@ -140,6 +143,12 @@ Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + cont
   parâmetro** (`c.status = :status`), nunca literal (`Cobranca.Status.ABERTA`): o literal vira
   `cast(... as status)` (nome da classe Java) e quebra com `type "status" does not exist`.
 - Coluna `smallint` não valida contra campo `int` (`ddl-auto: validate`); use `integer`.
+- SQL manual em produção vai pelo `psql`, não pelo SQL Editor do Supabase: o botão "Run and enable RLS"
+  corrompe blocos `DO $$`. Em PL/pgSQL, prefira `var := (SELECT ...)` a `SELECT ... INTO var` (o editor lê como
+  criação de tabela).
+- `inscricoes.aprovado_por`/`rejeitado_por` e `escalas.created_by` apontam para `public.usuario` (V023); no
+  banco antigo eram ids do Supabase Auth. Migrar dado antigo exige criar o `usuario` com o mesmo id antes.
+- Segredo nunca vai para `.env.example` (é versionado): só o nome da variável, valor vazio.
 - Tabela nova em `public` (que não seja tenant-aware com policy): `ENABLE ROW LEVEL SECURITY` sem
   policy, senão a Data API do Supabase (chave anon) lê/grava. A API Java é dona das tabelas e não é afetada.
 - Bloqueio por atraso é **manual**: `BillingJob` só gera cobranças, nunca bloqueia paróquia
