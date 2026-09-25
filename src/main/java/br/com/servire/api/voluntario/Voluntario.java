@@ -17,6 +17,7 @@ import org.hibernate.annotations.TenantId;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -72,6 +73,12 @@ public class Voluntario {
 
     @Column(name = "autoriza_whatsapp", nullable = false)
     private boolean autorizaWhatsapp = false;
+
+    @Column(name = "mandato_inicio")
+    private LocalDate mandatoInicio;
+
+    @Column(name = "mandato_fim")
+    private LocalDate mandatoFim;
 
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Enumerated(EnumType.STRING)
@@ -166,6 +173,22 @@ public class Voluntario {
 
     public void setAutorizaWhatsapp(boolean autorizaWhatsapp) {
         this.autorizaWhatsapp = autorizaWhatsapp;
+    }
+
+    public LocalDate getMandatoInicio() {
+        return mandatoInicio;
+    }
+
+    public void setMandatoInicio(LocalDate mandatoInicio) {
+        this.mandatoInicio = mandatoInicio;
+    }
+
+    public LocalDate getMandatoFim() {
+        return mandatoFim;
+    }
+
+    public void setMandatoFim(LocalDate mandatoFim) {
+        this.mandatoFim = mandatoFim;
     }
 
     public FuncaoEscala[] getFuncoesHabilitadas() {

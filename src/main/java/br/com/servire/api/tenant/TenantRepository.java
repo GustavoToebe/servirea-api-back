@@ -3,6 +3,8 @@ package br.com.servire.api.tenant;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -24,4 +26,8 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecif
     boolean existsBySlug(String slug);
 
     long countByStatus(Tenant.Status status);
+
+    /** Soma o espelho {@code voluntarios_ativos} das paróquias da diocese. */
+    @Query("SELECT COALESCE(SUM(t.voluntariosAtivos), 0) FROM Tenant t WHERE t.diocese.id = :dioceseId")
+    long somarVoluntariosAtivos(@Param("dioceseId") UUID dioceseId);
 }

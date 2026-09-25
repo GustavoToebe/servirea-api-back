@@ -10,5 +10,7 @@ package br.com.servire.api.voluntario;
 public enum TipoVoluntario {
     COROINHA,
     ACOLITO,
-    AMBOS
+    AMBOS,
+    /** Ministro extraordinário da Sagrada Comunhão. */
+    MESC
 }

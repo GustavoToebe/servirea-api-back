@@ -27,6 +27,8 @@ public record ParoquiaAdminResponse(
         String cep,
         String cidade,
         String uf,
+        UUID dioceseId,
+        String dioceseNome,
         String bairro,
         String logradouro,
         String numero,
@@ -53,6 +55,8 @@ public record ParoquiaAdminResponse(
                         .map(tel -> new ContatoTelefoneResponse(tel.getId(), tel.getTipo(), tel.getNumero(), tel.isPrincipal()))
                         .toList(),
                 t.getCep(), t.getCidade(), t.getUf(),
+                t.getDiocese() == null ? null : t.getDiocese().getId(),
+                t.getDiocese() == null ? null : t.getDiocese().getNome(),
                 t.getBairro(), t.getLogradouro(), t.getNumero(), t.getComplemento(),
                 t.getObservacoes(), t.getUltimoPagamentoEm(), t.getVigenciaAte(),
                 t.getCreatedAt(),

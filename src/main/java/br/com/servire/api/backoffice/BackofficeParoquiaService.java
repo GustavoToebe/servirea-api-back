@@ -1,5 +1,8 @@
 package br.com.servire.api.backoffice;
 
+import br.com.servire.api.diocese.CotaDioceseService;
+import br.com.servire.api.diocese.Diocese;
+import br.com.servire.api.diocese.DioceseRepository;
 import br.com.servire.api.auth.RefreshTokenService;
 import br.com.servire.api.auth.Usuario;
 import br.com.servire.api.auth.UsuarioRepository;
@@ -22,6 +25,7 @@ import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantEmail;
 import br.com.servire.api.tenant.TenantRepository;
 import br.com.servire.api.tenant.TenantTelefone;
+import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
@@ -60,6 +64,8 @@ public class BackofficeParoquiaService {
     private final RefreshTokenService refreshTokenService;
     private final SecurityProperties properties;
     private final BillingService billingService;
+    private final DioceseRepository dioceseRepository;
+    private final CotaDioceseService cotaDioceseService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -72,7 +78,9 @@ public class BackofficeParoquiaService {
                                       JwtService jwtService,
                                       RefreshTokenService refreshTokenService,
                                       SecurityProperties properties,
-                                      BillingService billingService) {
+                                      BillingService billingService,
+                                      DioceseRepository dioceseRepository,
+                                      CotaDioceseService cotaDioceseService) {
         this.tenantRepository = tenantRepository;
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
@@ -82,6 +90,8 @@ public class BackofficeParoquiaService {
         this.refreshTokenService = refreshTokenService;
         this.properties = properties;
         this.billingService = billingService;
+        this.dioceseRepository = dioceseRepository;
+        this.cotaDioceseService = cotaDioceseService;
     }
 
     @Transactional(readOnly = true)
@@ -105,17 +115,16 @@ public class BackofficeParoquiaService {
                 ? new FiltroParoquia(null, null, null, null, null, null, null, null, null, null, null)
                 : filtro;
         List<Tenant> tenants = tenantRepository.findAll(filtroSpec(efetivo, billingService.hoje()));
-        tenants.forEach(t -> {
-            t.getEmails().size();
-            t.getTelefones().size();
-        });
+        tenants.forEach(BackofficeParoquiaService::inicializar);
         return tenants;
     }
 
     @Transactional(readOnly = true)
     public Tenant buscar(UUID id) {
-        return tenantRepository.findById(id)
+        Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paróquia não encontrada."));
+        inicializar(tenant);
+        return tenant;
     }
 
     @Transactional
@@ -140,12 +149,14 @@ public class BackofficeParoquiaService {
         } catch (DataIntegrityViolationException e) {
             throw new ConflictException("Já existe uma paróquia com este código ou slug.");
         }
+        vincularDiocese(tenant, request.dioceseId());
 
         Usuario admin = garantirAdmin(request.admin(), tenant);
         usuarioTenantRepository.save(new UsuarioTenant(
                 admin, tenant, UsuarioTenant.Role.ADMIN, UsuarioTenant.Status.ATIVO));
 
         backofficeLogService.registrar("CRIAR", "TENANT", tenant.getId(), tenant.getId());
+        inicializar(tenant);
         return tenant;
     }
 
@@ -160,7 +171,9 @@ public class BackofficeParoquiaService {
         if (request.vigenciaAte() != null) {
             tenant.setVigenciaAte(request.vigenciaAte());
         }
+        vincularDiocese(tenant, request.dioceseId());
         backofficeLogService.registrar("ATUALIZAR", "TENANT", tenant.getId(), tenant.getId());
+        inicializar(tenant);
         return tenant;
     }
 
@@ -221,6 +234,27 @@ public class BackofficeParoquiaService {
             novo.setSenhaHash(passwordEncoder.encode(admin.senha()));
             return usuarioRepository.saveAndFlush(novo);
         });
+    }
+
+    private void vincularDiocese(Tenant tenant, UUID dioceseId) {
+        if (dioceseId == null) {
+            tenant.setDiocese(null);
+            return;
+        }
+        Diocese diocese = dioceseRepository.findById(dioceseId)
+                .orElseThrow(() -> new BadRequestException("Diocese não encontrada."));
+        long usoAntes = cotaDioceseService.uso(diocese.getId());
+        tenant.setDiocese(diocese);
+        tenantRepository.saveAndFlush(tenant);
+        cotaDioceseService.exigirContra(diocese, usoAntes);
+    }
+
+    private static void inicializar(Tenant tenant) {
+        tenant.getEmails().size();
+        tenant.getTelefones().size();
+        if (tenant.getDiocese() != null) {
+            tenant.getDiocese().getNome();
+        }
     }
 
     private static void aplicarIdentidade(Tenant tenant, String razaoSocial, String cnpj,

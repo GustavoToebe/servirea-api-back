@@ -57,9 +57,10 @@ seção "Onde está o código (disco + GitHub)".
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
 | `backoffice/` | painel do operador do SaaS (`/admin/**`): login sem tenant, paróquias, logins, logs globais, sessão de suporte |
 | `billing/` | financeiro manual do painel: `Plano`/`PrecoPlano` (`/admin/planos`), `Assinatura`/`Cobranca` (`/admin/paroquias/{id}/financeiro`, pagamentos, estorno, isenção), `BillingJob` diário |
+| `diocese/` | catálogo global (`/admin/dioceses`): nome, UF e cota de servidores ativos. Paróquia liga por `tenant.diocese_id` |
 
-Migrations: `src/main/resources/db/migration/V001..V032`. **V001–V015 são o baseline, nunca editar.**
-Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`. **Não aplicar V030–V032 em produção** sem o front em `/pessoas` e um ensaio do backfill numa cópia do banco real.
+Migrations: `src/main/resources/db/migration/V001..V034`. **V001–V015 são o baseline, nunca editar.**
+Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`. V033: `MESC` em `tipo_voluntario` (fora de transação). V034: `voluntarios.mandato_inicio`/`mandato_fim`, tabela global `diocese` (`cota_voluntarios` nulo = sem teto) e `tenant.diocese_id` + `voluntarios_ativos` (trigger). A cota só impede **novo** ativo acima do teto; não desativa quem já está. **Não aplicar V030–V034 em produção** sem o front correspondente e um ensaio numa cópia do banco real.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).

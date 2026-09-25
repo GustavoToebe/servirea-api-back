@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Provisionamento de cliente (seção 71): tenant em {@code TRIAL} +
@@ -30,6 +31,7 @@ public record CriarParoquiaRequest(
         String numero,
         String complemento,
         String observacoes,
+        UUID dioceseId,
         @NotNull @Valid AdminInicial admin
 ) {
 

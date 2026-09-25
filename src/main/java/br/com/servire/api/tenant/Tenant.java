@@ -1,5 +1,6 @@
 package br.com.servire.api.tenant;
 
+import br.com.servire.api.diocese.Diocese;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,6 +10,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -84,6 +87,14 @@ public class Tenant {
 
     @Column(name = "vigencia_ate")
     private LocalDate vigenciaAte;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "diocese_id")
+    private Diocese diocese;
+
+    /** Mantido pela trigger de {@code voluntarios}. A API não grava. */
+    @Column(name = "voluntarios_ativos", nullable = false, insertable = false, updatable = false)
+    private int voluntariosAtivos;
 
     @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("principal DESC, email ASC")
@@ -231,6 +242,18 @@ public class Tenant {
 
     public void setVigenciaAte(LocalDate vigenciaAte) {
         this.vigenciaAte = vigenciaAte;
+    }
+
+    public Diocese getDiocese() {
+        return diocese;
+    }
+
+    public void setDiocese(Diocese diocese) {
+        this.diocese = diocese;
+    }
+
+    public int getVoluntariosAtivos() {
+        return voluntariosAtivos;
     }
 
     public List<TenantEmail> getEmails() {

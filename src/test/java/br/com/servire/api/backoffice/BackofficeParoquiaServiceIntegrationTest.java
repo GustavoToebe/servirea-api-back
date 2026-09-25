@@ -92,7 +92,7 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
 
         Tenant criado = backofficeParoquiaService.criar(new CriarParoquiaRequest(
                 "COD-" + sufixo, "slug-" + sufixo, "Paróquia " + sufixo,
-                null, null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null, null,
                 new CriarParoquiaRequest.AdminInicial(existente.getNome(), existente.getEmail(), SENHA)));
 
         assertThat(usuarioRepository.findByEmail(existente.getEmail())).hasValueSatisfying(
@@ -144,7 +144,7 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
                 "Nome Novo", "Razão", "00.000.000/0001-00",
                 List.of(new ContatoEmailRequest("FINANCEIRO", "contato@x.com", true)),
                 List.of(new ContatoTelefoneRequest("Telefone", "41 9999", true)),
-                "80000-000", "Curitiba", "PR", "Centro", "Rua X", "10", "ap 1", "obs", null));
+                "80000-000", "Curitiba", "PR", "Centro", "Rua X", "10", "ap 1", "obs", null, null));
 
         assertThat(atualizado.getNome()).isEqualTo("Nome Novo");
         assertThat(atualizado.getSlug()).isEqualTo(slug);
@@ -174,7 +174,7 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
                 "COD-F-" + sufixo, "filtro-" + sufixo, "Paróquia Filtro " + sufixo,
                 null, "12.345.678/0001-90",
                 List.of(new ContatoEmailRequest("CONTATO", "contato-" + sufixo + "@paroquia.com", true)),
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 new CriarParoquiaRequest.AdminInicial("Padre F", "admin-f-" + sufixo + "@teste.com", SENHA)));
         backofficeParoquiaService.bloquear(alvo.getId());
 
@@ -247,7 +247,7 @@ class BackofficeParoquiaServiceIntegrationTest extends AbstractIntegrationTest {
     private CriarParoquiaRequest novaParoquia(String sufixo, String emailAdmin) {
         return new CriarParoquiaRequest(
                 "COD-" + sufixo, sufixo, "Paróquia " + sufixo,
-                null, null, null, null, null, "Curitiba", null, null, null, null, null, null,
+                null, null, null, null, null, "Curitiba", null, null, null, null, null, null, null,
                 new CriarParoquiaRequest.AdminInicial("Padre " + sufixo, emailAdmin, SENHA));
     }
 }

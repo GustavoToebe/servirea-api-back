@@ -70,6 +70,12 @@ Regras de negócio (V031):
 - `novaPessoa` (só em `responsaveis`) cria o responsável na mesma transação.
 - Responsáveis são **opcionais**. Adulto/ministro entra sem nenhum. Se vier
   mais de um, exatamente um `principal: true`.
+- `tipo` do voluntário: `COROINHA`, `ACOLITO`, `AMBOS` ou `MESC` (ministro
+  da comunhão). `mandatoInicio` e `mandatoFim` são opcionais; se os dois
+  vierem, o vencimento não pode ser anterior à investidura.
+- Diocese (`/admin/dioceses`) tem cota de servidores ativos. A paróquia
+  entra nela por `dioceseId` no cadastro do backoffice. Sem diocese, ou
+  com cota nula, não há teto. Passar da cota na ativação devolve 409.
 - Dependente marcado `principal` quando o voluntário já tem outro principal → 409.
 - `GET /pessoas?papel=VOLUNTARIO` inclui quem também é responsável.
 

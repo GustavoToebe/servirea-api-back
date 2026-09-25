@@ -5,6 +5,7 @@ import br.com.servire.api.voluntario.FuncaoEscala;
 import br.com.servire.api.voluntario.TipoVoluntario;
 import br.com.servire.api.voluntario.Voluntario;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,7 +21,9 @@ public record VoluntarioResponse(
         String crismaAno,
         Voluntario.HorarioEstudo horarioEstudo,
         boolean autorizaWhatsapp,
-        List<FuncaoEscala> funcoesHabilitadas) {
+        List<FuncaoEscala> funcoesHabilitadas,
+        LocalDate mandatoInicio,
+        LocalDate mandatoFim) {
 
     public static VoluntarioResponse de(Voluntario v) {
         return new VoluntarioResponse(
@@ -34,6 +37,8 @@ public record VoluntarioResponse(
                 v.getCrismaAno(),
                 v.getHorarioEstudo(),
                 v.isAutorizaWhatsapp(),
-                List.of(v.getFuncoesHabilitadas()));
+                List.of(v.getFuncoesHabilitadas()),
+                v.getMandatoInicio(),
+                v.getMandatoFim());
     }
 }

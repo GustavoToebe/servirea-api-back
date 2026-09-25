@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /** PUT do operador — não mexe em codigo/slug/status. */
 public record AtualizarParoquiaRequest(
@@ -23,6 +24,7 @@ public record AtualizarParoquiaRequest(
         String numero,
         String complemento,
         String observacoes,
-        LocalDate vigenciaAte
+        LocalDate vigenciaAte,
+        UUID dioceseId
 ) {
 }

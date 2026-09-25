@@ -1,6 +1,7 @@
 package br.com.servire.api.inscricao;
 
 import br.com.servire.api.audit.AuditLogService;
+import br.com.servire.api.diocese.CotaDioceseService;
 import br.com.servire.api.inscricao.dto.InscricaoAtualizarRequest;
 import br.com.servire.api.inscricao.dto.InscricaoPublicaRequest;
 import br.com.servire.api.inscricao.dto.InscricaoResponsavelRequest;
@@ -64,6 +65,7 @@ public class InscricaoService {
     private final TurnstileService turnstileService;
     private final InscricaoRateLimiter rateLimiter;
     private final AuditLogService auditLogService;
+    private final CotaDioceseService cotaDioceseService;
     private final TransactionTemplate transactionTemplate;
 
     @PersistenceContext
@@ -76,6 +78,7 @@ public class InscricaoService {
                              TurnstileService turnstileService,
                              InscricaoRateLimiter rateLimiter,
                              AuditLogService auditLogService,
+                             CotaDioceseService cotaDioceseService,
                              PlatformTransactionManager transactionManager) {
         this.inscricaoRepository = inscricaoRepository;
         this.pessoaRepository = pessoaRepository;
@@ -84,6 +87,7 @@ public class InscricaoService {
         this.turnstileService = turnstileService;
         this.rateLimiter = rateLimiter;
         this.auditLogService = auditLogService;
+        this.cotaDioceseService = cotaDioceseService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
@@ -224,7 +228,9 @@ public class InscricaoService {
         perfil.setFuncoesHabilitadas(inscricao.getFuncoesHabilitadas());
         voluntarioPessoa.setVoluntario(perfil);
 
+        long usoAntes = cotaDioceseService.usoDoTenant(TenantContext.get());
         voluntarioPessoa = pessoaRepository.saveAndFlush(voluntarioPessoa);
+        cotaDioceseService.exigir(TenantContext.get(), usoAntes);
 
         // Principal primeiro. Pai e mãe com o mesmo e-mail na mesma ficha são
         // duas pessoas: quem já foi ligado nesta aprovação não é candidato de

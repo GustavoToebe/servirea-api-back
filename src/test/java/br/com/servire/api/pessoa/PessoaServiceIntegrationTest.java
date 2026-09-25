@@ -263,7 +263,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 Set.of(PessoaPapel.VOLUNTARIO), "Só Voluntário", null, null, null, null,
                 List.of(), List.of(), List.of(), List.of(new RelacaoRequest(filho.getId(), "Irmão", "Irmão", false)),
                 null, null, null, null, null, null, null, null,
-                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of()));
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
 
         assertThatThrownBy(() -> pessoaService.criar(request))
                 .isInstanceOf(BadRequestException.class)
@@ -290,7 +290,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 List.of(new ContatoEmailRequest("E-mail pessoal", "vol-" + UUID.randomUUID() + "@teste.com", true)),
                 List.of(new ContatoTelefoneRequest("celular", "11988887777", true)),
                 relacoes, List.of(), null, null, null, null, null, null, null, null,
-                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of()));
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
     }
 
     private PessoaRequest requestAmbos(String nome) {
@@ -310,6 +310,6 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 List.of(new ContatoEmailRequest("E-mail pessoal", "ambos-" + UUID.randomUUID() + "@teste.com", true)),
                 List.of(new ContatoTelefoneRequest("celular", "11977776666", true)),
                 responsaveis, dependentes, null, null, null, null, null, null, null, null,
-                new VoluntarioPerfilRequest(TipoVoluntario.ACOLITO, true, null, null, null, null, false, List.of()));
+                new VoluntarioPerfilRequest(TipoVoluntario.ACOLITO, true, null, null, null, null, false, List.of(), null, null));
     }
 }
