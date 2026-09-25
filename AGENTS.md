@@ -57,14 +57,15 @@ seção "Onde está o código (disco + GitHub)".
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
 | `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me`. `CatalogoPermissao` é a **única** lista de permissões (seção → módulo → ações); `PermissoesDaSessao` vira `PERM_<código>`; `ConcessaoDePermissao` impede conceder mais do que a sessão tem |
 | `integracao/` | contrato v1 com a Central: `IntegracaoFiltro` (HMAC → `PERM_INTEGRACAO`), provisionamento idempotente, `direitos_locais`, `AcessoParoquia` (regra única de paróquia liberada, usada no login e no filtro), webhook, sync de 8h + alerta, código de suporte |
-| `diocese/` | cota de servidores (`CotaDioceseService`). Sem tela: o catálogo `/admin/dioceses` saiu com o backoffice e ainda não há como ligar paróquia a diocese (decisão pendente: agrupamento, cliente da Central ou cota real) |
+| `diocese/` | diocese **só como agrupamento informativo** da paróquia (V037, sem cota). Global, sem `@TenantId`. A paróquia escolhe ou digita o nome no `PUT /tenant` (`DioceseService.resolver`: mesmo nome sem diferenciar maiúsculas = mesma diocese); `GET /dioceses` sugere as já usadas. Diocese que contrate em bloco vira cliente na Central, não regra do Servire |
 
-Migrations: `src/main/resources/db/migration/V001..V036`. **V001–V015 são o baseline, nunca editar.**
+Migrations: `src/main/resources/db/migration/V001..V037`. **V001–V015 são o baseline, nunca editar.**
 Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`.
 **Produção está na V032** desde 24/09/2026 (banco recriado do zero por script manual, com `flyway_schema_history`
 gerado com os checksums reais — ver README, "Produção (banco)"). **Nunca editar migration já aplicada** (checksum
 diferente = a API não sobe). V033/V034 (MESC, mandato, diocese) já estão no `main`. V035 (perfil e convite) e
 V036 (integração v1) são aditivas: as tabelas de billing continuam no banco até a Central existir para recebê-las.
+V037 tira a cota da diocese (gatilho, `tenant.voluntarios_ativos` e `diocese.cota_voluntarios`) e troca o único de `nome` por `lower(nome)`.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).

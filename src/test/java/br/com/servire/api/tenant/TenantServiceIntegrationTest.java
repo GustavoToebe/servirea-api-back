@@ -1,6 +1,7 @@
 package br.com.servire.api.tenant;
 
 import br.com.servire.api.AbstractIntegrationTest;
+import br.com.servire.api.diocese.DioceseService;
 import br.com.servire.api.tenant.dto.TenantRequest;
 import br.com.servire.api.web.ResourceNotFoundException;
 import org.junit.jupiter.api.AfterEach;
@@ -23,6 +24,9 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private TenantRepository tenantRepository;
+
+    @Autowired
+    private DioceseService dioceseService;
 
     @AfterEach
     void limparTenantContext() {
@@ -63,7 +67,7 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
         TenantContext.set(tenant.getId());
 
         Tenant atualizado = tenantService.atualizar(new TenantRequest(
-                " Paróquia Nova ", " Associação ", " 12.345.678/0001-90 ", null, null));
+                " Paróquia Nova ", " Associação ", " 12.345.678/0001-90 ", null, null, null));
 
         assertThat(atualizado.getNome()).isEqualTo("Paróquia Nova");
         assertThat(atualizado.getRazaoSocial()).isEqualTo("Associação");
@@ -83,11 +87,43 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
         String nomeB = tenantB.getNome();
         TenantContext.set(tenantA.getId());
 
-        tenantService.atualizar(new TenantRequest("Só o A", null, null, null, null));
+        tenantService.atualizar(new TenantRequest("Só o A", null, null, null, null, null));
 
         TenantContext.set(tenantB.getId());
         assertThat(tenantService.buscarAtual().getNome()).isEqualTo(nomeB);
         assertThat(tenantRepository.findById(tenantA.getId()).orElseThrow().getNome()).isEqualTo("Só o A");
+    }
+
+    @Test
+    void dioceseDigitadaECriadaEOutraParoquiaReaproveitaSemDiferenciarMaiusculas() {
+        String nome = "Diocese Teste " + UUID.randomUUID();
+        Tenant tenantA = salvar("E");
+        Tenant tenantB = salvar("F");
+
+        TenantContext.set(tenantA.getId());
+        Tenant a = tenantService.atualizar(new TenantRequest("Paróquia E", null, null, "  " + nome + "  ", null, null));
+        TenantContext.set(tenantB.getId());
+        Tenant b = tenantService.atualizar(new TenantRequest(
+                "Paróquia F", null, null, nome.toUpperCase().replace(" ", "   "), null, null));
+
+        assertThat(a.getDiocese().getNome()).isEqualTo(nome);
+        assertThat(b.getDiocese().getId()).isEqualTo(a.getDiocese().getId());
+        assertThat(dioceseService.listarEmUso()).extracting(d -> d.getId()).contains(a.getDiocese().getId());
+    }
+
+    @Test
+    void dioceseVaziaDesligaAParoquiaEADioceseSemParoquiaSaiDaLista() {
+        String nome = "Diocese Sozinha " + UUID.randomUUID();
+        Tenant tenant = salvar("G");
+        TenantContext.set(tenant.getId());
+        Tenant comDiocese = tenantService.atualizar(new TenantRequest("Paróquia G", null, null, nome, null, null));
+        UUID dioceseId = comDiocese.getDiocese().getId();
+
+        Tenant semDiocese = tenantService.atualizar(new TenantRequest("Paróquia G", null, null, "   ", null, null));
+
+        assertThat(semDiocese.getDiocese()).isNull();
+        assertThat(tenantService.buscarAtual().getDiocese()).isNull();
+        assertThat(dioceseService.listarEmUso()).extracting(d -> d.getId()).doesNotContain(dioceseId);
     }
 
     private Tenant salvar(String sufixoUnico) {

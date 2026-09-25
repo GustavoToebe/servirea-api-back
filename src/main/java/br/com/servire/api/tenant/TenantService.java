@@ -1,6 +1,7 @@
 package br.com.servire.api.tenant;
 
 import br.com.servire.api.audit.AuditLogService;
+import br.com.servire.api.diocese.DioceseService;
 import br.com.servire.api.pessoa.Contatos;
 import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
 import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
@@ -8,6 +9,7 @@ import br.com.servire.api.tenant.dto.TenantRequest;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,25 +19,32 @@ import java.util.UUID;
 /**
  * Configuração da paróquia do JWT atual ({@code GET}/{@code PUT /tenant}).
  * {@link Tenant} é tabela global, sem {@code @TenantId}: o isolamento é
- * só pelo id em {@link TenantContext}.
+ * só pelo id em {@link TenantContext}. A diocese é lazy e o
+ * {@code TenantResponse} roda fora da transação: os dois métodos já devolvem
+ * a diocese inicializada.
  */
 @Service
 public class TenantService {
 
     private final TenantRepository tenantRepository;
     private final AuditLogService auditLogService;
+    private final DioceseService dioceseService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public TenantService(TenantRepository tenantRepository, AuditLogService auditLogService) {
+    public TenantService(TenantRepository tenantRepository, AuditLogService auditLogService,
+                         DioceseService dioceseService) {
         this.tenantRepository = tenantRepository;
         this.auditLogService = auditLogService;
+        this.dioceseService = dioceseService;
     }
 
     @Transactional(readOnly = true)
     public Tenant buscarAtual() {
-        return tenantDoContexto();
+        Tenant tenant = tenantDoContexto();
+        Hibernate.initialize(tenant.getDiocese());
+        return tenant;
     }
 
     @Transactional
@@ -44,9 +53,11 @@ public class TenantService {
         tenant.setNome(request.nome().trim());
         tenant.setRazaoSocial(opcional(request.razaoSocial()));
         tenant.setCnpj(opcional(request.cnpj()));
+        tenant.setDiocese(dioceseService.resolver(request.diocese()));
         substituirContatos(tenant, request.emails(), request.telefones());
         auditLogService.registrar("ATUALIZACAO", "TENANT", tenant.getId(),
-                List.of("nome", "razaoSocial", "cnpj", "contatos"));
+                List.of("nome", "razaoSocial", "cnpj", "diocese", "contatos"));
+        Hibernate.initialize(tenant.getDiocese());
         return tenant;
     }
 

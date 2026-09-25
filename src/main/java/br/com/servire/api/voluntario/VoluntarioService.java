@@ -1,8 +1,6 @@
 package br.com.servire.api.voluntario;
 
 import br.com.servire.api.audit.AuditLogService;
-import br.com.servire.api.diocese.CotaDioceseService;
-import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.escala.EscalaVagaRepository;
 import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.voluntario.dto.CompromissoResponse;
@@ -33,18 +31,15 @@ public class VoluntarioService {
     private final EscalaVagaRepository escalaVagaRepository;
     private final StorageService storageService;
     private final AuditLogService auditLogService;
-    private final CotaDioceseService cotaDioceseService;
 
     public VoluntarioService(VoluntarioRepository voluntarioRepository,
                               EscalaVagaRepository escalaVagaRepository,
                               StorageService storageService,
-                              AuditLogService auditLogService,
-                              CotaDioceseService cotaDioceseService) {
+                              AuditLogService auditLogService) {
         this.voluntarioRepository = voluntarioRepository;
         this.escalaVagaRepository = escalaVagaRepository;
         this.storageService = storageService;
         this.auditLogService = auditLogService;
-        this.cotaDioceseService = cotaDioceseService;
     }
 
     @Transactional(readOnly = true)
@@ -87,12 +82,9 @@ public class VoluntarioService {
 
     @Transactional
     public Voluntario setAtivo(UUID id, boolean ativo) {
-        UUID tenantId = TenantContext.get();
-        long usoAntes = cotaDioceseService.usoDoTenant(tenantId);
         Voluntario voluntario = buscarPorId(id);
         voluntario.setAtivo(ativo);
-        voluntarioRepository.saveAndFlush(voluntario);
-        cotaDioceseService.exigir(tenantId, usoAntes);
+        voluntarioRepository.save(voluntario);
         auditLogService.registrar(ativo ? "ATIVACAO" : "DESATIVACAO", "VOLUNTARIO", id, List.of("ativo"));
         return voluntario;
     }

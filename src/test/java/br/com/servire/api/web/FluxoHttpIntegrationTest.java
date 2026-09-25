@@ -214,6 +214,24 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void dioceseDaParoquiaIdaEVoltaPeloHttpEApareceNaLista() throws Exception {
+        String nome = "Diocese HTTP " + UUID.randomUUID();
+        mockMvc.perform(json(put("/tenant"), """
+                        {"nome":"Paróquia Diocese","diocese":"%s"}
+                        """.formatted(nome)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.diocese").value(nome));
+
+        mockMvc.perform(autenticado(get("/tenant")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.diocese").value(nome));
+
+        mockMvc.perform(autenticado(get("/dioceses")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.nome == '%s')]".formatted(nome), hasSize(1)));
+    }
+
+    @Test
     void filaDeInscricoesComVariosContatosEResponsaveisViaHttp() throws Exception {
         TenantContext.set(tenantId);
         Inscricao inscricao = new Inscricao("Candidato Com Família");

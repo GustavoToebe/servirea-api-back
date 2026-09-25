@@ -2,6 +2,7 @@ package br.com.servire.api.security;
 
 import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.audit.AuditLogService;
+import br.com.servire.api.diocese.DioceseService;
 import br.com.servire.api.auth.UsuarioTenant;
 import br.com.servire.api.acesso.Perfil;
 import br.com.servire.api.acesso.PermissoesDaSessao;
@@ -116,6 +117,9 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
 
     @MockitoBean
     private TenantService tenantService;
+
+    @MockitoBean
+    private DioceseService dioceseService;
 
     @Test
     void semAutenticacaoRecebe401() throws Exception {
@@ -264,6 +268,9 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
                         .with(comoUsuario(UsuarioTenant.Role.COORDENADOR))
                         .with(csrf()))
                 .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/dioceses").with(comoUsuario(UsuarioTenant.Role.COORDENADOR)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -279,6 +286,10 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
                         .content("{\"nome\":\"Paróquia\"}")
                         .with(comoUsuario(UsuarioTenant.Role.ADMIN))
                         .with(csrf()))
+                .andExpect(status().isOk());
+
+        when(dioceseService.listarEmUso()).thenReturn(List.of());
+        mockMvc.perform(get("/dioceses").with(comoUsuario(UsuarioTenant.Role.ADMIN)))
                 .andExpect(status().isOk());
     }
 

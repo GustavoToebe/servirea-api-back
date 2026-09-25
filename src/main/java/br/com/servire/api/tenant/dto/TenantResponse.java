@@ -14,6 +14,7 @@ public record TenantResponse(
         String nome,
         String razaoSocial,
         String cnpj,
+        String diocese,
         Tenant.Status status,
         List<ContatoEmailResponse> emails,
         List<ContatoTelefoneResponse> telefones
@@ -22,7 +23,9 @@ public record TenantResponse(
     public static TenantResponse de(Tenant t) {
         return new TenantResponse(
                 t.getId(), t.getCodigo(), t.getSlug(), t.getNome(),
-                t.getRazaoSocial(), t.getCnpj(), t.getStatus(),
+                t.getRazaoSocial(), t.getCnpj(),
+                t.getDiocese() == null ? null : t.getDiocese().getNome(),
+                t.getStatus(),
                 t.getEmails().stream()
                         .map(e -> new ContatoEmailResponse(e.getId(), e.getTipo(), e.getEmail(), e.isPrincipal()))
                         .toList(),

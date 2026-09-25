@@ -92,10 +92,6 @@ public class Tenant {
     @JoinColumn(name = "diocese_id")
     private Diocese diocese;
 
-    /** Mantido pela trigger de {@code voluntarios}. A API não grava. */
-    @Column(name = "voluntarios_ativos", nullable = false, insertable = false, updatable = false)
-    private int voluntariosAtivos;
-
     @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("principal DESC, email ASC")
     private List<TenantEmail> emails = new ArrayList<>();
@@ -250,10 +246,6 @@ public class Tenant {
 
     public void setDiocese(Diocese diocese) {
         this.diocese = diocese;
-    }
-
-    public int getVoluntariosAtivos() {
-        return voluntariosAtivos;
     }
 
     public List<TenantEmail> getEmails() {

@@ -11,9 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Configuração da paróquia do access token atual. Exige
- * {@code CONFIG_WRITE} (seção 31) — só {@code ADMIN} tem essa permissão
- * ({@link br.com.servire.api.security.RolePermissoes}).
+ * Configuração da paróquia do access token atual: {@code PAROQUIA} para ler,
+ * {@code PAROQUIA_ALTERAR} para gravar (catálogo de permissões, 25/09/2026).
  */
 @RestController
 @RequestMapping("/tenant")

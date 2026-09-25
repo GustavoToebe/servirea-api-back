@@ -8,9 +8,9 @@ Este repo é o `servire-api-back`; o Angular é o irmão `servire-api-front`
 - Diário das fases, bugs e builds: [`HISTORICO.md`](HISTORICO.md)
 - Plano de produto: `plano_mestre_servire_v2_mvp_baixo_custo.md`
 
-**Última confirmação nesta máquina (24/09/2026):** `mvn test` com
-`BUILD SUCCESS`, 207 testes, 0 falhas (V032 incluída, com `FluxoHttpIntegrationTest`
-exercitando `/pessoas` e `/escalas` via HTTP com JWT real).
+**Última confirmação (25/09/2026):** `mvn verify` com `BUILD SUCCESS`,
+193 testes, 0 falhas (V037 incluída, com `FluxoHttpIntegrationTest` e
+`IntegracaoHttpIntegrationTest` exercitando a API via HTTP).
 
 ## Estado atual
 
@@ -73,10 +73,10 @@ Regras de negócio (V031):
 - `tipo` do voluntário: `COROINHA`, `ACOLITO`, `AMBOS` ou `MESC` (ministro
   da comunhão). `mandatoInicio` e `mandatoFim` são opcionais; se os dois
   vierem, o vencimento não pode ser anterior à investidura.
-- Diocese tem cota de servidores ativos (`CotaDioceseService`). Com o
-  backoffice fora do app, não há mais tela para criar diocese nem ligar a
-  paróquia a ela; sem diocese não há teto. Decisão pendente: o que a
-  diocese representa (agrupamento, cliente da Central ou cota real).
+- Diocese é só agrupamento informativo (V037, sem cota). Vai no
+  `PUT /tenant` como `diocese` (nome; vazio = sem diocese) e volta no
+  `GET /tenant`. Nome igual sem diferenciar maiúsculas reaproveita a mesma
+  diocese; `GET /dioceses` (`PERM_PAROQUIA`) lista as já usadas para sugerir.
 - Dependente marcado `principal` quando o voluntário já tem outro principal → 409.
 - `GET /pessoas?papel=VOLUNTARIO` inclui quem também é responsável.
 
@@ -170,7 +170,7 @@ GitHub: [servire-api-back](https://github.com/GustavoToebe/servire-api-back),
 [servire-api-front](https://github.com/GustavoToebe/servire-api-front).
 
 Stack: Java 21 · Spring Boot 4.1.1 · Hibernate 7.4 · PostgreSQL 16 ·
-Flyway V001–V036 · JJWT 0.13 · Testcontainers 2.x.
+Flyway V001–V037 · JJWT 0.13 · Testcontainers 2.x.
 
 ## Próximos passos
 
@@ -181,6 +181,5 @@ Flyway V001–V036 · JJWT 0.13 · Testcontainers 2.x.
 4. Conferir Nginx/Caddy de produção com o snippet acima.
 5. Renomear a paróquia inicial (`placeholder`, V020) e recadastrar as pessoas.
 6. Configurar as variáveis `SERVIRE_INTEGRACAO_*` quando a Central subir (`.env.example`).
-7. Decidir o que é a diocese (ver contrato do Angular acima).
-8. No corte: migration apagando `plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e
+7. No corte: migration apagando `plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e
    `usuario.operador_saas` (já fora do código).

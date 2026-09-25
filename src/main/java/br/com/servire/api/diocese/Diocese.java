@@ -12,7 +12,10 @@ import java.util.UUID;
 
 /**
  * Diocese que agrupa paróquias (V034). Tabela global, sem
- * {@code @TenantId}. {@code cotaVoluntarios} nulo significa sem teto.
+ * {@code @TenantId}. Só informativa desde a V037 (25/09/2026): a cota de
+ * servidores somada entre paróquias saiu. A paróquia escolhe ou digita o
+ * nome em {@code PUT /tenant}; nomes iguais sem diferenciar maiúsculas são
+ * a mesma diocese (índice único em {@code lower(nome)}).
  */
 @Entity
 @Table(name = "diocese")
@@ -26,9 +29,6 @@ public class Diocese {
     private String nome;
 
     private String uf;
-
-    @Column(name = "cota_voluntarios")
-    private Integer cotaVoluntarios;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
@@ -61,14 +61,6 @@ public class Diocese {
 
     public void setUf(String uf) {
         this.uf = uf;
-    }
-
-    public Integer getCotaVoluntarios() {
-        return cotaVoluntarios;
-    }
-
-    public void setCotaVoluntarios(Integer cotaVoluntarios) {
-        this.cotaVoluntarios = cotaVoluntarios;
     }
 
     public Instant getCreatedAt() {

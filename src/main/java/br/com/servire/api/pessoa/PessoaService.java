@@ -1,14 +1,12 @@
 package br.com.servire.api.pessoa;
 
 import br.com.servire.api.audit.AuditLogService;
-import br.com.servire.api.diocese.CotaDioceseService;
 import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
 import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
 import br.com.servire.api.pessoa.dto.NovaPessoaRequest;
 import br.com.servire.api.pessoa.dto.PessoaRequest;
 import br.com.servire.api.pessoa.dto.RelacaoRequest;
 import br.com.servire.api.pessoa.dto.VoluntarioPerfilRequest;
-import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.voluntario.FuncaoEscala;
 import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.web.BadRequestException;
@@ -44,16 +42,13 @@ public class PessoaService {
 
     private final PessoaRepository pessoaRepository;
     private final AuditLogService auditLogService;
-    private final CotaDioceseService cotaDioceseService;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public PessoaService(PessoaRepository pessoaRepository, AuditLogService auditLogService,
-                         CotaDioceseService cotaDioceseService) {
+    public PessoaService(PessoaRepository pessoaRepository, AuditLogService auditLogService) {
         this.pessoaRepository = pessoaRepository;
         this.auditLogService = auditLogService;
-        this.cotaDioceseService = cotaDioceseService;
     }
 
     @Transactional(readOnly = true)
@@ -119,7 +114,7 @@ public class PessoaService {
             aplicarPerfilVoluntario(pessoa, request.voluntario());
         }
         substituirRelacoes(pessoa, request);
-        pessoa = gravarRespeitandoCota(pessoa);
+        pessoa = pessoaRepository.save(pessoa);
         auditLogService.registrar("CRIACAO", "PESSOA", pessoa.getId(), null);
         return buscarPorId(pessoa.getId());
     }
@@ -142,7 +137,7 @@ public class PessoaService {
             aplicarPerfilVoluntario(pessoa, request.voluntario());
         }
         substituirRelacoes(pessoa, request);
-        gravarRespeitandoCota(pessoa);
+        pessoaRepository.save(pessoa);
         auditLogService.registrar("ATUALIZACAO", "PESSOA", id, List.of("identidade", "contatos", "responsaveis", "dependentes", "papeis"));
         return buscarPorId(id);
     }
@@ -221,18 +216,6 @@ public class PessoaService {
             }
         }
         return ids;
-    }
-
-    /**
-     * A trigger atualiza o contador da paróquia no flush. A cota da diocese
-     * só barra quando o total de ativos sobe além do teto.
-     */
-    private Pessoa gravarRespeitandoCota(Pessoa pessoa) {
-        UUID tenantId = TenantContext.get();
-        long usoAntes = cotaDioceseService.usoDoTenant(tenantId);
-        Pessoa salva = pessoaRepository.saveAndFlush(pessoa);
-        cotaDioceseService.exigir(tenantId, usoAntes);
-        return salva;
     }
 
     private static void validarMandato(LocalDate inicio, LocalDate fim) {

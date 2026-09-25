@@ -2070,6 +2070,27 @@ Limpeza no mesmo pacote: token `purpose=backoffice`, suporte antigo
 (`suporte=true` no access token), refresh do operador e o mapeamento de
 `usuario.operador_saas` saíram; o operador agora mora na Central.
 
+## Diocese só como agrupamento (V037, 25/09/2026)
+
+Decisão: a diocese é só informação da paróquia (filtro, relatório, exibição),
+não cliente da Central nem cota. Sai tudo o que a V034 montou para a cota
+somada entre paróquias: `CotaDioceseService`, as verificações em
+`PessoaService`/`InscricaoService`/`VoluntarioService`, o gatilho
+`trg_voluntarios_ativos`, `tenant.voluntarios_ativos` e
+`diocese.cota_voluntarios`.
+
+- A paróquia define a diocese no `PUT /tenant` (campo `diocese`, nome). O
+  `DioceseService.resolver` reaproveita a existente sem diferenciar
+  maiúsculas e espaços repetidos, ou cria com `INSERT ... ON CONFLICT` no
+  índice único `lower(nome)` (duas paróquias digitando a mesma diocese ao
+  mesmo tempo não derrubam a transação).
+- `GET /dioceses` (`PERM_PAROQUIA`) sugere só as dioceses ligadas a alguma
+  paróquia; diocese órfã (digitada errado e trocada) some da lista.
+- `TenantService` inicializa a diocese (lazy) antes de devolver: o
+  `TenantResponse` roda fora da transação.
+- Front: tela **Paróquia** (`/paroquia`) com nome, razão social, CNPJ,
+  diocese e contatos.
+
 ## Onde está o código (disco + GitHub) — 23/09/2026
 
 Dois repositórios **irmãos** (não é monorepo). A pasta `servire` existe

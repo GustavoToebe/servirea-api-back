@@ -1,66 +1,51 @@
 package br.com.servire.api.diocese;
 
-import br.com.servire.api.diocese.dto.DioceseRequest;
-import br.com.servire.api.diocese.dto.DioceseResponse;
-import br.com.servire.api.web.ConflictException;
-import br.com.servire.api.web.ResourceNotFoundException;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
-/** Catálogo de dioceses no painel. Tabela global, como {@code plano}. */
+/**
+ * Diocese como agrupamento informativo da paróquia (V037, 25/09/2026).
+ * Não há cadastro próprio: a paróquia escolhe uma diocese já usada ou digita
+ * um nome novo no {@code PUT /tenant}, e {@link #resolver(String)} reaproveita
+ * ou cria.
+ */
 @Service
 public class DioceseService {
 
     private final DioceseRepository dioceseRepository;
-    private final CotaDioceseService cotaDioceseService;
 
-    public DioceseService(DioceseRepository dioceseRepository,
-                          CotaDioceseService cotaDioceseService) {
+    public DioceseService(DioceseRepository dioceseRepository) {
         this.dioceseRepository = dioceseRepository;
-        this.cotaDioceseService = cotaDioceseService;
     }
 
     @Transactional(readOnly = true)
-    public List<DioceseResponse> listar() {
-        return dioceseRepository.findAll(Sort.by("nome")).stream()
-                .map(d -> DioceseResponse.de(d, cotaDioceseService.uso(d.getId())))
-                .toList();
+    public List<Diocese> listarEmUso() {
+        return dioceseRepository.listarEmUso();
     }
 
+    /**
+     * Nome vazio = sem diocese. Senão devolve a diocese com esse nome (sem
+     * diferenciar maiúsculas e ignorando espaços repetidos), criando se não
+     * existir. Roda na transação de quem chama.
+     */
     @Transactional
-    public DioceseResponse criar(DioceseRequest request) {
-        Diocese diocese = new Diocese(request.nome().trim());
-        aplicar(diocese, request);
-        try {
-            diocese = dioceseRepository.saveAndFlush(diocese);
-        } catch (DataIntegrityViolationException e) {
-            throw new ConflictException("Já existe uma diocese com este nome.");
+    public Diocese resolver(String nome) {
+        String normalizado = normalizar(nome);
+        if (normalizado == null) {
+            return null;
         }
-        return DioceseResponse.de(diocese, 0);
+        return dioceseRepository.findFirstByNomeIgnoreCase(normalizado).orElseGet(() -> {
+            dioceseRepository.inserirSeNaoExiste(normalizado);
+            return dioceseRepository.findFirstByNomeIgnoreCase(normalizado).orElseThrow();
+        });
     }
 
-    @Transactional
-    public DioceseResponse atualizar(UUID id, DioceseRequest request) {
-        Diocese diocese = dioceseRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Diocese não encontrada."));
-        aplicar(diocese, request);
-        try {
-            dioceseRepository.saveAndFlush(diocese);
-        } catch (DataIntegrityViolationException e) {
-            throw new ConflictException("Já existe uma diocese com este nome.");
+    static String normalizar(String nome) {
+        if (nome == null || nome.isBlank()) {
+            return null;
         }
-        return DioceseResponse.de(diocese, cotaDioceseService.uso(diocese.getId()));
-    }
-
-    private static void aplicar(Diocese diocese, DioceseRequest request) {
-        diocese.setNome(request.nome().trim());
-        String uf = request.uf();
-        diocese.setUf(uf == null || uf.isBlank() ? null : uf.trim().toUpperCase());
-        diocese.setCotaVoluntarios(request.cotaVoluntarios());
+        return nome.trim().replaceAll("\\s+", " ");
     }
 }
