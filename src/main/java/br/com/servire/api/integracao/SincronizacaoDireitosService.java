@@ -161,8 +161,7 @@ public class SincronizacaoDireitosService {
                     || (ultimoAlerta != null && ultimoAlerta.isAfter(agora.minus(Duration.ofHours(8))))) {
                 return;
             }
-            emailSender.enviarAlertaIntegracao(properties.alertaEmail(), String.join("
-", linhas));
+            emailSender.enviarAlertaIntegracao(properties.alertaEmail(), String.join("\n", linhas));
             ultimoAlerta = agora;
         } catch (RuntimeException e) {
             log.error("Falha ao verificar atraso de sincronização.", e);
