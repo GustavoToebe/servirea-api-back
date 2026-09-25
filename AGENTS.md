@@ -47,17 +47,17 @@ seção "Onde está o código (disco + GitHub)".
 |---|---|
 | `web/` | `GlobalExceptionHandler`, `ApiError`, hierarquia `ApiException` (`BadRequest`/`Conflict`/`Forbidden`/`ResourceNotFound`/`Unauthorized`/`TooManyRequests`), `RequestIdFilter` (MDC `requestId`), `ClientIp` (nunca lê `X-Forwarded-For` no código), `RestClientConfiguration` |
 | `tenant/` | `Tenant` (global), `TenantEmail`/`TenantTelefone` (globais, sem `@TenantId`), `TenantContext`, `GET/PUT /tenant` |
-| `security/` | `SecurityConfig`, `JwtAuthenticationFilter`, `JwtService`, `Permissao` + `RolePermissoes`, handlers 401/403 |
-| `auth/` | `Usuario`, `UsuarioTenant` (role ADMIN/COORDENADOR/VISUALIZADOR), refresh token, reset de senha, `EmailSender` (`LoggingEmailSender` / `ResendEmailSender`), `/auth/**` |
+| `security/` | `SecurityConfig`, `JwtAuthenticationFilter` (Kill Switch + perfil por requisição), `JwtService` (`access`, `tenant_selection`, `suporte_app`), handlers 401/403 |
+| `auth/` | `Usuario`, `UsuarioTenant` (`perfil_id`; a `role` antiga só vale se o perfil for nulo), refresh token, token de senha (`RESET` 1h / `CONVITE` 7 dias), `EmailSender` (`LoggingEmailSender` / `ResendEmailSender`), `/auth/**` |
 | `pessoa/` | cadastro pessoa-primeiro: `Pessoa` (`e_voluntario`/`e_responsavel`, podem coexistir), e-mails/telefones 1:N, `PessoaRelacao` (é/de, opcional), `/pessoas/**` |
 | `voluntario/` | perfil 1:1 `@MapsId` com `Pessoa` (escala, foto, ativo, disponibilidade), `/voluntarios/**` — identidade não mora mais aqui |
 | `escala/` | `Escala` → `EscalaEvento` → `EscalaVaga`, presença, picker de candidatos, `/escalas/**` |
 | `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila `/inscricoes/**`; aprovar materializa `Pessoa` e reusa RESPONSAVEL por e-mail principal |
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
-| `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me`. `PermissoesDaSessao` traduz o perfil (ou a role antiga, se `perfil_id` for nulo) nas `PERM_*` que os controllers já usam |
-| `integracao/` | contrato v1 com a Central: HMAC em `/integracao/**`, provisionamento idempotente, `direitos_locais`, webhook, sync de 8h, código de suporte |
-| `diocese/` | cota de servidores (`CotaDioceseService`). O catálogo `/admin/dioceses` saiu junto com o backoffice |
+| `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me`. `CatalogoPermissao` é a **única** lista de permissões (seção → módulo → ações); `PermissoesDaSessao` vira `PERM_<código>`; `ConcessaoDePermissao` impede conceder mais do que a sessão tem |
+| `integracao/` | contrato v1 com a Central: `IntegracaoFiltro` (HMAC → `PERM_INTEGRACAO`), provisionamento idempotente, `direitos_locais`, `AcessoParoquia` (regra única de paróquia liberada, usada no login e no filtro), webhook, sync de 8h + alerta, código de suporte |
+| `diocese/` | cota de servidores (`CotaDioceseService`). Sem tela: o catálogo `/admin/dioceses` saiu com o backoffice e ainda não há como ligar paróquia a diocese (decisão pendente: agrupamento, cliente da Central ou cota real) |
 
 Migrations: `src/main/resources/db/migration/V001..V036`. **V001–V015 são o baseline, nunca editar.**
 Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`.
@@ -88,9 +88,11 @@ V036 (integração v1) são aditivas: as tabelas de billing continuam no banco a
 ## Convenções de código
 - Injeção por construtor; `EntityManager` via `@PersistenceContext` quando precisa de `flush()`.
 - DTOs são `record`s em `<modulo>/dto/`, com `static de(Entidade)` na resposta e Bean Validation no request.
-- Controller: `@PreAuthorize("hasAuthority('PERM_<PERMISSAO>')")` em **todo** método (`*_READ` para GET,
-  `*_WRITE`/`INSCRICAO_APPROVE` para escrita; `CONFIG_WRITE` só ADMIN da paróquia; `PERM_BACKOFFICE`
-  só o JWT do operador, nunca a role ADMIN da paróquia). Toda rota não pública é autenticada.
+- Controller: `@PreAuthorize("hasAuthority('PERM_<CÓDIGO>')")` em **todo** método, com o código do
+  `CatalogoPermissao`: o **módulo** para leitura (`PERM_ESCALA`) e a **ação** para escrita
+  (`PERM_ESCALA_EXCLUIR`, `PERM_VAGA_PRESENCA`). Nunca uma permissão "de escrita geral": a matriz do perfil
+  vale por ação. Ação nova = entra no catálogo + no `@PreAuthorize`. `/integracao/**` exige `PERM_INTEGRACAO`
+  (só o HMAC concede). Toda rota não pública é autenticada.
 - Service: `@Transactional` / `@Transactional(readOnly = true)`; erro de negócio = subclasse de `ApiException`
   (vira JSON `ApiError` com `requestId`). Nunca vazar detalhes internos num 500.
 - Mudança relevante chama `auditLogService.registrar("ACAO", "ENTIDADE", id, camposAlterados)` de forma explícita (sem AOP).
@@ -106,7 +108,7 @@ V036 (integração v1) são aditivas: as tabelas de billing continuam no banco a
 - Criteria/`JOIN FETCH`/`@EntityGraph` em **duas** coleções `List` da mesma raiz (`emails` + `telefones`)
   explode em `MultipleBagFetchException` ou, no grafo, simplesmente não carrega. Não fetchar as duas;
   inicialize as coleções dentro do `@Transactional` do service (`PessoaService.buscarPorId`,
-  `EscalaService.buscarPorId`, `InscricaoService.buscar`, `BackofficeParoquiaService.listar`).
+  `EscalaService.buscarPorId`, `InscricaoService.buscar`).
   `default_batch_fetch_size: 50` evita N+1. Grafo com várias bags numa query dá "Could not generate fetch".
 - Todo `XResponse.de(entidade)` roda no controller, **fora** da transação: o service devolve a entidade
   já inicializada. Endpoint novo ganha teste HTTP real em `FluxoHttpIntegrationTest` (teste de service não pega isso).
@@ -116,8 +118,8 @@ V036 (integração v1) são aditivas: as tabelas de billing continuam no banco a
 - Relações de pessoa: `PessoaRequest`/`PessoaResponse` têm `responsaveis` e `dependentes` separados; em cada item
   `parentesco` = o que a **outra** pessoa é. Não voltar para uma lista só (quem tem os dois papéis não salvava).
 - `pessoaRepository.findPorEmailPrincipal` devolve **lista**: e-mail principal não é único (criança usa o da mãe).
-- CSRF: `SecurityConfig.exigeCsrf` dispensa o token para `Authorization: Bearer` fora de `/auth/**` e
-  `/admin/auth/**`. Não remover — o Angular não manda `X-XSRF-TOKEN` para URL absoluta.
+- CSRF: `SecurityConfig.exigeCsrf` dispensa o token para `Authorization: Bearer` fora de `/auth/**`.
+  Não remover — o Angular não manda `X-XSRF-TOKEN` para URL absoluta.
 - Rate limit / IP: use `ClientIp.de(request)` (= `getRemoteAddr()`). **Nunca** ler
   `X-Forwarded-For` no código — o cliente forja e esvazia o limitador. Em prod,
   `server.forward-headers-strategy: native` + `internal-proxies` (Nginx/Caddy no
@@ -140,7 +142,7 @@ V036 (integração v1) são aditivas: as tabelas de billing continuam no banco a
 - Supabase Storage: enviar **os dois** headers `Authorization: Bearer` e `apikey`; não usar template `{caminho}` na URI (codifica `/`).
 - Enum nativo do Postgres: `@Enumerated(STRING)` + `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`; array de enum:
   `@JdbcTypeCode(ARRAY)` + `@ColumnTransformer(write = "?::tipo[]")`. Em JPQL, enum **sempre por
-  parâmetro** (`c.status = :status`), nunca literal (`Cobranca.Status.ABERTA`): o literal vira
+  parâmetro** (`c.status = :status`), nunca literal (`Tenant.Status.ATIVO`): o literal vira
   `cast(... as status)` (nome da classe Java) e quebra com `type "status" does not exist`.
 - Coluna `smallint` não valida contra campo `int` (`ddl-auto: validate`); use `integer`.
 - SQL manual em produção vai pelo `psql`, não pelo SQL Editor do Supabase: o botão "Run and enable RLS"
@@ -151,13 +153,13 @@ V036 (integração v1) são aditivas: as tabelas de billing continuam no banco a
 - Segredo nunca vai para `.env.example` (é versionado): só o nome da variável, valor vazio.
 - Tabela nova em `public` (que não seja tenant-aware com policy): `ENABLE ROW LEVEL SECURITY` sem
   policy, senão a Data API do Supabase (chave anon) lê/grava. A API Java é dona das tabelas e não é afetada.
-- Bloqueio por atraso é **manual**: `BillingJob` só gera cobranças, nunca bloqueia paróquia
-  (decisão de 23/09/2026; os 3 dias da seção 131.3 ficam para depois).
-- Role `ADMIN` da paróquia **não** pode ganhar `PERM_BACKOFFICE`. Se `RolePermissoes`
-  usar `EnumSet.allOf(Permissao.class)`, o padre acessa `/admin/**`.
-- Operador SaaS entra só em `POST /admin/auth/login`; `POST /auth/login` recusa
-  `operador_saas`. `/admin/auth/**` é `permitAll` (refresh/logout usam cookie em
-  path `/admin/auth`, não JWT) — não colocar `PERM_BACKOFFICE` nessas rotas.
+- Entidade com **chave preenchida à mão** (`integracao_operacao`, `integracao_nonce`): o `save` do Spring
+  Data faz `merge` (UPDATE) e a PK nunca esbarra — nonce repetido passava. Use `Persistable` com `isNew`
+  (`IntegracaoOperacao`) ou `INSERT ... ON CONFLICT DO NOTHING` contando linhas (`IntegracaoNonceRepository`).
+- `/integracao/**` **não** é `permitAll`. O filtro decide pelo caminho decodificado (`servletPath`) e assina o
+  cru; o controller exige `PERM_INTEGRACAO`, então um caminho que escape do filtro (`/%69ntegracao/...`) dá 401.
+- Bloqueio por atraso é decisão da Central; o app obedece `acesso_liberado` da cópia local. Operador do SaaS
+  não existe mais no app (coluna `usuario.operador_saas` fica no banco até o corte, sem mapeamento).
 
 ## Testes (`src/test/java/...`)
 - Integração estende `AbstractIntegrationTest`: um Postgres 16 singleton (sem `@Container`, de propósito),
@@ -168,9 +170,9 @@ V036 (integração v1) são aditivas: as tabelas de billing continuam no banco a
 - Autorização HTTP: `MethodSecurityIntegrationTest` (MockMvc + `@MockitoBean` nos services). Clientes HTTP
   externos: `MockRestServiceServer`, sem contexto Spring.
 - Ao adicionar migration: atualizar total e descrição da última em `FlywayMigrationIntegrationTest`.
-- Billing (`BillingServiceIntegrationTest`): as tabelas são globais, então cada teste cria **o próprio plano**
-  (código aleatório) além da paróquia; as datas são relativas a `billingService.hoje()`. O `BillingJob` fica
-  desligado no profile `test` (`servire.billing.job.enabled: false`).
+- Integração (`IntegracaoHttpIntegrationTest`): requisições assinadas de verdade com a chave `teste-central`
+  do `application-test.yml` (mesmo segredo dos vetores do contrato). Regras de perfil/usuário e a trava de
+  concessão: `AcessoIntegrationTest` (monta a sessão à mão; sem autenticação a trava não se aplica).
 - Nomes de teste em português, descritivos (`atualizarComVersaoDivergenteLancaConflictException`).
 - Voluntário em teste: `Pessoas.persistirVoluntario(pessoaRepository, "Nome")` — não existe mais
   `new Voluntario("Nome")`. Papéis podem coexistir; responsável é opcional (adulto/ministro).

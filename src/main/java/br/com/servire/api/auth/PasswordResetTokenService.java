@@ -6,6 +6,7 @@ import br.com.servire.api.web.UnauthorizedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 
 /**
@@ -27,21 +28,21 @@ public class PasswordResetTokenService {
 
     @Transactional
     public String gerar(Usuario usuario) {
-        String tokenBruto = OpaqueTokenGenerator.gerar();
-        PasswordResetToken entidade = new PasswordResetToken(
-                usuario, OpaqueTokenGenerator.hash(tokenBruto),
-                Instant.now().plus(properties.passwordResetTokenTtl()));
-        repository.save(entidade);
-        return tokenBruto;
+        return emitir(usuario, "RESET", properties.passwordResetTokenTtl());
     }
 
+    /** Convite: mesmo token de uso único, com finalidade e prazo próprios. */
     @Transactional
     public String gerarConvite(Usuario usuario) {
-        String tokenBruto = gerar(usuario);
-        repository.findByTokenHash(OpaqueTokenGenerator.hash(tokenBruto)).ifPresent(token -> {
-            token.setFinalidade("CONVITE");
-            repository.save(token);
-        });
+        return emitir(usuario, "CONVITE", properties.conviteTtl());
+    }
+
+    private String emitir(Usuario usuario, String finalidade, Duration ttl) {
+        String tokenBruto = OpaqueTokenGenerator.gerar();
+        PasswordResetToken entidade = new PasswordResetToken(
+                usuario, OpaqueTokenGenerator.hash(tokenBruto), Instant.now().plus(ttl));
+        entidade.setFinalidade(finalidade);
+        repository.save(entidade);
         return tokenBruto;
     }
 

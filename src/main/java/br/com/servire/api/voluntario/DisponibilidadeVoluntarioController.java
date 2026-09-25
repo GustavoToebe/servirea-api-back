@@ -34,13 +34,13 @@ public class DisponibilidadeVoluntarioController {
         this.disponibilidadeService = disponibilidadeService;
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
     @GetMapping
     public List<DisponibilidadeVoluntarioResponse> listar(@PathVariable UUID voluntarioId) {
         return disponibilidadeService.listar(voluntarioId).stream().map(DisponibilidadeVoluntarioResponse::de).toList();
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA_ALTERAR')")
     @PostMapping
     public ResponseEntity<DisponibilidadeVoluntarioResponse> criar(@PathVariable UUID voluntarioId,
                                                                     @RequestBody @Valid DisponibilidadeVoluntarioRequest request) {
@@ -48,7 +48,7 @@ public class DisponibilidadeVoluntarioController {
         return ResponseEntity.ok(DisponibilidadeVoluntarioResponse.de(criada));
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA_ALTERAR')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable UUID voluntarioId, @PathVariable UUID id) {
         disponibilidadeService.excluir(voluntarioId, id);

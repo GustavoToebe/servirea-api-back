@@ -49,6 +49,7 @@ servire:
       tenant-selection-token-ttl: PT5M
     refresh-token-ttl: P30D
     password-reset-token-ttl: PT1H
+    convite-token-ttl: P7D
     cors:
       allowed-origins: ${CORS_ALLOWED_ORIGINS:}
   # URL do Angular, usada só para montar o link de "esqueci minha senha"

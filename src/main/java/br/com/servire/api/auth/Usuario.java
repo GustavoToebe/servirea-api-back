@@ -45,14 +45,6 @@ public class Usuario {
     @Column(nullable = false)
     private boolean ativo = true;
 
-    /**
-     * Operador do SaaS (backoffice, seção 111). Não tem paróquia no JWT;
-     * entra por {@code POST /admin/auth/login}. O ADMIN da paróquia
-     * continua sendo só a role em {@code usuario_tenant}.
-     */
-    @Column(name = "operador_saas", nullable = false)
-    private boolean operadorSaas = false;
-
     private String telefone;
 
     @Column(name = "tipo_telefone")
@@ -107,14 +99,6 @@ public class Usuario {
 
     public void setAtivo(boolean ativo) {
         this.ativo = ativo;
-    }
-
-    public boolean isOperadorSaas() {
-        return operadorSaas;
-    }
-
-    public void setOperadorSaas(boolean operadorSaas) {
-        this.operadorSaas = operadorSaas;
     }
 
     public String getTelefone() {

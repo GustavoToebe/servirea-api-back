@@ -51,7 +51,7 @@ public class IntegracaoInstanciaService {
     private final EmailSender emailSender;
     private final JsonMapper json;
     private final TransactionTemplate transacao;
-    private final IntegracaoProperties properties;
+    private final AcessoParoquia acessoParoquia;
     private final String frontendBaseUrl;
 
     public IntegracaoInstanciaService(IntegracaoOperacaoRepository operacoes,
@@ -66,7 +66,7 @@ public class IntegracaoInstanciaService {
                                        EmailSender emailSender,
                                        JsonMapper json,
                                        PlatformTransactionManager transactionManager,
-                                       IntegracaoProperties properties,
+                                       AcessoParoquia acessoParoquia,
                                        @Value("${servire.frontend.base-url}") String frontendBaseUrl) {
         this.operacoes = operacoes;
         this.direitos = direitos;
@@ -80,7 +80,7 @@ public class IntegracaoInstanciaService {
         this.emailSender = emailSender;
         this.json = json;
         this.transacao = new TransactionTemplate(transactionManager);
-        this.properties = properties;
+        this.acessoParoquia = acessoParoquia;
         this.frontendBaseUrl = frontendBaseUrl;
     }
 
@@ -121,8 +121,7 @@ public class IntegracaoInstanciaService {
         Tenant tenant = tenants.findById(tenantId)
                 .orElseThrow(() -> new IntegracaoException(HttpStatus.NOT_FOUND, "INSTANCIA_NAO_ENCONTRADA",
                         "Instância não encontrada."));
-        boolean efetivo = locais.isAcessoLiberado()
-                && !Instant.now().isAfter(locais.getConfirmadoEm().plus(properties.tolerancia(), ChronoUnit.HOURS));
+        boolean efetivo = acessoParoquia.liberada(locais);
         return Map.of(
                 "tenantId", tenant.getId(),
                 "contratacaoId", locais.getContratacaoId(),

@@ -67,6 +67,10 @@ public class UsuarioParoquiaService {
         UUID tenantId = TenantContext.get();
         Perfil perfil = perfilRepository.findByIdAndTenantId(request.perfilId(), tenantId)
                 .orElseThrow(() -> new BadRequestException("Perfil não encontrado nesta paróquia."));
+        exigirPodeUsar(perfil);
+        if (!perfil.isAtivo()) {
+            throw new BadRequestException("Este perfil está inativo.");
+        }
         String email = request.email().trim().toLowerCase();
         Usuario existente = usuarioRepository.findByEmail(email).orElse(null);
         if (existente == null) {
@@ -95,6 +99,12 @@ public class UsuarioParoquiaService {
         UsuarioTenant vinculo = vinculo(usuarioId);
         Perfil novo = perfilRepository.findByIdAndTenantId(request.perfilId(), vinculo.getTenant().getId())
                 .orElseThrow(() -> new BadRequestException("Perfil não encontrado nesta paróquia."));
+        ConcessaoDePermissao.exigirPodeAlterarAcessoTotal(
+                vinculo.getPerfil() != null && vinculo.getPerfil().isAcessoTotal());
+        exigirPodeUsar(novo);
+        if (!novo.isAtivo()) {
+            throw new BadRequestException("Este perfil está inativo.");
+        }
         if (!request.ativo() || !novo.isAcessoTotal()) {
             impedirUltimoAdministrador(vinculo, novo, request.ativo());
         }
@@ -103,8 +113,14 @@ public class UsuarioParoquiaService {
         vinculo.setStatus(request.ativo() ? UsuarioTenant.Status.ATIVO : UsuarioTenant.Status.INATIVO);
         if (somenteEstaParoquia(usuarioId)) {
             Usuario usuario = vinculo.getUsuario();
+            String email = request.email().trim().toLowerCase();
+            usuarioRepository.findByEmail(email)
+                    .filter(outro -> !outro.getId().equals(usuario.getId()))
+                    .ifPresent(outro -> {
+                        throw new ConflictException("Já existe um usuário com este e-mail.");
+                    });
             usuario.setNome(request.nome().trim());
-            usuario.setEmail(request.email().trim().toLowerCase());
+            usuario.setEmail(email);
             usuario.setTelefone(request.telefone());
             usuario.setTipoTelefone(request.tipoTelefone());
         }
@@ -123,6 +139,11 @@ public class UsuarioParoquiaService {
         String token = passwordResetTokenService.gerarConvite(vinculo.getUsuario());
         String link = frontendBaseUrl + "/reset-password?token=" + token;
         depoisDoCommit(() -> emailSender.enviarConvite(vinculo.getUsuario().getEmail(), link));
+    }
+
+    private void exigirPodeUsar(Perfil perfil) {
+        ConcessaoDePermissao.exigirPodeConceder(perfil.isAcessoTotal(),
+                perfil.getPermissoes().stream().map(PerfilPermissao::getPermissao).toList());
     }
 
     private void vincular(Usuario usuario, UUID tenantId, Perfil perfil, boolean ativo) {

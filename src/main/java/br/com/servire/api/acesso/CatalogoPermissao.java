@@ -1,6 +1,11 @@
 package br.com.servire.api.acesso;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Catálogo seção → módulo → ações da tela de perfil (Central, seção 8.3).
@@ -52,6 +57,41 @@ public final class CatalogoPermissao {
                     new Modulo("AUDITORIA", "Auditoria", List.of())))
     );
 
+    private static final Set<String> CODIGOS;
+    private static final Map<String, String> MODULO_DA_ACAO;
+
+    static {
+        Set<String> codigos = new LinkedHashSet<>();
+        Map<String, String> moduloDaAcao = new LinkedHashMap<>();
+        for (Secao secao : SECOES) {
+            for (Modulo modulo : secao.modulos()) {
+                codigos.add(modulo.codigo());
+                for (Acao acao : modulo.acoes()) {
+                    codigos.add(acao.codigo());
+                    moduloDaAcao.put(acao.codigo(), modulo.codigo());
+                }
+            }
+        }
+        CODIGOS = Collections.unmodifiableSet(codigos);
+        MODULO_DA_ACAO = Collections.unmodifiableMap(moduloDaAcao);
+    }
+
     private CatalogoPermissao() {
+    }
+
+    /**
+     * Todos os códigos do catálogo. É a lista que o acesso total libera e a
+     * única aceita num perfil: o {@code @PreAuthorize} de cada endpoint usa
+     * {@code PERM_<código>} (25/09/2026 — antes os endpoints ainda pediam
+     * as permissões antigas e a matriz não valia para Pessoas/Escalas/
+     * Inscrições).
+     */
+    public static Set<String> codigos() {
+        return CODIGOS;
+    }
+
+    /** Módulo de uma ação ({@code ESCALA_CRIAR} → {@code ESCALA}); {@code null} se o código já é módulo. */
+    public static String moduloDe(String codigo) {
+        return MODULO_DA_ACAO.get(codigo);
     }
 }

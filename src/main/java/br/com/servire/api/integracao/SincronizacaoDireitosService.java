@@ -2,6 +2,7 @@ package br.com.servire.api.integracao;
 
 import br.com.servire.api.auth.EmailSender;
 import br.com.servire.api.integracao.dto.DireitosInstancia;
+import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,8 +17,10 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,6 +42,7 @@ public class SincronizacaoDireitosService {
     private final JsonMapper json;
     private final RestClient http;
     private volatile boolean pendente = true;
+    private volatile Instant ultimoAlerta;
 
     public SincronizacaoDireitosService(IntegracaoProperties properties,
                                          IntegracaoInstanciaService instancias,
@@ -116,24 +120,52 @@ public class SincronizacaoDireitosService {
                 if (!vistos.contains(local.getTenantId()) && tenants.existsById(local.getTenantId())) {
                     log.warn("Paróquia {} não veio na sincronização da Central.", local.getTenantId());
                 }
-                alertarSeAtrasada(local);
             }
             pendente = false;
         } catch (RuntimeException e) {
             pendente = true;
             log.error("Sincronização de direitos falhou; nova tentativa em 30 minutos.", e);
+        } finally {
+            verificarAtrasos();
         }
     }
 
-    private void alertarSeAtrasada(DireitosLocais local) {
-        if (properties.alertaEmail() == null || properties.alertaEmail().isBlank() || local.getConfirmadoEm() == null) {
-            return;
-        }
-        Duration atraso = Duration.between(local.getConfirmadoEm(), Instant.now());
-        if (atraso.toHours() >= 24 && atraso.toHours() < properties.tolerancia()) {
-            emailSender.enviarAlertaIntegracao(properties.alertaEmail(),
-                    "A paróquia " + local.getTenantId() + " está há " + atraso.toHours()
-                            + "h sem confirmação da Central.");
+    /**
+     * Roda depois de toda tentativa, com sucesso ou não. Até 25/09/2026 o
+     * alerta ficava dentro do caminho de sucesso: com a Central fora do ar
+     * a exceção vinha antes e o e-mail nunca saía, justo no caso para o
+     * qual ele existe. No máximo um e-mail a cada 8h (as tentativas são a
+     * cada 30 min).
+     */
+    void verificarAtrasos() {
+        try {
+            List<String> linhas = new ArrayList<>();
+            for (DireitosLocais local : direitos.findAll()) {
+                Duration atraso = Duration.between(local.getConfirmadoEm(), Instant.now());
+                if (atraso.toHours() < 24) {
+                    continue;
+                }
+                String nome = tenants.findById(local.getTenantId()).map(Tenant::getNome)
+                        .orElse(local.getTenantId().toString());
+                boolean bloqueada = atraso.toHours() >= properties.tolerancia();
+                linhas.add(nome + ": " + atraso.toHours() + "h sem confirmação da Central"
+                        + (bloqueada ? " — BLOQUEADA pela tolerância de " + properties.tolerancia() + "h" : ""));
+            }
+            if (linhas.isEmpty()) {
+                ultimoAlerta = null;
+                return;
+            }
+            log.error("Paróquias sem confirmação da Central: {}", linhas);
+            Instant agora = Instant.now();
+            if (properties.alertaEmail() == null || properties.alertaEmail().isBlank()
+                    || (ultimoAlerta != null && ultimoAlerta.isAfter(agora.minus(Duration.ofHours(8))))) {
+                return;
+            }
+            emailSender.enviarAlertaIntegracao(properties.alertaEmail(), String.join("
+", linhas));
+            ultimoAlerta = agora;
+        } catch (RuntimeException e) {
+            log.error("Falha ao verificar atraso de sincronização.", e);
         }
     }
 

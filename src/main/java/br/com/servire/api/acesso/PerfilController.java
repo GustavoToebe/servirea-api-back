@@ -26,13 +26,13 @@ public class PerfilController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('PERM_PERFIL','PERM_PERFIL_ALTERAR')")
+    @PreAuthorize("hasAnyAuthority('PERM_PERFIL','PERM_USUARIO')")
     public List<PerfilResponse> listar() {
         return perfilService.listar();
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('PERM_PERFIL','PERM_PERFIL_ALTERAR')")
+    @PreAuthorize("hasAnyAuthority('PERM_PERFIL','PERM_USUARIO')")
     public PerfilResponse buscar(@PathVariable UUID id) {
         return perfilService.buscar(id);
     }

@@ -27,26 +27,26 @@ public class PessoaController {
         this.pessoaService = pessoaService;
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
     @GetMapping
     public List<PessoaResponse> listar(@RequestParam(required = false) PessoaPapel papel,
                                        @RequestParam(required = false) String nome) {
         return pessoaService.buscar(papel, nome).stream().map(PessoaResponse::de).toList();
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
     @GetMapping("/{id}")
     public PessoaResponse buscarPorId(@PathVariable UUID id) {
         return PessoaResponse.de(pessoaService.buscarPorId(id));
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA_CRIAR')")
     @PostMapping
     public ResponseEntity<PessoaResponse> criar(@RequestBody @Valid PessoaRequest request) {
         return ResponseEntity.ok(PessoaResponse.de(pessoaService.criar(request)));
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA_ALTERAR')")
     @PutMapping("/{id}")
     public PessoaResponse atualizar(@PathVariable UUID id, @RequestBody @Valid PessoaRequest request) {
         return PessoaResponse.de(pessoaService.atualizar(id, request));

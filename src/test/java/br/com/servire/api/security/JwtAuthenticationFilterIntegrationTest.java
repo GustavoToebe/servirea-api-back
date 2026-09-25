@@ -1,10 +1,14 @@
 package br.com.servire.api.security;
 
 import br.com.servire.api.AbstractIntegrationTest;
+import br.com.servire.api.acesso.Perfil;
+import br.com.servire.api.acesso.PerfilRepository;
 import br.com.servire.api.auth.Usuario;
 import br.com.servire.api.auth.UsuarioRepository;
 import br.com.servire.api.auth.UsuarioTenant;
 import br.com.servire.api.auth.UsuarioTenantRepository;
+import br.com.servire.api.integracao.DireitosLocais;
+import br.com.servire.api.integracao.DireitosLocaisRepository;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantRepository;
 import org.junit.jupiter.api.Test;
@@ -14,6 +18,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -51,6 +58,12 @@ class JwtAuthenticationFilterIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private TenantRepository tenantRepository;
+
+    @Autowired
+    private DireitosLocaisRepository direitosLocaisRepository;
+
+    @Autowired
+    private PerfilRepository perfilRepository;
 
     @Test
     void accessTokenValidoAutenticaGetVoluntarios() throws Exception {
@@ -94,60 +107,77 @@ class JwtAuthenticationFilterIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void tokenBackofficeAutenticaAdminParoquiasENaoVoluntarios() throws Exception {
-        Usuario operador = usuarioRepository.saveAndFlush(operador("jwt-backoffice"));
-        String token = jwtService.gerarBackofficeToken(operador.getId());
+    void accessTokenComClaimDeSuporteDoPainelAntigoNaoAutentica() throws Exception {
+        Tenant tenant = tenant("jwt-sup-antigo", Tenant.Status.ATIVO);
+        Usuario usuario = usuarioComVinculo("jwt-sup-antigo", tenant);
+        String token = jwtService.gerarAccessToken(usuario.getId(), tenant.getId(), UsuarioTenant.Role.ADMIN, true);
 
-        mockMvc.perform(get("/admin/paroquias")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
-
-        mockMvc.perform(get("/voluntarios")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/voluntarios").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void tokenDeSuporteEntraEmParoquiaBloqueada() throws Exception {
-        Usuario operador = usuarioRepository.saveAndFlush(operador("jwt-suporte"));
-        Tenant tenant = tenantRepository.saveAndFlush(new Tenant(
-                "JWT-SUP-" + UUID.randomUUID().toString().substring(0, 8),
-                "jwt-suporte-" + UUID.randomUUID(),
-                "Paróquia suporte",
-                Tenant.Status.BLOQUEADO));
-        String token = jwtService.gerarAccessToken(
-                operador.getId(), tenant.getId(), UsuarioTenant.Role.ADMIN, true);
+    void tokenDeSuporteDaCentralEntraEmParoquiaBloqueada() throws Exception {
+        Tenant tenant = tenant("jwt-sup-app", Tenant.Status.BLOQUEADO);
+        String token = jwtService.gerarTokenSuporte(
+                UUID.randomUUID(), tenant.getId(), "Operador", "op@central.com", "Teste de suporte");
 
-        mockMvc.perform(get("/voluntarios")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                        .accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/voluntarios").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void padreNaoAutenticaRotasDoBackoffice() throws Exception {
-        Usuario usuario = usuarioRepository.saveAndFlush(
-                new Usuario("jwt-padre-" + UUID.randomUUID() + "@teste.com", "Padre JWT"));
-        Tenant tenant = tenantRepository.saveAndFlush(new Tenant(
-                "JWT-PADRE-" + UUID.randomUUID().toString().substring(0, 8),
-                "jwt-padre-" + UUID.randomUUID(),
-                "Paróquia padre",
-                Tenant.Status.ATIVO));
-        usuarioTenantRepository.saveAndFlush(
-                new UsuarioTenant(usuario, tenant, UsuarioTenant.Role.ADMIN, UsuarioTenant.Status.ATIVO));
+    void paroquiaSemConfirmacaoDaCentralHaMaisDaToleranciaNaoAutentica() throws Exception {
+        Tenant tenant = tenant("jwt-72h", Tenant.Status.ATIVO);
+        Usuario usuario = usuarioComVinculo("jwt-72h", tenant);
+        DireitosLocais direitos = new DireitosLocais(tenant.getId(), UUID.randomUUID());
+        direitos.setVersao(1);
+        direitos.setSituacao("ATIVA");
+        direitos.setAcessoLiberado(true);
+        direitos.setConfirmadoEm(Instant.now().minus(73, ChronoUnit.HOURS));
+        direitosLocaisRepository.saveAndFlush(direitos);
         String token = jwtService.gerarAccessToken(usuario.getId(), tenant.getId(), UsuarioTenant.Role.ADMIN);
 
-        mockMvc.perform(get("/admin/paroquias")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/voluntarios").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+
+        direitos.setConfirmadoEm(Instant.now().minus(71, ChronoUnit.HOURS));
+        direitosLocaisRepository.saveAndFlush(direitos);
+        mockMvc.perform(get("/voluntarios").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
     }
 
-    private Usuario operador(String rotulo) {
-        Usuario usuario = new Usuario(rotulo + "-" + UUID.randomUUID() + "@teste.com", "Operador " + rotulo);
-        usuario.setOperadorSaas(true);
+    @Test
+    void usuarioEmPerfilInativoNaoAutentica() throws Exception {
+        Tenant tenant = tenant("jwt-perfil-inativo", Tenant.Status.ATIVO);
+        Perfil perfil = new Perfil(tenant.getId(), "Inativo", false, false);
+        perfil.substituirPermissoes(List.of("PESSOA"));
+        perfil.setAtivo(false);
+        perfil = perfilRepository.saveAndFlush(perfil);
+        Usuario usuario = usuarioRepository.saveAndFlush(
+                new Usuario("jwt-perfil-inativo-" + UUID.randomUUID() + "@teste.com", "Usuário"));
+        UsuarioTenant vinculo = new UsuarioTenant(usuario, tenant, UsuarioTenant.Role.VISUALIZADOR, UsuarioTenant.Status.ATIVO);
+        vinculo.setPerfil(perfil);
+        usuarioTenantRepository.saveAndFlush(vinculo);
+        String token = jwtService.gerarAccessToken(usuario.getId(), tenant.getId(), UsuarioTenant.Role.VISUALIZADOR);
+
+        mockMvc.perform(get("/voluntarios").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private Tenant tenant(String rotulo, Tenant.Status status) {
+        return tenantRepository.saveAndFlush(new Tenant(
+                "J-" + UUID.randomUUID().toString().substring(0, 8),
+                rotulo + "-" + UUID.randomUUID(),
+                "Paróquia " + rotulo,
+                status));
+    }
+
+    private Usuario usuarioComVinculo(String rotulo, Tenant tenant) {
+        Usuario usuario = usuarioRepository.saveAndFlush(
+                new Usuario(rotulo + "-" + UUID.randomUUID() + "@teste.com", "Usuário " + rotulo));
+        usuarioTenantRepository.saveAndFlush(
+                new UsuarioTenant(usuario, tenant, UsuarioTenant.Role.ADMIN, UsuarioTenant.Status.ATIVO));
         return usuario;
     }
 }

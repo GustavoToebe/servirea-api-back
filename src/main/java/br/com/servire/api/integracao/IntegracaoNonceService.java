@@ -1,6 +1,5 @@
 package br.com.servire.api.integracao;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -21,12 +20,7 @@ public class IntegracaoNonceService {
     /** Persiste mesmo se o handler seguinte falhar. {@code false} = nonce já usado. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean registrar(String chaveId, String nonce) {
-        try {
-            repository.saveAndFlush(new IntegracaoNonce(chaveId, nonce));
-            return true;
-        } catch (DataIntegrityViolationException e) {
-            return false;
-        }
+        return repository.registrar(chaveId, nonce) == 1;
     }
 
     @Scheduled(fixedDelay = 600_000)

@@ -3,8 +3,7 @@ package br.com.servire.api.auth;
 import br.com.servire.api.auth.dto.TenantResumo;
 import br.com.servire.api.security.JwtService;
 import br.com.servire.api.security.SecurityProperties;
-import br.com.servire.api.tenant.Tenant;
-import br.com.servire.api.tenant.TenantRepository;
+import br.com.servire.api.integracao.AcessoParoquia;
 import br.com.servire.api.web.ForbiddenException;
 import br.com.servire.api.web.UnauthorizedException;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,7 +34,7 @@ public class AuthService {
     private final EmailSender emailSender;
     private final SecurityProperties properties;
     private final String frontendBaseUrl;
-    private final TenantRepository tenantRepository;
+    private final AcessoParoquia acessoParoquia;
 
     public AuthService(UsuarioRepository usuarioRepository,
                         UsuarioTenantRepository usuarioTenantRepository,
@@ -46,7 +45,7 @@ public class AuthService {
                         EmailSender emailSender,
                         SecurityProperties properties,
                         @Value("${servire.frontend.base-url}") String frontendBaseUrl,
-                        TenantRepository tenantRepository) {
+                        AcessoParoquia acessoParoquia) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
         this.refreshTokenService = refreshTokenService;
@@ -56,7 +55,7 @@ public class AuthService {
         this.emailSender = emailSender;
         this.properties = properties;
         this.frontendBaseUrl = frontendBaseUrl;
-        this.tenantRepository = tenantRepository;
+        this.acessoParoquia = acessoParoquia;
     }
 
     /**
@@ -77,13 +76,6 @@ public class AuthService {
         if (!usuario.isAtivo()) {
             throw new UnauthorizedException("Usuário inativo.");
         }
-        // Operador do SaaS não entra pelo app da paróquia (seção 111).
-        // Só depois da senha bater — senão o e-mail "é operador" vaza
-        // para quem não tem a senha.
-        if (usuario.isOperadorSaas()) {
-            throw new ForbiddenException("Acesse o painel administrativo.");
-        }
-
         List<UsuarioTenant> vinculosValidos = vinculosAtivosComTenantPermitido(usuario.getId());
         if (vinculosValidos.isEmpty()) {
             throw new UnauthorizedException("Nenhuma paróquia ativa vinculada a este usuário.");
@@ -132,15 +124,6 @@ public class AuthService {
         if (!usuario.isAtivo()) {
             throw new UnauthorizedException("Usuário inativo.");
         }
-        if (usuario.isOperadorSaas()) {
-            Tenant tenant = tenantRepository.findById(tenantId)
-                    .orElseThrow(() -> new ForbiddenException("Paróquia não encontrada."));
-            String accessToken = jwtService.gerarAccessToken(
-                    usuario.getId(), tenantId, UsuarioTenant.Role.ADMIN, true);
-            return new TokensCompletos(
-                    accessToken, properties.jwt().accessTokenTtl().toSeconds(),
-                    TenantResumo.de(tenant), rotacao.novoTokenBruto());
-        }
         UsuarioTenant vinculo = vinculoAtivoComTenantPermitido(usuario.getId(), tenantId)
                 .orElseThrow(() -> new ForbiddenException("Usuário sem acesso a esta paróquia."));
         String accessToken = jwtService.gerarAccessToken(usuario.getId(), tenantId, vinculo.getRole());
@@ -185,18 +168,26 @@ public class AuthService {
 
     private List<UsuarioTenant> vinculosAtivosComTenantPermitido(UUID usuarioId) {
         return usuarioTenantRepository.findByUsuario_IdAndStatus(usuarioId, UsuarioTenant.Status.ATIVO).stream()
-                .filter(v -> tenantPermiteAcesso(v.getTenant()))
+                .filter(this::permiteAcesso)
                 .toList();
     }
 
     private Optional<UsuarioTenant> vinculoAtivoComTenantPermitido(UUID usuarioId, UUID tenantId) {
         return usuarioTenantRepository.findByUsuario_IdAndTenant_Id(usuarioId, tenantId)
                 .filter(v -> v.getStatus() == UsuarioTenant.Status.ATIVO)
-                .filter(v -> tenantPermiteAcesso(v.getTenant()));
+                .filter(this::permiteAcesso);
     }
 
-    private boolean tenantPermiteAcesso(Tenant tenant) {
-        return tenant.getStatus() == Tenant.Status.ATIVO || tenant.getStatus() == Tenant.Status.TRIAL;
+    /**
+     * Mesma regra do Kill Switch ({@link AcessoParoquia}: cópia local dos
+     * direitos + 72h) e perfil ativo. Assim a paróquia que o filtro recusaria
+     * nem aparece na lista do login.
+     */
+    private boolean permiteAcesso(UsuarioTenant vinculo) {
+        if (vinculo.getPerfil() != null && !vinculo.getPerfil().isAtivo()) {
+            return false;
+        }
+        return acessoParoquia.liberada(vinculo.getTenant());
     }
 
     private TokensCompletos emitirTokens(Usuario usuario, UsuarioTenant vinculo, String ip, String userAgent) {

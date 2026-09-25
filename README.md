@@ -16,7 +16,7 @@ exercitando `/pessoas` e `/escalas` via HTTP com JWT real).
 
 | Módulo | Situação | Contrato |
 |---|---|---|
-| Auth (`/auth/**`) | Pronto | Login, refresh em cookie, reset de senha (Resend) |
+| Auth (`/auth/**`) | Pronto | Login, refresh em cookie, reset de senha e convite (Resend). Link cai em `/reset-password?token=` do front |
 | Tenant (`/tenant`) | Pronto | `GET`/`PUT`; e-mails e telefones em lista 1:N |
 | Pessoas (`/pessoas/**`) | Pronto (V030–V032) | Cadastro. **Substitui** `POST`/`PUT /voluntarios` |
 | Voluntários (`/voluntarios/**`) | Perfil só | Lista, ativo, foto, commitments — sem criar/editar identidade |
@@ -24,8 +24,8 @@ exercitando `/pessoas` e `/escalas` via HTTP com JWT real).
 | Escalas (`/escalas/**`) | Pronto | Eventos, vagas, presença, picker, alocação. Front já usa a API |
 | Storage | Pronto | Bucket privado `voluntarios-fotos` |
 | Auditoria | Pronto | `GET /audit-log` (ADMIN da paróquia) |
-| Perfis e usuários | Etapa 1 | `/perfis`, `/usuarios` (convite, sem senha no formulário), `/me` |
-| Integração Central | Etapa 2 | `/integracao/v1` com HMAC. Sem chave configurada, a rota recusa; sem `direitos_locais`, a paróquia segue no status do tenant |
+| Perfis e usuários | Etapa 1 | `/perfis`, `/usuarios` (convite de 7 dias, sem senha no formulário), `/me`. Cada endpoint pede a ação do catálogo (`PERM_ESCALA_EXCLUIR`…); ninguém concede mais do que tem |
+| Integração Central | Etapa 2 | `/integracao/v1` com HMAC (`PERM_INTEGRACAO`). Sem chave configurada, a rota recusa; sem `direitos_locais`, a paróquia segue no status do tenant. Login e filtro usam a mesma regra (72h) |
 | Front Angular | Migrado | Login JWT, `/pessoas`, inscrições, escalas, perfis, usuários e meu perfil. O painel `/admin` saiu |
 
 ## Cadastro pessoa-primeiro — contrato para o Angular
@@ -73,9 +73,10 @@ Regras de negócio (V031):
 - `tipo` do voluntário: `COROINHA`, `ACOLITO`, `AMBOS` ou `MESC` (ministro
   da comunhão). `mandatoInicio` e `mandatoFim` são opcionais; se os dois
   vierem, o vencimento não pode ser anterior à investidura.
-- Diocese (`/admin/dioceses`) tem cota de servidores ativos. A paróquia
-  entra nela por `dioceseId` no cadastro do backoffice. Sem diocese, ou
-  com cota nula, não há teto. Passar da cota na ativação devolve 409.
+- Diocese tem cota de servidores ativos (`CotaDioceseService`). Com o
+  backoffice fora do app, não há mais tela para criar diocese nem ligar a
+  paróquia a ela; sem diocese não há teto. Decisão pendente: o que a
+  diocese representa (agrupamento, cliente da Central ou cota real).
 - Dependente marcado `principal` quando o voluntário já tem outro principal → 409.
 - `GET /pessoas?papel=VOLUNTARIO` inclui quem também é responsável.
 
@@ -169,7 +170,7 @@ GitHub: [servire-api-back](https://github.com/GustavoToebe/servire-api-back),
 [servire-api-front](https://github.com/GustavoToebe/servire-api-front).
 
 Stack: Java 21 · Spring Boot 4.1.1 · Hibernate 7.4 · PostgreSQL 16 ·
-Flyway V001–V032 · JJWT 0.13 · Testcontainers 2.x.
+Flyway V001–V036 · JJWT 0.13 · Testcontainers 2.x.
 
 ## Próximos passos
 
@@ -179,4 +180,7 @@ Flyway V001–V032 · JJWT 0.13 · Testcontainers 2.x.
 3. Definir `CSRF_COOKIE_DOMAIN` no deploy (lista completa das variáveis de produção em `.env.example`).
 4. Conferir Nginx/Caddy de produção com o snippet acima.
 5. Renomear a paróquia inicial (`placeholder`, V020) e recadastrar as pessoas.
-6. Resto do billing (gateway, webhooks, bloqueio por atraso).
+6. Configurar as variáveis `SERVIRE_INTEGRACAO_*` quando a Central subir (`.env.example`).
+7. Decidir o que é a diocese (ver contrato do Angular acima).
+8. No corte: migration apagando `plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e
+   `usuario.operador_saas` (já fora do código).

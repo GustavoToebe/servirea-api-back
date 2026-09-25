@@ -45,7 +45,7 @@ public class VoluntarioController {
         this.voluntarioService = voluntarioService;
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')")
     @GetMapping
     public List<VoluntarioResponse> listar(@RequestParam(required = false) Boolean ativo,
                                             @RequestParam(required = false) TipoVoluntario tipo,
@@ -53,37 +53,37 @@ public class VoluntarioController {
         return voluntarioService.buscar(ativo, tipo, nome).stream().map(VoluntarioResponse::de).toList();
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')")
     @GetMapping("/count")
     public long contar(@RequestParam boolean ativo) {
         return voluntarioService.contarPorAtivo(ativo);
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')")
     @GetMapping("/{id}")
     public VoluntarioResponse buscarPorId(@PathVariable UUID id) {
         return VoluntarioResponse.de(voluntarioService.buscarPorId(id));
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA_ATIVAR_INATIVAR')")
     @PatchMapping("/{id}/ativo")
     public VoluntarioResponse alterarAtivo(@PathVariable UUID id, @RequestParam boolean ativo) {
         return VoluntarioResponse.de(voluntarioService.setAtivo(id, ativo));
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA_ALTERAR')")
     @PostMapping("/{id}/foto")
     public VoluntarioResponse enviarFoto(@PathVariable UUID id, @RequestParam("foto") MultipartFile foto) {
         return VoluntarioResponse.de(voluntarioService.definirFoto(id, foto));
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')")
     @GetMapping("/{id}/foto-url")
     public FotoUrlResponse obterUrlFoto(@PathVariable UUID id) {
         return new FotoUrlResponse(voluntarioService.obterUrlFoto(id));
     }
 
-    @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
     @GetMapping("/{id}/commitments")
     public List<CompromissoResponse> listarCompromissos(@PathVariable UUID id) {
         return voluntarioService.listarCompromissos(id);

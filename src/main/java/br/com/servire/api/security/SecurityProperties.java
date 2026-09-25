@@ -22,8 +22,17 @@ import java.util.List;
  * (falhar alto e cedo em vez de assinar tokens com uma chave fraca).</p>
  */
 @ConfigurationProperties(prefix = "servire.security")
-public record SecurityProperties(Jwt jwt, Duration refreshTokenTtl, Duration passwordResetTokenTtl, Cors cors,
-                                 Csrf csrf) {
+public record SecurityProperties(Jwt jwt, Duration refreshTokenTtl, Duration passwordResetTokenTtl,
+                                 Duration conviteTokenTtl, Cors cors, Csrf csrf) {
+
+    /**
+     * Convite (usuário novo define a senha) vale mais que o reset: quem
+     * recebe pode abrir o e-mail no dia seguinte. Sem valor configurado,
+     * 7 dias (25/09/2026).
+     */
+    public Duration conviteTtl() {
+        return conviteTokenTtl == null ? Duration.ofDays(7) : conviteTokenTtl;
+    }
 
     public record Jwt(String secret, Duration accessTokenTtl, Duration tenantSelectionTokenTtl) {
     }

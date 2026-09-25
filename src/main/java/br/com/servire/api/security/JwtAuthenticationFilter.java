@@ -1,11 +1,9 @@
 package br.com.servire.api.security;
 
 import br.com.servire.api.acesso.PermissoesDaSessao;
-import br.com.servire.api.auth.Usuario;
-import br.com.servire.api.integracao.DireitosLocais;
-import br.com.servire.api.integracao.DireitosLocaisRepository;
-import br.com.servire.api.integracao.IntegracaoProperties;
+import br.com.servire.api.integracao.AcessoParoquia;
 import br.com.servire.api.integracao.SuporteSessao;
+import br.com.servire.api.auth.Usuario;
 import br.com.servire.api.auth.UsuarioRepository;
 import br.com.servire.api.auth.UsuarioTenant;
 import br.com.servire.api.auth.UsuarioTenantRepository;
@@ -20,16 +18,12 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,18 +35,20 @@ import java.util.UUID;
  * <p>Extrai o token do header {@code Authorization: Bearer
  * <token>}, valida assinatura/expiração/finalidade via {@link JwtService}
  * e então REVALIDA o Kill Switch (seção 28) direto no banco a cada
- * requisição. Três ramos (seção 111):</p>
+ * requisição. Dois ramos:</p>
  * <ul>
- *   <li>{@code purpose=access} sem {@code suporte} — usuário ativo,
- *   vínculo {@code usuario_tenant} ATIVO, tenant ATIVO/TRIAL.</li>
- *   <li>{@code purpose=access} com {@code suporte=true} — usuário
- *   operador ativo; tenant precisa existir (aceita {@code BLOQUEADO},
- *   senão o dono não atende quem está inadimplente); SEM vínculo
- *   {@code usuario_tenant} (seções 61/99: suporte explícito, nunca um
- *   operador "plantado" em todas as paróquias).</li>
- *   <li>{@code purpose=backoffice} — usuário operador ativo; NÃO seta
- *   {@link TenantContext} (o operador não é de nenhuma paróquia).</li>
+ *   <li>{@code purpose=access} — usuário ativo, vínculo
+ *   {@code usuario_tenant} ATIVO, perfil ativo e paróquia liberada
+ *   ({@link AcessoParoquia}: cópia local dos direitos + 72h).</li>
+ *   <li>{@code purpose=suporte_app} — código de uso único pedido pela
+ *   Central e trocado em {@code /auth/suporte/trocar}; tenant precisa
+ *   existir (aceita paróquia bloqueada, senão o dono não atende quem está
+ *   inadimplente); SEM vínculo {@code usuario_tenant}.</li>
  * </ul>
+ *
+ * <p>O token {@code purpose=backoffice} e o access token com
+ * {@code suporte=true} do operador saíram em 25/09/2026, junto com o
+ * painel: o operador agora mora na Central.</p>
  *
  * <p>Quando o token está ausente, é inválido, ou alguma checagem do Kill
  * Switch falha, este filtro simplesmente NÃO autentica a requisição (não
@@ -84,21 +80,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioTenantRepository usuarioTenantRepository;
     private final TenantRepository tenantRepository;
-    private final DireitosLocaisRepository direitosLocaisRepository;
-    private final IntegracaoProperties integracaoProperties;
+    private final AcessoParoquia acessoParoquia;
 
     public JwtAuthenticationFilter(JwtService jwtService,
                                     UsuarioRepository usuarioRepository,
                                     UsuarioTenantRepository usuarioTenantRepository,
                                     TenantRepository tenantRepository,
-                                    DireitosLocaisRepository direitosLocaisRepository,
-                                    IntegracaoProperties integracaoProperties) {
+                                    AcessoParoquia acessoParoquia) {
         this.jwtService = jwtService;
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
         this.tenantRepository = tenantRepository;
-        this.direitosLocaisRepository = direitosLocaisRepository;
-        this.integracaoProperties = integracaoProperties;
+        this.acessoParoquia = acessoParoquia;
     }
 
     @Override
@@ -150,9 +143,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return Optional.empty();
         }
 
-        if (JwtService.PURPOSE_BACKOFFICE.equals(purpose)) {
-            return autenticarBackoffice(token);
-        }
         if (JwtService.PURPOSE_SUPORTE_APP.equals(purpose)) {
             return autenticarSuporteApp(token);
         }
@@ -160,20 +150,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return autenticarAccess(token);
         }
         return Optional.empty();
-    }
-
-    private Optional<AuthenticatedUser> autenticarBackoffice(String token) {
-        UUID usuarioId;
-        try {
-            usuarioId = jwtService.validarBackofficeToken(token);
-        } catch (RuntimeException e) {
-            return Optional.empty();
-        }
-        Usuario usuario = usuarioRepository.findById(usuarioId).orElse(null);
-        if (usuario == null || !usuario.isAtivo() || !usuario.isOperadorSaas()) {
-            return Optional.empty();
-        }
-        return Optional.of(AuthenticatedUser.backoffice(usuarioId));
     }
 
     private Optional<AuthenticatedUser> autenticarAccess(String token) {
@@ -190,7 +166,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         if (claims.suporte()) {
-            return autenticarSuporte(usuarioEntidade, claims);
+            // Suporte do operador pelo painel antigo; hoje só suporte_app.
+            return Optional.empty();
         }
 
         Optional<UsuarioTenant> vinculo =
@@ -198,31 +175,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (vinculo.isEmpty() || vinculo.get().getStatus() != UsuarioTenant.Status.ATIVO) {
             return Optional.empty();
         }
+        if (vinculo.get().getPerfil() != null && !vinculo.get().getPerfil().isAtivo()) {
+            return Optional.empty();
+        }
 
         // tenant e perfil precisam já vir inicializados pelo repositório
         // (EntityGraph) — este filtro não é @Transactional e open-in-view
         // está desligado.
         Tenant tenant = vinculo.get().getTenant();
-        if (!paroquiaLiberada(tenant)) {
+        if (!acessoParoquia.liberada(tenant)) {
             return Optional.empty();
         }
 
         return Optional.of(new AuthenticatedUser(claims.usuarioId(), claims.tenantId(), claims.role()));
-    }
-
-    /**
-     * Sessão de suporte (seção 99/111): operador escolheu explicitamente
-     * a paróquia. Sem {@code usuario_tenant}; tenant só precisa existir
-     * (incluindo {@code BLOQUEADO}/{@code CANCELADO}).
-     */
-    private Optional<AuthenticatedUser> autenticarSuporte(Usuario usuario, JwtService.AccessTokenClaims claims) {
-        if (!usuario.isOperadorSaas()) {
-            return Optional.empty();
-        }
-        if (!tenantRepository.existsById(claims.tenantId())) {
-            return Optional.empty();
-        }
-        return Optional.of(AuthenticatedUser.suporte(usuario.getId(), claims.tenantId()));
     }
 
     /** Código de uso único da Central. Aceita paróquia bloqueada. */
@@ -241,45 +206,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Sem linha em {@code direitos_locais}, vale o status do tenant (a
-     * Central ainda não provisionou esta paróquia). Com a linha, obedece
-     * a Central e a tolerância de 72h.
-     */
-    private boolean paroquiaLiberada(Tenant tenant) {
-        Optional<DireitosLocais> direitos = direitosLocaisRepository.findById(tenant.getId());
-        if (direitos.isEmpty()) {
-            return tenant.getStatus() == Tenant.Status.ATIVO || tenant.getStatus() == Tenant.Status.TRIAL;
-        }
-        DireitosLocais locais = direitos.get();
-        return locais.isAcessoLiberado()
-                && !Instant.now().isAfter(locais.getConfirmadoEm().plus(integracaoProperties.tolerancia(), ChronoUnit.HOURS));
-    }
-
-    /**
-     * Monta as {@link GrantedAuthority} do usuário autenticado (seção 31 do
-     * plano mestre). Operador no painel recebe só {@code PERM_BACKOFFICE}
-     * (não as {@code PERM_*} da paróquia). Sessão de suporte e login da
-     * paróquia recebem {@code ROLE_<role>} + {@code PERM_*} de
-     * {@link RolePermissoes}.
+     * Monta as {@link GrantedAuthority} do usuário autenticado a partir do
+     * perfil da paróquia ({@link PermissoesDaSessao}). Suporte recebe o
+     * conjunto do acesso total.
      */
     private List<GrantedAuthority> autoridadesDe(AuthenticatedUser usuario) {
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        if (usuario.isBackoffice()) {
-            authorities.add(new SimpleGrantedAuthority("PERM_BACKOFFICE"));
-            return authorities;
-        }
         if (usuario.suporte()) {
             return PermissoesDaSessao.acessoTotal();
         }
         return usuarioTenantRepository
                 .findComPerfilByUsuario_IdAndTenant_Id(usuario.usuarioId(), usuario.tenantId())
                 .map(PermissoesDaSessao::de)
-                .orElseGet(() -> {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.role().name()));
-                    for (Permissao permissao : RolePermissoes.de(usuario.role())) {
-                        authorities.add(new SimpleGrantedAuthority("PERM_" + permissao.name()));
-                    }
-                    return authorities;
-                });
+                .orElseGet(() -> PermissoesDaSessao.daRole(usuario.role()));
     }
 }

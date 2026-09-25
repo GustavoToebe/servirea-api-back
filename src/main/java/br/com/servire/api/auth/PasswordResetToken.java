@@ -88,6 +88,10 @@ public class PasswordResetToken {
         this.usedAt = usedAt;
     }
 
+    public String getFinalidade() {
+        return finalidade;
+    }
+
     public void setFinalidade(String finalidade) {
         this.finalidade = finalidade;
     }

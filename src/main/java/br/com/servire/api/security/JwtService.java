@@ -30,15 +30,15 @@ import java.util.UUID;
  * <ul>
  *   <li><b>access</b> — token de acesso da paróquia (seção 34: 15 minutos),
  *   carrega {@code sub} (usuarioId), {@code tenant} (tenantId) e
- *   {@code roles}. Claim opcional {@code suporte=true} (seção 111):
- *   sessão de suporte do operador, sem vínculo {@code usuario_tenant}.</li>
+ *   {@code roles}. O claim antigo {@code suporte=true} (painel removido
+ *   em 25/09/2026) é recusado pelo filtro.</li>
  *   <li><b>tenant_selection</b> — token temporário (poucos minutos),
  *   emitido só quando o usuário tem mais de uma paróquia (seção 30: fluxo
  *   de {@code POST /auth/select-tenant}), carrega só {@code sub} — sem
  *   claim de tenant, porque o tenant ainda não foi escolhido.</li>
- *   <li><b>backoffice</b> — token do operador no painel (seção 111),
- *   carrega só {@code sub} — sem tenant (o operador não é de nenhuma
- *   paróquia). Nunca aceito nas rotas da paróquia.</li>
+ *   <li><b>suporte_app</b> — sessão de suporte da Central, emitida ao
+ *   trocar o código de uso único; carrega o id do código, o tenant e o
+ *   operador (nome, e-mail, motivo) para a auditoria.</li>
  * </ul>
  *
  * <p>O backend não confia apenas nos claims (seção 33): o
@@ -52,7 +52,6 @@ public class JwtService {
     static final String CLAIM_PURPOSE = "purpose";
     static final String PURPOSE_ACCESS = "access";
     static final String PURPOSE_TENANT_SELECTION = "tenant_selection";
-    static final String PURPOSE_BACKOFFICE = "backoffice";
     static final String PURPOSE_SUPORTE_APP = "suporte_app";
     static final String CLAIM_TENANT = "tenant";
     static final String CLAIM_ROLES = "roles";
@@ -135,17 +134,6 @@ public class JwtService {
                 claims.get("motivo", String.class));
     }
 
-    public String gerarBackofficeToken(UUID usuarioId) {
-        Instant agora = Instant.now();
-        return Jwts.builder()
-                .subject(usuarioId.toString())
-                .claim(CLAIM_PURPOSE, PURPOSE_BACKOFFICE)
-                .issuedAt(Date.from(agora))
-                .expiration(Date.from(agora.plus(config.accessTokenTtl())))
-                .signWith(key)
-                .compact();
-    }
-
     public String gerarTokenSelecaoTenant(UUID usuarioId) {
         Instant agora = Instant.now();
         return Jwts.builder()
@@ -189,19 +177,8 @@ public class JwtService {
     }
 
     /**
-     * @throws UnauthorizedException se o token for inválido, expirado ou de
-     * outra finalidade (ex.: um access token da paróquia apresentado no
-     * painel).
-     */
-    public UUID validarBackofficeToken(String token) {
-        Claims claims = parseClaims(token);
-        exigirPurpose(claims, PURPOSE_BACKOFFICE);
-        return parseUuidClaim(claims.getSubject(), "sub");
-    }
-
-    /**
      * Lê o {@code purpose} sem exigir um valor específico — o filtro usa
-     * isso para escolher o ramo (access vs backoffice) antes de validar
+     * isso para escolher o ramo (access vs suporte_app) antes de validar
      * o restante das claims.
      */
     public String purpose(String token) {

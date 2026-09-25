@@ -40,11 +40,11 @@ servire:
   # poder trocar isso.
   email:
     provider: log
-  # Job diário de cobranças (V029) desligado: os testes chamam o
-  # BillingService direto e não podem ter um job gerando no meio.
-  billing:
-    job:
-      enabled: false
+  # Integração com a Central: chave de teste = segredo dos vetores do
+  # contrato (docs da Central, seção 2.5), em Base64. Sem central-url, o
+  # job de sincronização não faz nada.
+  integracao:
+    chaves-entrada: teste-central:c2VncmVkby1kZS10ZXN0ZS1uYW8tdXNhci1lbS1wcm9kdWNhby0wMTIzNDU2Nzg5
 
 logging:
   level:

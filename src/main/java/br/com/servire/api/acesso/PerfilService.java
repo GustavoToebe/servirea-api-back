@@ -46,6 +46,7 @@ public class PerfilService {
         if (perfilRepository.findByTenantIdAndNome(tenantId, request.nome().trim()).isPresent()) {
             throw new ConflictException("Já existe um perfil com este nome.");
         }
+        ConcessaoDePermissao.exigirPodeConceder(request.acessoTotal(), normalizar(request.permissoes()));
         Perfil perfil = new Perfil(tenantId, request.nome().trim(), request.acessoTotal(), false);
         aplicar(perfil, request);
         perfilRepository.saveAndFlush(perfil);
@@ -55,6 +56,8 @@ public class PerfilService {
     @Transactional
     public PerfilResponse atualizar(UUID id, PerfilRequest request) {
         Perfil perfil = carregar(id);
+        ConcessaoDePermissao.exigirPodeAlterarAcessoTotal(perfil.isAcessoTotal());
+        ConcessaoDePermissao.exigirPodeConceder(request.acessoTotal(), normalizar(request.permissoes()));
         if (perfil.isSistema()) {
             if (!request.acessoTotal() || !request.ativo()) {
                 throw new BadRequestException("O perfil Administrador permanece ativo e com todas as opções liberadas.");
@@ -74,6 +77,7 @@ public class PerfilService {
     @Transactional
     public PerfilResponse duplicar(UUID id) {
         Perfil origem = carregar(id);
+        ConcessaoDePermissao.exigirPodeConceder(origem.isAcessoTotal() && !origem.isSistema(), codigos(origem));
         String nome = origem.getNome() + " (cópia)";
         Perfil copia = new Perfil(origem.getTenantId(), nome, false, false);
         copia.setAcessoTotal(origem.isAcessoTotal() && !origem.isSistema());
@@ -98,13 +102,15 @@ public class PerfilService {
     }
 
     private void aplicar(Perfil perfil, PerfilRequest request) {
+        // O ativo vem antes do retorno do acesso total: antes ficava depois
+        // e inativar um perfil com "Liberar todas as opções" era ignorado.
+        perfil.setAtivo(perfil.isSistema() || request.ativo());
         if (perfil.isSistema() || request.acessoTotal()) {
             perfil.setAcessoTotal(true);
             perfil.getPermissoes().clear();
             return;
         }
         perfil.setAcessoTotal(false);
-        perfil.setAtivo(request.ativo());
         perfil.getPermissoes().clear();
         if (perfil.getId() != null) {
             perfilRepository.flush();
@@ -112,11 +118,27 @@ public class PerfilService {
         perfil.substituirPermissoes(normalizar(request.permissoes()));
     }
 
+    /**
+     * Só códigos do catálogo; ação marcada traz o módulo junto (a ação sem
+     * o acesso ao módulo não teria como ser usada — mesma regra da tela).
+     */
     private List<String> normalizar(List<String> pedidas) {
         if (pedidas == null) {
             return List.of();
         }
-        return new ArrayList<>(new LinkedHashSet<>(pedidas));
+        LinkedHashSet<String> codigos = new LinkedHashSet<>();
+        for (String pedida : pedidas) {
+            String codigo = pedida == null ? "" : pedida.trim();
+            if (!CatalogoPermissao.codigos().contains(codigo)) {
+                throw new BadRequestException("Permissão desconhecida: " + codigo);
+            }
+            String modulo = CatalogoPermissao.moduloDe(codigo);
+            if (modulo != null) {
+                codigos.add(modulo);
+            }
+            codigos.add(codigo);
+        }
+        return new ArrayList<>(codigos);
     }
 
     private List<String> codigos(Perfil perfil) {

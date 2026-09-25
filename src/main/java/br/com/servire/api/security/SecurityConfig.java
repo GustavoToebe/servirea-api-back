@@ -38,15 +38,13 @@ import java.util.Set;
  * {@code /auth/login}, {@code /auth/select-tenant},
  * {@code /auth/forgot-password} e {@code /auth/reset-password} são
  * isentos de CSRF porque nenhum deles depende de uma credencial ambiente
- * do navegador (o corpo da requisição é autossuficiente). O mesmo vale
- * para {@code /admin/auth/login} (seção 111). Já
- * {@code /auth/refresh}, {@code /auth/logout}, {@code /admin/auth/refresh}
- * e {@code /admin/auth/logout} dependem do cookie HttpOnly do refresh
+ * do navegador (o corpo da requisição é autossuficiente). Já
+ * {@code /auth/refresh} e {@code /auth/logout} dependem do cookie HttpOnly do refresh
  * token (seção 92) e por isso continuam protegidos —
  * ver a javadoc de {@code AuthController}.</p>
  *
  * <p><b>CSRF x Bearer (correção de 24/09/2026):</b> fora de
- * {@code /auth/**} e {@code /admin/auth/**}, requisição com
+ * {@code /auth/**}, requisição com
  * {@code Authorization: Bearer} não exige token CSRF — o access token
  * mora em {@code sessionStorage} e o navegador nunca o envia sozinho,
  * então não há credencial ambiente para forjar (um site de terceiro não
@@ -68,9 +66,10 @@ import java.util.Set;
  * <p><b>Roles e permissões (seção 31, Fase 11):</b>
  * {@code @EnableMethodSecurity} liga o suporte a {@code @PreAuthorize} nos
  * métodos dos controllers — {@code JwtAuthenticationFilter} concede tanto
- * {@code ROLE_<role>} quanto um {@code PERM_<permissão>} por permissão
- * mapeada em {@link RolePermissoes}; os controllers checam só a permissão
- * (ex.: {@code @PreAuthorize("hasAuthority('PERM_VOLUNTARIO_WRITE')")}),
+ * {@code ROLE_ADMIN}/{@code ROLE_PERFIL} quanto um {@code PERM_<código>} por
+ * permissão do perfil ({@code PermissoesDaSessao}, catálogo em
+ * {@code CatalogoPermissao}); os controllers checam só a permissão
+ * (ex.: {@code @PreAuthorize("hasAuthority('PERM_ESCALA_EXCLUIR')")}),
  * nunca a role diretamente. Uma {@code AccessDeniedException} lançada por
  * {@code @PreAuthorize} acaba tratada pelo MESMO {@link RestAccessDeniedHandler}
  * já configurado abaixo para {@code authorizeHttpRequests} — mas isso NÃO
@@ -98,12 +97,12 @@ public class SecurityConfig {
     // filtros, o Boot despacha para cá SEM reaplicar o JWT
     // (OncePerRequestFilter pula ERROR dispatch). Sem isto, o cliente
     // vê 401 path=/error em vez do 500 real (Bug real #15).
-    // /admin/auth/login é o equivalente do /auth/login para o operador
-    // (seção 111) — o JWT ainda não existe nesse momento.
+    // /integracao/** NÃO é pública: o IntegracaoFiltro autentica pelo HMAC
+    // e concede PERM_INTEGRACAO (25/09/2026).
     private static final Set<String> METODOS_SEGUROS = Set.of("GET", "HEAD", "TRACE", "OPTIONS");
 
     private static final String[] ROTAS_PUBLICAS = {
-            "/auth/**", "/admin/auth/**", "/public/**", "/integracao/**", "/actuator/health", "/error"};
+            "/auth/**", "/public/**", "/actuator/health", "/error"};
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -146,7 +145,6 @@ public class SecurityConfig {
                         .ignoringRequestMatchers(
                                 "/auth/login", "/auth/select-tenant",
                                 "/auth/forgot-password", "/auth/reset-password",
-                                "/admin/auth/login",
                                 "/auth/suporte/trocar",
                                 "/integracao/**",
                                 "/public/**"))
@@ -179,7 +177,7 @@ public class SecurityConfig {
             return false;
         }
         String caminho = request.getRequestURI().substring(request.getContextPath().length());
-        if (caminho.startsWith("/auth/") || caminho.startsWith("/admin/auth/")) {
+        if (caminho.startsWith("/auth/")) {
             return true;
         }
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);

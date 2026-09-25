@@ -25,13 +25,13 @@ public class TenantController {
         this.tenantService = tenantService;
     }
 
-    @PreAuthorize("hasAnyAuthority('PERM_PAROQUIA','PERM_CONFIG_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_PAROQUIA')")
     @GetMapping
     public TenantResponse buscar() {
         return TenantResponse.de(tenantService.buscarAtual());
     }
 
-    @PreAuthorize("hasAnyAuthority('PERM_PAROQUIA_ALTERAR','PERM_CONFIG_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_PAROQUIA_ALTERAR')")
     @PutMapping
     public TenantResponse atualizar(@RequestBody @Valid TenantRequest request) {
         return TenantResponse.de(tenantService.atualizar(request));

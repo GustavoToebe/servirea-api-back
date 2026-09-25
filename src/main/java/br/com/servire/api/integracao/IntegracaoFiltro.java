@@ -13,6 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import tools.jackson.databind.json.JsonMapper;
@@ -23,10 +26,20 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * Valida HMAC nas rotas {@code /integracao/**}, na ordem do contrato:
  * chave, janela de 300s, assinatura, nonce em transação própria.
+ *
+ * <p>Quem passa ganha a authority {@code PERM_INTEGRACAO}, exigida pelo
+ * {@code IntegracaoController}. A rota não é {@code permitAll}: se algum
+ * caminho escapar deste filtro (ex.: {@code /%69ntegracao/...}, que o
+ * Spring decodifica ao escolher o controller), a requisição chega sem
+ * autenticação e recebe 401. Por isso a decisão de filtrar usa o caminho
+ * já decodificado ({@code servletPath}); a assinatura continua sobre o
+ * caminho cru, como o contrato define (25/09/2026).</p>
  */
 @Component
 public class IntegracaoFiltro extends OncePerRequestFilter {
@@ -35,6 +48,9 @@ public class IntegracaoFiltro extends OncePerRequestFilter {
     static final String TIMESTAMP = "X-Integracao-Timestamp";
     static final String NONCE = "X-Integracao-Nonce";
     static final String ASSINATURA = "X-Integracao-Assinatura";
+
+    /** Authority de quem passou pelo HMAC. Não está em {@code Permissao}: o acesso total não a inclui. */
+    public static final String AUTHORITY = "PERM_INTEGRACAO";
 
     private static final long JANELA_SEGUNDOS = 300;
     private static final Logger log = LoggerFactory.getLogger(IntegracaoFiltro.class);
@@ -53,8 +69,7 @@ public class IntegracaoFiltro extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        return uri == null || !uri.startsWith("/integracao/");
+        return !caminhoDecodificado(request).startsWith("/integracao/");
     }
 
     @Override
@@ -94,7 +109,15 @@ public class IntegracaoFiltro extends OncePerRequestFilter {
             recusar(response, request, "NONCE_REPETIDO", "nonce=" + nonce);
             return;
         }
+        SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                "integracao:" + chaveId, null, List.of(new SimpleGrantedAuthority(AUTHORITY))));
         chain.doFilter(new CorpoCacheado(request, corpo), response);
+    }
+
+    private static String caminhoDecodificado(HttpServletRequest request) {
+        String servletPath = request.getServletPath() == null ? "" : request.getServletPath();
+        String pathInfo = request.getPathInfo() == null ? "" : request.getPathInfo();
+        return (servletPath + pathInfo).toLowerCase(Locale.ROOT);
     }
 
     private void recusar(HttpServletResponse response, HttpServletRequest request, String codigo, String detalhe)

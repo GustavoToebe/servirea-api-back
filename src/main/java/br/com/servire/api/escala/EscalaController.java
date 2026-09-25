@@ -52,7 +52,7 @@ public class EscalaController {
         this.escalaService = escalaService;
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_READ')")
+    @PreAuthorize("hasAuthority('PERM_ESCALA')")
     @GetMapping
     public List<EscalaResponse> listar(@RequestParam(required = false) TipoEscala tipo,
                                         @RequestParam(required = false) StatusEscala status,
@@ -61,20 +61,20 @@ public class EscalaController {
         return escalaService.buscar(tipo, status, ano, mes).stream().map(EscalaResponse::de).toList();
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_READ')")
+    @PreAuthorize("hasAuthority('PERM_ESCALA')")
     @GetMapping("/{id}")
     public EscalaResponse buscarPorId(@PathVariable UUID id) {
         return EscalaResponse.de(escalaService.buscarPorId(id));
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_READ')")
+    @PreAuthorize("hasAnyAuthority('PERM_ESCALA','PERM_VAGA')")
     @GetMapping("/{eventoId}/candidatos")
     public List<CandidatoResponse> listarCandidatos(@PathVariable UUID eventoId,
                                                      @RequestParam FuncaoEscala funcao) {
         return escalaService.listarCandidatos(eventoId, funcao);
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_ESCALA_CRIAR')")
     @PostMapping
     public ResponseEntity<EscalaResponse> criar(@RequestBody @Valid EscalaRequest request,
                                                  @AuthenticationPrincipal AuthenticatedUser usuario) {
@@ -82,31 +82,31 @@ public class EscalaController {
         return ResponseEntity.ok(EscalaResponse.de(criada));
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_ESCALA_ALTERAR')")
     @PutMapping("/{id}")
     public EscalaResponse atualizar(@PathVariable UUID id, @RequestBody @Valid EscalaRequest request) {
         return EscalaResponse.de(escalaService.atualizar(id, request));
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_ESCALA_FINALIZAR_REABRIR')")
     @PostMapping("/{id}/finalizar")
     public EscalaResponse finalizar(@PathVariable UUID id) {
         return EscalaResponse.de(escalaService.finalizar(id));
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_ESCALA_CANCELAR')")
     @PostMapping("/{id}/cancelar")
     public EscalaResponse cancelar(@PathVariable UUID id) {
         return EscalaResponse.de(escalaService.cancelar(id));
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_ESCALA_FINALIZAR_REABRIR')")
     @PostMapping("/{id}/reabrir")
     public EscalaResponse reabrir(@PathVariable UUID id) {
         return EscalaResponse.de(escalaService.reabrir(id));
     }
 
-    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_ESCALA_EXCLUIR')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> excluir(@PathVariable UUID id) {
         escalaService.excluir(id);
@@ -114,14 +114,14 @@ public class EscalaController {
     }
 
     /** Controle de faltas (Fase 11, seção 131.5 item 11) — ver {@link EscalaService#registrarPresenca}. */
-    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_VAGA_PRESENCA')")
     @PatchMapping("/vagas/{vagaId}/presenca")
     public EscalaVagaResponse registrarPresenca(@PathVariable UUID vagaId, @RequestBody @Valid PresencaRequest request) {
         return EscalaVagaResponse.de(escalaService.registrarPresenca(vagaId, request.presenca()));
     }
 
     /** Aloca ou desaloca o voluntário desta vaga — complemento do picker (seção 49). */
-    @PreAuthorize("hasAuthority('PERM_ESCALA_WRITE')")
+    @PreAuthorize("hasAuthority('PERM_VAGA_ALOCAR')")
     @PatchMapping("/vagas/{vagaId}")
     public EscalaVagaResponse alocarVaga(@PathVariable UUID vagaId, @RequestBody AlocacaoVagaRequest request) {
         return EscalaVagaResponse.de(escalaService.alocarVaga(vagaId, request.voluntarioId()));

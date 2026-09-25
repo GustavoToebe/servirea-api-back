@@ -2025,6 +2025,51 @@ responsáveis com o mesmo e-mail vence o de mesmo nome (`9491963`).
 em `f94b7b5` e continua no histórico do git); V033 com o RLS nas
 migrations; renomear a paróquia `placeholder`.
 
+## Revisão de 25/09/2026 — perfis e integração v1 (Bugs reais #29–#36)
+
+Revisão do commit `bb42ecc` (perfis da paróquia + contrato v1 com a Central).
+Testes de regressão no novo `IntegracaoHttpIntegrationTest` (requisições
+assinadas de verdade), no novo `AcessoIntegrationTest`, em
+`MethodSecurityIntegrationTest` e em `JwtAuthenticationFilterIntegrationTest`.
+
+- **#29 Convidado nunca conseguia entrar.** O link do convite e do "esqueci
+  a senha" é `/reset-password?token=`, e o front não tinha essa rota: caía
+  no login. Criada a página no `servire-api-front`. O convite também
+  expirava em 1h (mesmo prazo do reset); agora vale 7 dias
+  (`convite-token-ttl`).
+- **#30 A matriz do perfil não valia para Pessoas, Escalas e Inscrições.**
+  Os endpoints ainda pediam `ESCALA_WRITE`/`VOLUNTARIO_WRITE`/
+  `INSCRICAO_APPROVE`, e uma "ponte" dava a escrita inteira a quem tinha
+  qualquer ação do módulo: quem só registrava presença excluía escala.
+  Cada endpoint pede a ação do catálogo; o enum `Permissao` e
+  `RolePermissoes` saíram (a role antiga é traduzida em `daRole`).
+- **#31 `/integracao/**` dependia só do caminho bater.** A rota era
+  `permitAll` e o HMAC só rodava se `getRequestURI()` começasse com
+  `/integracao/`; `/%69ntegracao/...` provavelmente chegava ao controller
+  sem assinatura. Agora o filtro concede `PERM_INTEGRACAO`, o controller
+  exige, e a rota saiu do `permitAll`.
+- **#32 Nonce repetido era aceito.** `saveAndFlush` com a chave preenchida
+  faz `merge` (UPDATE); a PK nunca esbarrava. Virou `INSERT ... ON CONFLICT
+  DO NOTHING`. `IntegracaoOperacao` virou `Persistable` pelo mesmo motivo.
+- **#33 Entrar em suporte → 500 sempre.** `SuporteTrocaService` abria a
+  transação antes do `TenantContext.set`; o `audit_log` ia com o tenant
+  sentinela e a FK falhava. Consumo do código e auditoria em transações
+  separadas; o uso único virou `UPDATE ... WHERE usado_em IS NULL`.
+- **#34 Qualquer um com `PERFIL_ALTERAR`/`USUARIO_ALTERAR` virava
+  administrador.** `ConcessaoDePermissao`: quem não tem acesso total não
+  concede acesso total, nem permissão que não tem, nem mexe em quem tem.
+- **#35 Alerta de 24h nunca saía com a Central fora do ar.** Ficava no
+  caminho de sucesso da sincronização. Agora roda depois de toda tentativa,
+  no máximo um e-mail a cada 8h.
+- **#36 Login e filtro com regras diferentes.** O login olhava só
+  `tenant.status`; paróquia fora das 72h entrava e depois tudo dava 401.
+  Regra única em `AcessoParoquia`. Perfil inativo também passou a barrar
+  login e requisição; inativar perfil com acesso total era ignorado.
+
+Limpeza no mesmo pacote: token `purpose=backoffice`, suporte antigo
+(`suporte=true` no access token), refresh do operador e o mapeamento de
+`usuario.operador_saas` saíram; o operador agora mora na Central.
+
 ## Onde está o código (disco + GitHub) — 23/09/2026
 
 Dois repositórios **irmãos** (não é monorepo). A pasta `servire` existe

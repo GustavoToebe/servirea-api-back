@@ -3,6 +3,8 @@ package br.com.servire.api.security;
 import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.auth.UsuarioTenant;
+import br.com.servire.api.acesso.Perfil;
+import br.com.servire.api.acesso.PermissoesDaSessao;
 import br.com.servire.api.escala.EscalaService;
 import br.com.servire.api.escala.EscalaVaga;
 import br.com.servire.api.inscricao.Inscricao;
@@ -22,13 +24,12 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
-import java.util.ArrayList;
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -297,19 +299,100 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
+     * A matriz do perfil vale por ação (25/09/2026). Antes qualquer ação do
+     * módulo virava {@code ESCALA_WRITE} e quem só registrava presença
+     * excluía escala.
+     */
+    @Test
+    void perfilSoComPresencaRegistraPresencaMasNaoExcluiNemCriaEscala() throws Exception {
+        when(escalaService.registrarPresenca(any(), any())).thenReturn(new EscalaVaga(FuncaoEscala.CRUZ, 1));
+        RequestPostProcessor soPresenca = comoPerfil("ESCALA", "VAGA", "VAGA_PRESENCA");
+
+        mockMvc.perform(patch("/escalas/vagas/{vagaId}/presenca", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"presenca\":\"PRESENTE\"}")
+                        .with(soPresenca)
+                        .with(csrf()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/escalas/{id}", UUID.randomUUID()).with(soPresenca)
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch("/escalas/vagas/{vagaId}", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"voluntarioId\":null}")
+                        .with(soPresenca)
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void perfilQueAprovaInscricaoNaoRejeita() throws Exception {
+        when(inscricaoService.aprovar(any(), any())).thenReturn(new Inscricao("Fulano"));
+        RequestPostProcessor soAprova = comoPerfil("INSCRICAO", "INSCRICAO_APROVAR");
+
+        mockMvc.perform(post("/inscricoes/{id}/aprovar", UUID.randomUUID()).with(soAprova)
+                        .with(csrf()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/inscricoes/{id}/rejeitar", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"x\"}")
+                        .with(soAprova)
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void perfilQueSoAlteraPessoaNaoAtivaNemInativa() throws Exception {
+        mockMvc.perform(patch("/voluntarios/{id}/ativo", UUID.randomUUID())
+                        .param("ativo", "false")
+                        .with(comoPerfil("PESSOA", "PESSOA_ALTERAR"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void integracaoSemAssinaturaRecebe401() throws Exception {
+        mockMvc.perform(get("/integracao/v1/instancias/{id}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    /**
+     * Caminho que o Spring decodifica ao escolher o controller, mas que não
+     * começa com {@code /integracao/} cru. Mesmo que escapasse do filtro
+     * HMAC, a rota exige {@code PERM_INTEGRACAO} e não é pública.
+     */
+    @Test
+    void integracaoComCaminhoCodificadoNaoPulaOHmac() throws Exception {
+        mockMvc.perform(get(URI.create("/%69ntegracao/v1/instancias/" + UUID.randomUUID())))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void usuarioDaParoquiaNaoAcessaIntegracao() throws Exception {
+        mockMvc.perform(get("/integracao/v1/instancias/{id}", UUID.randomUUID())
+                        .with(comoUsuario(UsuarioTenant.Role.ADMIN)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private RequestPostProcessor comoPerfil(String... codigos) {
+        Perfil perfil = new Perfil(UUID.randomUUID(), "Teste", false, false);
+        perfil.substituirPermissoes(List.of(codigos));
+        AuthenticatedUser usuario = new AuthenticatedUser(UUID.randomUUID(), UUID.randomUUID(), UsuarioTenant.Role.VISUALIZADOR);
+        return SecurityMockMvcRequestPostProcessors.authentication(
+                new UsernamePasswordAuthenticationToken(usuario, null, PermissoesDaSessao.doPerfil(perfil)));
+    }
+
+    /**
      * Monta a mesma {@link UsernamePasswordAuthenticationToken} que
      * {@link JwtAuthenticationFilter#doFilterInternal} monta a partir de um
-     * access token de verdade — {@code ROLE_<role>} mais um
-     * {@code PERM_<permissão>} por permissão de {@link RolePermissoes} (ver
-     * javadoc da classe).
+     * access token de verdade para um vínculo sem perfil
+     * ({@link PermissoesDaSessao#daRole}).
      */
     private RequestPostProcessor comoUsuario(UsuarioTenant.Role role) {
         AuthenticatedUser usuario = new AuthenticatedUser(UUID.randomUUID(), UUID.randomUUID(), role);
-        List<GrantedAuthority> authorities = new ArrayList<>();
-        authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
-        for (Permissao permissao : RolePermissoes.de(role)) {
-            authorities.add(new SimpleGrantedAuthority("PERM_" + permissao.name()));
-        }
+        List<GrantedAuthority> authorities = PermissoesDaSessao.daRole(role);
         return SecurityMockMvcRequestPostProcessors.authentication(
                 new UsernamePasswordAuthenticationToken(usuario, null, authorities));
     }

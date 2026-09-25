@@ -9,17 +9,14 @@ import java.util.UUID;
  * {@link JwtAuthenticationFilter} a partir do token já validado
  * (assinatura, expiração, finalidade) e revalidado no banco.
  *
- * <p>Três formas, combinadas nesta fase (backoffice, seção 111):</p>
+ * <p>Duas formas:</p>
  * <ul>
- *   <li>Padre/coordenador — {@code tenantId} + {@code role} do
+ *   <li>Usuário da paróquia — {@code tenantId} + {@code role} do
  *   {@code usuario_tenant}; {@code suporte=false}.</li>
- *   <li>Operador no painel — {@code tenantId} e {@code role} nulos
- *   (JWT {@code purpose=backoffice}); autoridade só
- *   {@code PERM_BACKOFFICE}.</li>
- *   <li>Operador em suporte — {@code tenantId} da paróquia escolhida,
- *   {@code role=ADMIN}, {@code suporte=true} (claim no access token).
- *   Sem vínculo {@code usuario_tenant}; o filtro aceita tenant
- *   {@code BLOQUEADO}.</li>
+ *   <li>Operador da Central em suporte — {@code tenantId} da paróquia,
+ *   {@code suporte=true}, {@code usuarioId} = id do código de suporte
+ *   (JWT {@code purpose=suporte_app}). Sem vínculo {@code usuario_tenant};
+ *   o filtro aceita paróquia bloqueada.</li>
  * </ul>
  *
  * <p>Fica disponível em {@code SecurityContextHolder} como o
@@ -35,15 +32,7 @@ public record AuthenticatedUser(UUID usuarioId, UUID tenantId, UsuarioTenant.Rol
         this(usuarioId, tenantId, role, false);
     }
 
-    public static AuthenticatedUser backoffice(UUID usuarioId) {
-        return new AuthenticatedUser(usuarioId, null, null, false);
-    }
-
     public static AuthenticatedUser suporte(UUID usuarioId, UUID tenantId) {
         return new AuthenticatedUser(usuarioId, tenantId, UsuarioTenant.Role.ADMIN, true);
-    }
-
-    public boolean isBackoffice() {
-        return tenantId == null && !suporte;
     }
 }

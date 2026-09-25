@@ -12,7 +12,7 @@ import java.util.List;
 public class PermissaoCatalogoController {
 
     @GetMapping("/catalogo")
-    @PreAuthorize("hasAnyAuthority('PERM_PERFIL','PERM_PERFIL_ALTERAR','PERM_VOLUNTARIO_READ')")
+    @PreAuthorize("hasAnyAuthority('PERM_PERFIL','PERM_USUARIO')")
     public List<CatalogoPermissao.Secao> catalogo() {
         return CatalogoPermissao.SECOES;
     }

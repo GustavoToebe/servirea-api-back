@@ -5,11 +5,22 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.Transient;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.domain.Persistable;
 
+/**
+ * Uma operação idempotente já executada. {@link Persistable} com
+ * {@code isNew} verdadeiro até gravar: com a chave preenchida à mão, o
+ * {@code save} do Spring Data faria {@code merge} (UPDATE) e uma segunda
+ * gravação da mesma chave passaria em silêncio em vez de esbarrar na PK
+ * (25/09/2026).
+ */
 @Entity
 @Table(name = "integracao_operacao")
-public class IntegracaoOperacao {
+public class IntegracaoOperacao implements Persistable<String> {
 
     @Id
     @Column(name = "idempotency_key")
@@ -27,6 +38,9 @@ public class IntegracaoOperacao {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
     private String resposta;
+
+    @Transient
+    private boolean nova = true;
 
     protected IntegracaoOperacao() {
     }
@@ -49,5 +63,21 @@ public class IntegracaoOperacao {
 
     public String getResposta() {
         return resposta;
+    }
+
+    @Override
+    public String getId() {
+        return idempotencyKey;
+    }
+
+    @Override
+    public boolean isNew() {
+        return nova;
+    }
+
+    @PostLoad
+    @PostPersist
+    void marcarGravada() {
+        nova = false;
     }
 }
