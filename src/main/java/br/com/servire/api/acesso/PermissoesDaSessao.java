@@ -36,6 +36,20 @@ public final class PermissoesDaSessao {
     private PermissoesDaSessao() {
     }
 
+    /**
+     * Códigos do catálogo presentes na sessão, sem o prefixo {@code PERM_}.
+     * É o que o {@code GET /me} devolve para o menu esconder o que o usuário
+     * não pode abrir. A trava de verdade continua no {@code @PreAuthorize}.
+     */
+    public static List<String> codigosEfetivos(List<GrantedAuthority> authorities) {
+        return authorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(autoridade -> autoridade.startsWith("PERM_"))
+                .map(autoridade -> autoridade.substring("PERM_".length()))
+                .sorted()
+                .toList();
+    }
+
     /** Sessão de suporte: o mesmo conjunto de quem tem acesso total. */
     public static List<GrantedAuthority> acessoTotal() {
         return montar(CatalogoPermissao.codigos(), true);

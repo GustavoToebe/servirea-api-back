@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/me")
 public class MeController {
@@ -55,11 +57,15 @@ public class MeController {
     private MeResponse resposta(AuthenticatedUser atual) {
         Usuario usuario = usuarioRepository.findById(atual.usuarioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
-        String perfil = usuarioTenantRepository
-                .findComPerfilByUsuario_IdAndTenant_Id(atual.usuarioId(), atual.tenantId())
-                .map(vinculo -> vinculo.getPerfil() == null ? vinculo.getRole().name() : vinculo.getPerfil().getNome())
+        var vinculo = usuarioTenantRepository
+                .findComPerfilByUsuario_IdAndTenant_Id(atual.usuarioId(), atual.tenantId());
+        String perfil = vinculo
+                .map(item -> item.getPerfil() == null ? item.getRole().name() : item.getPerfil().getNome())
                 .orElse("");
+        List<String> permissoes = vinculo
+                .map(item -> PermissoesDaSessao.codigosEfetivos(PermissoesDaSessao.de(item)))
+                .orElse(List.of());
         return new MeResponse(usuario.getId(), usuario.getNome(), usuario.getEmail(),
-                usuario.getTipoTelefone(), usuario.getTelefone(), perfil);
+                usuario.getTipoTelefone(), usuario.getTelefone(), perfil, permissoes);
     }
 }

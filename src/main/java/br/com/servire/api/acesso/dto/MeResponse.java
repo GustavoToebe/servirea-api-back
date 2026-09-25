@@ -1,5 +1,6 @@
 package br.com.servire.api.acesso.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 public record MeResponse(
@@ -8,6 +9,7 @@ public record MeResponse(
         String email,
         String tipoTelefone,
         String telefone,
-        String perfil
+        String perfil,
+        List<String> permissoes
 ) {
 }

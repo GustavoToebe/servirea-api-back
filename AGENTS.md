@@ -55,7 +55,7 @@ seção "Onde está o código (disco + GitHub)".
 | `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila `/inscricoes/**`; aprovar materializa `Pessoa` e reusa RESPONSAVEL por e-mail principal |
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
-| `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me`. `CatalogoPermissao` é a **única** lista de permissões (seção → módulo → ações); `PermissoesDaSessao` vira `PERM_<código>`; `ConcessaoDePermissao` impede conceder mais do que a sessão tem |
+| `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me` (devolve `permissoes`: códigos efetivos do catálogo, para o menu). `CatalogoPermissao` é a **única** lista de permissões (seção → módulo → ações); `PermissoesDaSessao` vira `PERM_<código>`; `ConcessaoDePermissao` impede conceder mais do que a sessão tem |
 | `integracao/` | contrato v1 com a Central: `IntegracaoFiltro` (HMAC → `PERM_INTEGRACAO`), provisionamento idempotente, `direitos_locais`, `AcessoParoquia` (regra única de paróquia liberada, usada no login e no filtro), webhook, sync de 8h + alerta, código de suporte |
 | `diocese/` | diocese **só como agrupamento informativo** da paróquia (V037, sem cota). Global, sem `@TenantId`. A paróquia escolhe ou digita o nome no `PUT /tenant` (`DioceseService.resolver`: mesmo nome sem diferenciar maiúsculas = mesma diocese); `GET /dioceses` sugere as já usadas. Diocese que contrate em bloco vira cliente na Central, não regra do Servire |
 
