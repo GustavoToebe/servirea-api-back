@@ -22,6 +22,7 @@ import br.com.servire.api.voluntario.TipoVoluntario;
 import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
+import br.com.servire.api.web.Formatos;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -374,16 +375,16 @@ public class InscricaoService {
                                 String bairro, Voluntario.HorarioEstudo horarioEstudo, String observacoes,
                                 boolean autorizaWhatsapp, List<FuncaoEscala> funcoesHabilitadas) {
         inscricao.setDataNascimento(dataNascimento);
-        inscricao.setSexo(opcional(sexo));
-        inscricao.setCpf(opcional(cpf));
-        inscricao.setRg(opcional(rg));
+        inscricao.setSexo(Formatos.sexo(sexo));
+        inscricao.setCpf(Formatos.cpf(cpf));
+        inscricao.setRg(Formatos.rg(rg));
         inscricao.setTipo(tipo);
         inscricao.setEtapaCatequese(opcional(etapaCatequese));
         inscricao.setEucaristiaAno(opcional(eucaristiaAno));
         inscricao.setCrismaAno(opcional(crismaAno));
-        inscricao.setCep(opcional(cep));
+        inscricao.setCep(Formatos.cep(cep));
         inscricao.setCidade(opcional(cidade));
-        inscricao.setUf(opcional(uf));
+        inscricao.setUf(Formatos.uf(uf));
         inscricao.setRua(opcional(rua));
         inscricao.setNumero(opcional(numero));
         inscricao.setComplemento(opcional(complemento));
@@ -410,7 +411,7 @@ public class InscricaoService {
         }
         if (telefones != null) {
             for (ContatoTelefoneRequest t : telefones) {
-                InscricaoTelefone linha = new InscricaoTelefone(t.tipo().trim(), t.numero().trim(), t.principal());
+                InscricaoTelefone linha = new InscricaoTelefone(t.tipo().trim(), Formatos.telefone(t.numero()), t.principal());
                 linha.setInscricao(inscricao);
                 inscricao.getTelefones().add(linha);
             }
@@ -439,7 +440,7 @@ public class InscricaoService {
             if (r.telefones() != null) {
                 for (ContatoTelefoneRequest t : r.telefones()) {
                     InscricaoResponsavelTelefone linha = new InscricaoResponsavelTelefone(
-                            t.tipo().trim(), t.numero().trim(), t.principal());
+                            t.tipo().trim(), Formatos.telefone(t.numero()), t.principal());
                     linha.setResponsavel(responsavel);
                     responsavel.getTelefones().add(linha);
                 }

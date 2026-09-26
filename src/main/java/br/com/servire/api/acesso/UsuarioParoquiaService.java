@@ -13,6 +13,7 @@ import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
+import br.com.servire.api.web.Formatos;
 import br.com.servire.api.web.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -75,7 +76,7 @@ public class UsuarioParoquiaService {
         Usuario existente = usuarioRepository.findByEmail(email).orElse(null);
         if (existente == null) {
             Usuario usuario = new Usuario(email, request.nome().trim());
-            usuario.setTelefone(request.telefone());
+            usuario.setTelefone(Formatos.telefone(request.telefone()));
             usuario.setTipoTelefone(request.tipoTelefone());
             usuario.setSenhaHash(null);
             usuarioRepository.saveAndFlush(usuario);
@@ -121,7 +122,7 @@ public class UsuarioParoquiaService {
                     });
             usuario.setNome(request.nome().trim());
             usuario.setEmail(email);
-            usuario.setTelefone(request.telefone());
+            usuario.setTelefone(Formatos.telefone(request.telefone()));
             usuario.setTipoTelefone(request.tipoTelefone());
         }
         return resposta(vinculo);

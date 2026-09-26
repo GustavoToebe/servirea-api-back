@@ -45,7 +45,7 @@ seção "Onde está o código (disco + GitHub)".
 ## Pacotes (`src/main/java/br/com/servire/api/`)
 | Pacote | Conteúdo |
 |---|---|
-| `web/` | `GlobalExceptionHandler`, `ApiError`, hierarquia `ApiException` (`BadRequest`/`Conflict`/`Forbidden`/`ResourceNotFound`/`Unauthorized`/`TooManyRequests`), `RequestIdFilter` (MDC `requestId`), `ClientIp` (nunca lê `X-Forwarded-For` no código), `RestClientConfiguration` |
+| `web/` | `GlobalExceptionHandler`, `ApiError`, hierarquia `ApiException` (`BadRequest`/`Conflict`/`Forbidden`/`ResourceNotFound`/`Unauthorized`/`TooManyRequests`), `RequestIdFilter` (MDC `requestId`), `ClientIp` (nunca lê `X-Forwarded-For` no código), `RestClientConfiguration`, `Formatos` (CPF, CNPJ alfanumérico, RG, CEP, UF, telefone, sexo) |
 | `tenant/` | `Tenant` (global), `TenantEmail`/`TenantTelefone` (globais, sem `@TenantId`), `TenantContext`, `GET/PUT /tenant` |
 | `security/` | `SecurityConfig`, `JwtAuthenticationFilter` (Kill Switch + perfil por requisição), `JwtService` (`access`, `tenant_selection`, `suporte_app`), handlers 401/403 |
 | `auth/` | `Usuario`, `UsuarioTenant` (`perfil_id`; a `role` antiga só vale se o perfil for nulo), refresh token, token de senha (`RESET` 1h / `CONVITE` 7 dias), `EmailSender` (`LoggingEmailSender` / `ResendEmailSender`), `/auth/**` |
@@ -96,6 +96,9 @@ V037 tira a cota da diocese (gatilho, `tenant.voluntarios_ativos` e `diocese.cot
   (só o HMAC concede). Toda rota não pública é autenticada.
 - Service: `@Transactional` / `@Transactional(readOnly = true)`; erro de negócio = subclasse de `ApiException`
   (vira JSON `ApiError` com `requestId`). Nunca vazar detalhes internos num 500.
+- CPF, CNPJ, RG, CEP, UF, telefone e sexo passam por `Formatos` no service antes de gravar (valida e grava sempre no
+  mesmo formato, ex.: `529.982.247-25`, `(45) 99999-8888`); e-mail no DTO com `@Email(regexp = Formatos.EMAIL)`.
+  O front tem as mesmas regras em `shared/utils/formatos.ts`; mudou uma, muda a outra.
 - Mudança relevante chama `auditLogService.registrar("ACAO", "ENTIDADE", id, camposAlterados)` de forma explícita (sem AOP).
 - Javadocs longos que explicam o **porquê** (com data e seção do plano) são o estilo da casa. Mantenha-os ao mexer no código.
 - Segredos nunca versionados: prod lê de env var **sem valor padrão** (`JWT_SECRET`, `DB_URL`, `SUPABASE_*`,

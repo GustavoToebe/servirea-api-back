@@ -124,6 +124,46 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void fichaGravaDocumentosEContatosNoFormatoPadrao() throws Exception {
+        String corpo = """
+                {"papeis":["VOLUNTARIO"],"nomeCompleto":"Ficha Formatada","sexo":"f",
+                 "cpf":"52998224725","rg":"123456789","cep":"85800000","uf":"pr",
+                 "emails":[{"tipo":"E-mail pessoal","email":"ficha@paroquia.org.br","principal":true}],
+                 "telefones":[{"tipo":"celular","numero":"+55 45 99999 8888","principal":true}],
+                 "voluntario":{"tipo":"COROINHA","ativo":true,"autorizaWhatsapp":false,"funcoesHabilitadas":[]}}
+                """;
+        mockMvc.perform(json(post("/pessoas"), corpo))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sexo").value("Feminino"))
+                .andExpect(jsonPath("$.cpf").value("529.982.247-25"))
+                .andExpect(jsonPath("$.rg").value("12.345.678-9"))
+                .andExpect(jsonPath("$.cep").value("85800-000"))
+                .andExpect(jsonPath("$.uf").value("PR"))
+                .andExpect(jsonPath("$.telefones[0].numero").value("(45) 99999-8888"));
+    }
+
+    @Test
+    void fichaComCpfTelefoneOuEmailInvalidoVolta400() throws Exception {
+        String base = """
+                {"papeis":["VOLUNTARIO"],"nomeCompleto":"Ficha Inválida",%s,
+                 "voluntario":{"tipo":"COROINHA","ativo":true,"autorizaWhatsapp":false,"funcoesHabilitadas":[]}}
+                """;
+        mockMvc.perform(json(post("/pessoas"), base.formatted("\"cpf\":\"101175\"")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("CPF inválido."));
+        mockMvc.perform(json(post("/pessoas"), base.formatted(
+                        "\"telefones\":[{\"tipo\":\"celular\",\"numero\":\"9999-8888\",\"principal\":true}]")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Telefone inválido. Informe o DDD e o número."));
+        mockMvc.perform(json(post("/pessoas"), base.formatted(
+                        "\"emails\":[{\"tipo\":\"pessoal\",\"email\":\"ana@paroquia\",\"principal\":true}]")))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(json(post("/pessoas"), base.formatted("\"sexo\":\"talvez\"")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Sexo inválido. Use Masculino, Feminino ou Outro."));
+    }
+
+    @Test
     void rotaDoCookieDeRefreshContinuaExigindoCsrfMesmoComBearer() throws Exception {
         mockMvc.perform(autenticado(post("/auth/refresh"))
                         .contentType(MediaType.APPLICATION_JSON)

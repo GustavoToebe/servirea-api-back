@@ -6,6 +6,7 @@ import br.com.servire.api.pessoa.Contatos;
 import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
 import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
 import br.com.servire.api.tenant.dto.TenantRequest;
+import br.com.servire.api.web.Formatos;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -52,7 +53,7 @@ public class TenantService {
         Tenant tenant = tenantDoContexto();
         tenant.setNome(request.nome().trim());
         tenant.setRazaoSocial(opcional(request.razaoSocial()));
-        tenant.setCnpj(opcional(request.cnpj()));
+        tenant.setCnpj(Formatos.cnpj(request.cnpj()));
         tenant.setDiocese(dioceseService.resolver(request.diocese()));
         substituirContatos(tenant, request.emails(), request.telefones());
         auditLogService.registrar("ATUALIZACAO", "TENANT", tenant.getId(),
@@ -77,7 +78,7 @@ public class TenantService {
         }
         if (telefones != null) {
             for (ContatoTelefoneRequest t : telefones) {
-                TenantTelefone linha = new TenantTelefone(t.tipo().trim(), t.numero().trim(), t.principal());
+                TenantTelefone linha = new TenantTelefone(t.tipo().trim(), Formatos.telefone(t.numero()), t.principal());
                 linha.setTenant(tenant);
                 tenant.getTelefones().add(linha);
             }

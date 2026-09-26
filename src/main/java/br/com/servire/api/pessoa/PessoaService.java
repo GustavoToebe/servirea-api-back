@@ -11,6 +11,7 @@ import br.com.servire.api.voluntario.FuncaoEscala;
 import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ConflictException;
+import br.com.servire.api.web.Formatos;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -231,12 +232,12 @@ public class PessoaService {
     private void aplicarIdentidade(Pessoa pessoa, PessoaRequest request) {
         pessoa.setNomeCompleto(request.nomeCompleto().trim());
         pessoa.setDataNascimento(request.dataNascimento());
-        pessoa.setSexo(opcional(request.sexo()));
-        pessoa.setCpf(opcional(request.cpf()));
-        pessoa.setRg(opcional(request.rg()));
-        pessoa.setCep(opcional(request.cep()));
+        pessoa.setSexo(Formatos.sexo(request.sexo()));
+        pessoa.setCpf(Formatos.cpf(request.cpf()));
+        pessoa.setRg(Formatos.rg(request.rg()));
+        pessoa.setCep(Formatos.cep(request.cep()));
         pessoa.setCidade(opcional(request.cidade()));
-        pessoa.setUf(opcional(request.uf()));
+        pessoa.setUf(Formatos.uf(request.uf()));
         pessoa.setLogradouro(opcional(request.logradouro()));
         pessoa.setNumero(opcional(request.numero()));
         pessoa.setComplemento(opcional(request.complemento()));
@@ -278,7 +279,7 @@ public class PessoaService {
         }
         if (telefones != null) {
             for (ContatoTelefoneRequest t : telefones) {
-                PessoaTelefone linha = new PessoaTelefone(t.tipo().trim(), t.numero().trim(), t.principal());
+                PessoaTelefone linha = new PessoaTelefone(t.tipo().trim(), Formatos.telefone(t.numero()), t.principal());
                 linha.setPessoa(pessoa);
                 pessoa.getTelefones().add(linha);
             }
@@ -365,7 +366,7 @@ public class PessoaService {
             linha.setPessoa(pessoa);
             pessoa.getEmails().add(linha);
         }
-        String telefone = opcional(nova.telefone());
+        String telefone = Formatos.telefone(nova.telefone());
         if (telefone != null) {
             PessoaTelefone linha = new PessoaTelefone("celular", telefone, true);
             linha.setPessoa(pessoa);

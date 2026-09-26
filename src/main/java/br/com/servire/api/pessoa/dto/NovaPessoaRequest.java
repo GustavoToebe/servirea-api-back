@@ -1,5 +1,6 @@
 package br.com.servire.api.pessoa.dto;
 
+import br.com.servire.api.web.Formatos;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -10,6 +11,6 @@ import jakarta.validation.constraints.NotBlank;
  */
 public record NovaPessoaRequest(
         @NotBlank String nomeCompleto,
-        @Email String email,
+        @Email(regexp = Formatos.EMAIL, message = "E-mail inválido.") String email,
         String telefone) {
 }

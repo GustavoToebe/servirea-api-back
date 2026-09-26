@@ -6,6 +6,7 @@ import br.com.servire.api.auth.Usuario;
 import br.com.servire.api.auth.UsuarioRepository;
 import br.com.servire.api.auth.UsuarioTenantRepository;
 import br.com.servire.api.security.AuthenticatedUser;
+import br.com.servire.api.web.Formatos;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,7 +46,7 @@ public class MeController {
         Usuario usuario = usuarioRepository.findById(atual.usuarioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
         usuario.setNome(request.nome().trim());
-        usuario.setTelefone(request.telefone());
+        usuario.setTelefone(Formatos.telefone(request.telefone()));
         usuario.setTipoTelefone(request.tipoTelefone());
         if (request.senha() != null && !request.senha().isBlank()) {
             usuario.setSenhaHash(passwordEncoder.encode(request.senha()));
