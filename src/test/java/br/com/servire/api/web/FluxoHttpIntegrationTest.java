@@ -33,6 +33,7 @@ import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequ
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -73,6 +74,9 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private InscricaoRepository inscricaoRepository;
+
+    @Autowired
+    private br.com.servire.api.integracao.RelatorioDeErros relatorioDeErros;
 
     private String token;
     private UUID tenantId;
@@ -144,6 +148,9 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(multipartAutenticado(multipart("/pessoas").file(dados).file(foto)))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.message").value(containsString("Storage não configurado")));
+        assertThat(relatorioDeErros.pendentes()).anyMatch(erro -> erro.status() == 503
+                && "/pessoas".equals(erro.rota()) && erro.tenantId().equals(tenantId)
+                && erro.mensagem().contains("Storage não configurado"));
         mockMvc.perform(autenticado(get("/pessoas").param("nome", "Com Foto Sem Storage")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));

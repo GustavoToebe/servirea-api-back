@@ -16,7 +16,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class GlobalExceptionHandlerTest {
 
-    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler(
+            new org.springframework.beans.factory.support.StaticListableBeanFactory()
+                    .getBeanProvider(br.com.servire.api.integracao.RelatorioDeErros.class));
 
     @Test
     void resourceNotFoundExceptionViraHttp404ComAMensagemDaExcecao() {

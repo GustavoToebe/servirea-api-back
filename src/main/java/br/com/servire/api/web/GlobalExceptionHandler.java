@@ -1,7 +1,9 @@
 package br.com.servire.api.web;
 
+import br.com.servire.api.integracao.RelatorioDeErros;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -43,9 +45,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /** Erros 5xx vão para a tela "Logs" da Central (26/09/2026). Opcional para testes de fatia. */
+    private final ObjectProvider<RelatorioDeErros> relatorio;
+
+    public GlobalExceptionHandler(ObjectProvider<RelatorioDeErros> relatorio) {
+        this.relatorio = relatorio;
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiError> handleApiException(ApiException ex, HttpServletRequest request) {
         log.warn("Erro de negócio tratado: status={} message={}", ex.getStatus(), ex.getMessage());
+        relatorio.ifAvailable(r -> r.registrar(ex.getStatus().value(), ex.getCodigo(), ex.getMessage(), request));
         return build(ex.getStatus(), ex.getMessage(), ex.getCodigo(), request, null);
     }
 
@@ -131,6 +141,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         // ao cliente neste handler: pode ser uma mensagem de driver JDBC
         // revelando nome de tabela/coluna, ou outro detalhe interno.
         log.error("Erro não tratado ao processar requisição", ex);
+        // Para a Central vai só o tipo: a mensagem pode trazer valores do banco (dado pessoal).
+        relatorio.ifAvailable(r -> r.registrar(500, null,
+                "Erro inesperado (" + ex.getClass().getSimpleName() + ")", request));
         return build(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Ocorreu um erro inesperado. Tente novamente ou contate o suporte informando o requestId.",
                 null, request, null);
