@@ -65,6 +65,8 @@ gerado com os checksums reais — ver README, "Produção (banco)"). **Nunca edi
 diferente = a API não sobe). V033/V034 (MESC, mandato, diocese) já estão no `main`. V035 (perfil e convite) e
 V036 (integração v1) são aditivas: as tabelas de billing continuam no banco até a Central existir para recebê-las.
 V037 tira a cota da diocese (gatilho, `tenant.voluntarios_ativos` e `diocese.cota_voluntarios`) e troca o único de `nome` por `lower(nome)`.
+V038: número curto por paróquia (`sequencial`) em pessoa, escalas, inscricoes, perfil e usuario_tenant, numerado por
+gatilho com contador em `tenant_sequencial`; entidade com `@Generated`. Não é `numero` (pessoa e inscrição já têm, do endereço).
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).

@@ -4,6 +4,8 @@ import java.util.UUID;
 
 public record UsuarioParoquiaResponse(
         UUID usuarioId,
+        /** Número do usuário nesta paróquia (do vínculo, V038). */
+        Long sequencial,
         String nome,
         String email,
         String tipoTelefone,

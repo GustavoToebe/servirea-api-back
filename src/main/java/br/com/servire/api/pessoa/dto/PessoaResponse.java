@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public record PessoaResponse(
         UUID id,
+        Long sequencial,
         Set<PessoaPapel> papeis,
         String nomeCompleto,
         LocalDate dataNascimento,
@@ -39,6 +40,7 @@ public record PessoaResponse(
                 : List.of();
         return new PessoaResponse(
                 p.getId(),
+                p.getSequencial(),
                 p.getPapeis(),
                 p.getNomeCompleto(),
                 p.getDataNascimento(),

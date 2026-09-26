@@ -189,6 +189,7 @@ public class UsuarioParoquiaService {
         boolean senha = usuario.getSenhaHash() != null && !usuario.getSenhaHash().isBlank();
         return new UsuarioParoquiaResponse(
                 usuario.getId(),
+                vinculo.getSequencial(),
                 usuario.getNome(),
                 usuario.getEmail(),
                 usuario.getTipoTelefone(),

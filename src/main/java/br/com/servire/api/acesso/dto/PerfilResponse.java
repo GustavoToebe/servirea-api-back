@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record PerfilResponse(
         UUID id,
+        Long sequencial,
         String nome,
         boolean ativo,
         boolean acessoTotal,
@@ -21,6 +22,7 @@ public record PerfilResponse(
                 .toList();
         return new PerfilResponse(
                 perfil.getId(),
+                perfil.getSequencial(),
                 perfil.getNome(),
                 perfil.isAtivo(),
                 perfil.isAcessoTotal(),

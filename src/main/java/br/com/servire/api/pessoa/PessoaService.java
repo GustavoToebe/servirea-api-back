@@ -68,7 +68,12 @@ public class PessoaService {
                 predicados.add(cb.isTrue(root.get("eResponsavel")));
             }
             if (nome != null && !nome.isBlank()) {
-                predicados.add(cb.like(cb.lower(root.get("nomeCompleto")), "%" + nome.trim().toLowerCase() + "%"));
+                String texto = nome.trim();
+                Predicate porNome = cb.like(cb.lower(root.get("nomeCompleto")), "%" + texto.toLowerCase() + "%");
+                // Número curto da pessoa (V038) também encontra.
+                predicados.add(texto.matches("\\d{1,18}")
+                        ? cb.or(porNome, cb.equal(root.get("sequencial"), Long.valueOf(texto)))
+                        : porNome);
             }
             return cb.and(predicados.toArray(Predicate[]::new));
         };

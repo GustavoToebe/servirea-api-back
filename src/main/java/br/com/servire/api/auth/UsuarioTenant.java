@@ -61,6 +61,11 @@ public class UsuarioTenant {
     @EmbeddedId
     private UsuarioTenantId id;
 
+    /** Número curto por paróquia para ditar e copiar (V038); o gatilho do banco numera no insert. */
+    @org.hibernate.annotations.Generated
+    @Column(insertable = false, updatable = false)
+    private Long sequencial;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId("usuarioId")
     @JoinColumn(name = "usuario_id")
@@ -152,5 +157,8 @@ public class UsuarioTenant {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+    public Long getSequencial() {
+        return sequencial;
     }
 }

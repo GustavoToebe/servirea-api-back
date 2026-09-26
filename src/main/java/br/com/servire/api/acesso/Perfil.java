@@ -27,6 +27,11 @@ public class Perfil {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    /** Número curto por paróquia para ditar e copiar (V038); o gatilho do banco numera no insert. */
+    @org.hibernate.annotations.Generated
+    @Column(insertable = false, updatable = false)
+    private Long sequencial;
+
     @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
@@ -100,5 +105,8 @@ public class Perfil {
         for (String codigo : codigos) {
             permissoes.add(new PerfilPermissao(this, codigo));
         }
+    }
+    public Long getSequencial() {
+        return sequencial;
     }
 }

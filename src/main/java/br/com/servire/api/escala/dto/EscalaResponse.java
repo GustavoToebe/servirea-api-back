@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public record EscalaResponse(
         UUID id,
+        Long sequencial,
         String titulo,
         TipoEscala tipo,
         Integer ano,
@@ -21,7 +22,7 @@ public record EscalaResponse(
 
     public static EscalaResponse de(Escala e) {
         return new EscalaResponse(
-                e.getId(), e.getTitulo(), e.getTipo(), e.getAno(), e.getMes(), e.getStatus(), e.getObservacao(),
+                e.getId(), e.getSequencial(), e.getTitulo(), e.getTipo(), e.getAno(), e.getMes(), e.getStatus(), e.getObservacao(),
                 e.getCreatedBy(), e.getVersion(), e.getEventos().stream().map(EscalaEventoResponse::de).toList());
     }
 }

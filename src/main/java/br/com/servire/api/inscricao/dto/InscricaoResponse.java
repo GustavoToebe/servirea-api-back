@@ -15,6 +15,7 @@ import java.util.UUID;
 
 public record InscricaoResponse(
         UUID id,
+        Long sequencial,
         String nomeCompleto,
         LocalDate dataNascimento,
         String sexo,
@@ -50,6 +51,7 @@ public record InscricaoResponse(
     public static InscricaoResponse de(Inscricao i) {
         return new InscricaoResponse(
                 i.getId(),
+                i.getSequencial(),
                 i.getNomeCompleto(),
                 i.getDataNascimento(),
                 i.getSexo(),

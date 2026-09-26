@@ -133,6 +133,25 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.dependentes[0].parentescoInverso").value("Mãe"));
     }
 
+    /** Teste de telas de 26/09/2026: número curto por paróquia (V038), começando em 1 em cada uma. */
+    @Test
+    void pessoaGanhaNumeroCurtoDaParoquiaEAchaPeloNumero() throws Exception {
+        String corpo = """
+                {"papeis":["RESPONSAVEL"],"nomeCompleto":"%s","emails":[],"telefones":[]}
+                """;
+        mockMvc.perform(json(post("/pessoas"), corpo.formatted("Primeira da Paroquia")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sequencial").value(1));
+        mockMvc.perform(json(post("/pessoas"), corpo.formatted("Segunda da Paroquia")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sequencial").value(2));
+
+        mockMvc.perform(autenticado(get("/pessoas").param("nome", "2")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].nomeCompleto").value("Segunda da Paroquia"));
+    }
+
     /**
      * Teste de telas de 26/09/2026: a foto falhou (Storage não configurado) e
      * a ficha ficou gravada; cada novo "Salvar" criou mais uma pessoa.

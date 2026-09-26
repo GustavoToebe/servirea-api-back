@@ -38,6 +38,11 @@ public class Pessoa {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    /** Número curto por paróquia para ditar e copiar (V038); o gatilho do banco numera no insert. */
+    @org.hibernate.annotations.Generated
+    @Column(insertable = false, updatable = false)
+    private Long sequencial;
+
     @TenantId
     @Column(name = "tenant_id")
     private UUID tenantId;
@@ -292,5 +297,8 @@ public class Pessoa {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+    public Long getSequencial() {
+        return sequencial;
     }
 }
