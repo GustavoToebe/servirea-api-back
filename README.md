@@ -26,7 +26,8 @@ Este repo é o `servire-api-back`; o Angular é o irmão `servire-api-front`
 | Storage | Pronto | Bucket privado `voluntarios-fotos` |
 | Auditoria | Pronto | `GET /audit-log` (ADMIN da paróquia) |
 | Perfis e usuários | Etapa 1 | `/perfis`, `/usuarios` (convite de 7 dias, sem senha no formulário), `/me` (inclui `permissoes` da paróquia atual). Cada endpoint pede a ação do catálogo (`PERM_ESCALA_EXCLUIR`…); ninguém concede mais do que tem |
-| Integração Central | Etapa 2 | `/integracao/v1` com HMAC (`PERM_INTEGRACAO`). Sem chave configurada, a rota recusa; sem `direitos_locais`, a paróquia segue no status do tenant. Login e filtro usam a mesma regra (72h) |
+| Integração Central | Etapa 2 | `/integracao/v1` com HMAC (`PERM_INTEGRACAO`). Sem chave configurada, a rota recusa; sem `direitos_locais`, a paróquia segue no status do tenant. Login e filtro usam a mesma regra (72h). Publica o catálogo de recursos (`GET /integracao/v1/recursos`) e manda os erros 5xx à tela "Logs" da Central (contrato 5.5 e 6.2) |
+| Número curto | V038 | `sequencial` por paróquia em pessoa, escala, inscrição, perfil e usuário, para ditar e copiar |
 | Front Angular | Migrado | Login JWT, `/pessoas`, inscrições, escalas, perfis, usuários e meu perfil. O painel `/admin` saiu |
 
 ## Cadastro pessoa-primeiro — contrato para o Angular

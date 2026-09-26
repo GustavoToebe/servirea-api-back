@@ -2555,3 +2555,22 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      ficha é salva de novo.
    - Roteiro para rodar tudo no PC: README do `central-api-back`.
    Confirmado nesta máquina: `mvn clean verify` `BUILD SUCCESS`, 208 testes.
+
+   Segunda rodada do mesmo dia (bugs reais #37–#38 e pedidos do teste):
+   - **#37 Ficha salva mesmo com a foto falhando, e duplicada a cada novo
+     "Salvar".** O front gravava a pessoa e depois mandava a foto noutra
+     chamada; com o Storage não configurado a ficha ficava, a tela seguia em
+     "Nova pessoa" e cada clique criava outra (três cadastros iguais no teste).
+     `POST`/`PUT /pessoas` aceitam multipart (`dados` + `foto`) e o
+     `CadastroComFotoService` grava tudo numa transação.
+   - **#38 Lista de voluntários da vaga cortada.** O cartão do dia na escala
+     tem `overflow-hidden`; o painel do `volunteer-picker` agora é `fixed`,
+     posicionado pelo botão, e abre para cima sem espaço embaixo.
+   - Campo inválido fica vermelho e a tela rola até ele (`focarPrimeiroInvalido`).
+   - `GET /integracao/v1/recursos` (contrato 5.5): o Servire publica os códigos
+     de limite/funcionalidade que entende; hoje nenhum é aplicado.
+   - `RelatorioDeErros` (contrato 6.2): erros 5xx vão à tela "Logs" da Central
+     a cada minuto; usuário só pelo id, erro inesperado só com o tipo.
+   - V038: número curto por paróquia (`sequencial`) em pessoa, escala,
+     inscrição, perfil e usuário, com gatilho e contador `tenant_sequencial`.
+   - Regra de trabalho: commit e push direto na `main` (AGENTS.md).
