@@ -23,14 +23,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -121,6 +127,39 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.dependentes[0].nomeCompleto").value("Coroinha HTTP"))
                 .andExpect(jsonPath("$.dependentes[0].parentesco").value("Filho"))
                 .andExpect(jsonPath("$.dependentes[0].parentescoInverso").value("Mãe"));
+    }
+
+    /**
+     * Teste de telas de 26/09/2026: a foto falhou (Storage não configurado) e
+     * a ficha ficou gravada; cada novo "Salvar" criou mais uma pessoa.
+     */
+    @Test
+    void fichaComFotoQueFalhaNoStorageNaoGravaNada() throws Exception {
+        MockMultipartFile dados = new MockMultipartFile("dados", "", MediaType.APPLICATION_JSON_VALUE, """
+                {"papeis":["VOLUNTARIO"],"nomeCompleto":"Com Foto Sem Storage","emails":[],"telefones":[],
+                 "voluntario":{"tipo":"COROINHA","ativo":true,"autorizaWhatsapp":false,"funcoesHabilitadas":[]}}
+                """.getBytes(StandardCharsets.UTF_8));
+        MockMultipartFile foto = new MockMultipartFile("foto", "perfil.png", "image/png", new byte[]{1, 2, 3});
+
+        mockMvc.perform(multipartAutenticado(multipart("/pessoas").file(dados).file(foto)))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value(containsString("Storage não configurado")));
+        mockMvc.perform(autenticado(get("/pessoas").param("nome", "Com Foto Sem Storage")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        String criado = mockMvc.perform(multipartAutenticado(multipart("/pessoas").file(dados)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(criado, "$.id");
+        MockMultipartFile alterado = new MockMultipartFile("dados", "", MediaType.APPLICATION_JSON_VALUE, """
+                {"papeis":["VOLUNTARIO"],"nomeCompleto":"Nome Que Nao Pode Ficar","emails":[],"telefones":[],
+                 "voluntario":{"tipo":"COROINHA","ativo":true,"autorizaWhatsapp":false,"funcoesHabilitadas":[]}}
+                """.getBytes(StandardCharsets.UTF_8));
+        mockMvc.perform(multipartAutenticado(multipart(HttpMethod.PUT, "/pessoas/{id}", id).file(alterado).file(foto)))
+                .andExpect(status().isServiceUnavailable());
+        mockMvc.perform(autenticado(get("/pessoas/{id}", id)))
+                .andExpect(jsonPath("$.nomeCompleto").value("Com Foto Sem Storage"));
     }
 
     @Test
@@ -328,6 +367,11 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
 
     private MockHttpServletRequestBuilder autenticado(MockHttpServletRequestBuilder request) {
         return request.header(HttpHeaders.AUTHORIZATION, "Bearer " + token).accept(MediaType.APPLICATION_JSON);
+    }
+
+    private MockMultipartHttpServletRequestBuilder multipartAutenticado(MockMultipartHttpServletRequestBuilder request) {
+        request.header(HttpHeaders.AUTHORIZATION, "Bearer " + token).accept(MediaType.APPLICATION_JSON);
+        return request;
     }
 
     private MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String corpo) {

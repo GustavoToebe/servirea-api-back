@@ -40,6 +40,7 @@ Quebra deliberada. Não há shim dos endpoints antigos.
 | Tabela `responsaveis` | `pessoa` + `pessoa_relacao` |
 | Um e-mail/telefone solto | Listas `{ tipo, valor, principal }` |
 | Papel exclusivo | `papeis: ["VOLUNTARIO"]` e/ou `["RESPONSAVEL"]` |
+| Ficha e depois `POST /voluntarios/{id}/foto` | Com foto: `POST`/`PUT /pessoas` em `multipart/form-data` (`dados` = JSON, `foto`). Foto que falha não grava a ficha (26/09/2026) |
 
 ```json
 {

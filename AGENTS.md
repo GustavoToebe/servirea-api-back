@@ -48,7 +48,7 @@ seção "Onde está o código (disco + GitHub)".
 | `tenant/` | `Tenant` (global), `TenantEmail`/`TenantTelefone` (globais, sem `@TenantId`), `TenantContext`, `GET/PUT /tenant` |
 | `security/` | `SecurityConfig`, `JwtAuthenticationFilter` (Kill Switch + perfil por requisição), `JwtService` (`access`, `tenant_selection`, `suporte_app`), handlers 401/403 |
 | `auth/` | `Usuario`, `UsuarioTenant` (`perfil_id`; a `role` antiga só vale se o perfil for nulo), refresh token, token de senha (`RESET` 1h / `CONVITE` 7 dias), `EmailSender` (`LoggingEmailSender` / `ResendEmailSender`), `/auth/**` |
-| `pessoa/` | cadastro pessoa-primeiro: `Pessoa` (`e_voluntario`/`e_responsavel`, podem coexistir), e-mails/telefones 1:N, `PessoaRelacao` (é/de, opcional), `/pessoas/**` |
+| `pessoa/` | cadastro pessoa-primeiro: `Pessoa` (`e_voluntario`/`e_responsavel`, podem coexistir), e-mails/telefones 1:N, `PessoaRelacao` (é/de, opcional), `/pessoas/**`; com foto, `CadastroComFotoService` grava ficha e foto na mesma transação (multipart) |
 | `voluntario/` | perfil 1:1 `@MapsId` com `Pessoa` (escala, foto, ativo, disponibilidade), `/voluntarios/**` — identidade não mora mais aqui |
 | `escala/` | `Escala` → `EscalaEvento` → `EscalaVaga`, presença, picker de candidatos, `/escalas/**` |
 | `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila `/inscricoes/**`; aprovar materializa `Pessoa` e reusa RESPONSAVEL por e-mail principal |
