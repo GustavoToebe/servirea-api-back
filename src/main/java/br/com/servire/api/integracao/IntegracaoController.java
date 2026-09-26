@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -51,6 +52,12 @@ public class IntegracaoController {
             response.setHeader("Idempotency-Replayed", "true");
         }
         response.getWriter().write(resultado.json());
+    }
+
+    /** Seção 5.5: o que a Central pode pôr em limites e funcionalidades. */
+    @GetMapping("/recursos")
+    public List<CatalogoDeRecursos.RecursoDoApp> recursos() {
+        return CatalogoDeRecursos.RECURSOS;
     }
 
     @GetMapping("/instancias/{tenantId}")

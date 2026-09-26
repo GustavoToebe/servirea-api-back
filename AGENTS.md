@@ -20,9 +20,8 @@ o `CLAUDE.md` só importa este (`@AGENTS.md`). Edite **só aqui**.
   atualiza este arquivo **junto com a funcionalidade**.
 - Manter curto: só o que evita erro de quem vai mexer no código. Estado atual no
   `README.md`; histórico detalhado no `HISTORICO.md`.
-- **Não commitar nem dar push.** Deixar as mudanças no working tree para o dono revisar e entregar
-  a mensagem de commit pronta (em português) para ele copiar. Os commits vão na `main`; branch só
-  quando pedido explicitamente.
+- Commit e push direto na `main` a cada alteração, com testes e build verdes (decisão de 26/09/2026,
+  igual aos outros três repositórios). Branch só quando pedido explicitamente.
 
 ## Stack
 Java 21 · Spring Boot **4.1.1** (Spring Framework 7, Security 7, Jakarta EE 11) · Hibernate 7.4 ·
@@ -56,7 +55,7 @@ seção "Onde está o código (disco + GitHub)".
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
 | `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me` (devolve `permissoes`: códigos efetivos do catálogo, para o menu). `CatalogoPermissao` é a **única** lista de permissões (seção → módulo → ações); `PermissoesDaSessao` vira `PERM_<código>`; `ConcessaoDePermissao` impede conceder mais do que a sessão tem |
-| `integracao/` | contrato v1 com a Central: `IntegracaoFiltro` (HMAC → `PERM_INTEGRACAO`), provisionamento idempotente, `direitos_locais`, `AcessoParoquia` (regra única de paróquia liberada, usada no login e no filtro), webhook, sync de 8h + alerta, código de suporte |
+| `integracao/` | contrato v1 com a Central: `IntegracaoFiltro` (HMAC → `PERM_INTEGRACAO`), provisionamento idempotente, `direitos_locais`, `AcessoParoquia` (regra única de paróquia liberada, usada no login e no filtro), webhook, sync de 8h + alerta, código de suporte, `CatalogoDeRecursos` (`GET /integracao/v1/recursos`: códigos de limite/funcionalidade e se já são aplicados; aplicar um = trocar `aplicado` no mesmo commit) |
 | `diocese/` | diocese **só como agrupamento informativo** da paróquia (V037, sem cota). Global, sem `@TenantId`. A paróquia escolhe ou digita o nome no `PUT /tenant` (`DioceseService.resolver`: mesmo nome sem diferenciar maiúsculas = mesma diocese); `GET /dioceses` sugere as já usadas. Diocese que contrate em bloco vira cliente na Central, não regra do Servire |
 
 Migrations: `src/main/resources/db/migration/V001..V037`. **V001–V015 são o baseline, nunca editar.**

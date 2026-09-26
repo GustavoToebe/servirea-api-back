@@ -177,6 +177,20 @@ class IntegracaoHttpIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void catalogoDeRecursosSoComAssinaturaEComOsCodigosDoContrato() throws Exception {
+        String caminho = "/integracao/v1/recursos";
+
+        mockMvc.perform(get(caminho)).andExpect(status().isUnauthorized());
+        mockMvc.perform(assinado(get(caminho), "GET", caminho, "", UUID.randomUUID().toString(), agora()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.codigo == 'voluntarios')].tipo").value("LIMITE"))
+                .andExpect(jsonPath("$[?(@.codigo == 'voluntarios')].unidade").value("pessoa"))
+                .andExpect(jsonPath("$[?(@.codigo == 'ESCALAS')].tipo").value("FUNCIONALIDADE"))
+                .andExpect(jsonPath("$[?(@.codigo == 'ESCALAS')].aplicado").value(false))
+                .andExpect(jsonPath("$.length()").value(CatalogoDeRecursos.RECURSOS.size()));
+    }
+
+    @Test
     void webhookBloqueiaEVersaoAntigaNaoReverte() throws Exception {
         String email = "wh-" + UUID.randomUUID() + "@teste.com";
         UUID contratacao = UUID.randomUUID();
