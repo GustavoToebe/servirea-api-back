@@ -19,6 +19,7 @@ Este repo é o `servire-api-back`; o Angular é o irmão `servire-api-front`
 | Auth (`/auth/**`) | Pronto | Login, refresh em cookie, reset de senha e convite (Resend). Link cai em `/reset-password?token=` do front |
 | Tenant (`/tenant`) | Pronto | `GET`/`PUT`; e-mails e telefones em lista 1:N |
 | Pessoas (`/pessoas/**`) | Pronto (V030–V032) | Cadastro. **Substitui** `POST`/`PUT /voluntarios` |
+| Formatos (`web/Formatos`) | Pronto (26/09/2026) | CPF, CNPJ (inclusive alfanumérico), RG, CEP, UF, telefone e sexo (Masculino/Feminino/Outro) validados no service e gravados formatados (`529.982.247-25`, `(45) 99999-8888`, `85800-000`); inválido = 400 com a mensagem. E-mail exige domínio com ponto. Vale em pessoa, inscrição, paróquia, usuários e `/me` |
 | Voluntários (`/voluntarios/**`) | Perfil só | Lista, ativo, foto, commitments — sem criar/editar identidade |
 | Inscrições | Pronto | Público + fila; responsável **opcional**; aprovar materializa `Pessoa` |
 | Escalas (`/escalas/**`) | Pronto | Eventos, vagas, presença, picker, alocação. Front já usa a API |
@@ -57,6 +58,8 @@ Quebra deliberada. Não há shim dos endpoints antigos.
   "voluntario": { "tipo": "COROINHA", "ativo": true, "autorizaWhatsapp": false, "funcoesHabilitadas": [] }
 }
 ```
+
+A resposta devolve documentos e contatos já formatados (o telefone acima volta `(11) 99999-0000`).
 
 Regras de negócio (V031):
 - Uma pessoa pode ser **os dois** (ministro que também é pai/mãe).
@@ -157,6 +160,11 @@ mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
 `spring-boot:run` contra Postgres limpo precisa do stub
 `src/test/resources/testcontainers/supabase-stubs.sql` antes do
 Flyway. Detalhe em `HISTORICO.md`, seção "Como rodar localmente".
+
+**Tudo junto no PC** (Servire + Central + os dois fronts, Postgres no Docker, comando para
+dar pull nos quatro repositórios e problemas já vistos): README do
+[`central-api-back`](https://github.com/GustavoToebe/central-api-back), seção
+"Ponta a ponta local (Windows, tudo no PC)".
 
 ## Onde está o código
 

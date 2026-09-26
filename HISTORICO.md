@@ -2540,3 +2540,18 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
    Deploy (113), migração de dados (114) e remoção do Supabase direto
    do Angular (115). O front precisa trocar o cadastro para `/pessoas`
    (outro git).
+
+8c. ✅ **Primeiro teste de telas com Central + Servire no PC — 26/09/2026.**
+   Achados e correções do mesmo dia:
+   - Central: contratação cancelada enquanto o app estava fora do ar era
+     provisionada na repetição seguinte (paróquia criada já bloqueada e
+     convite enviado). A entrega passou a descartar (`PROVISIONAMENTO_DESCARTADO`).
+   - Ficha salvava CPF "101175" e sexo em texto livre. `web/Formatos` valida
+     e grava no mesmo formato CPF, CNPJ (inclusive alfanumérico, julho de
+     2026), RG, CEP, UF, telefone e sexo; e-mail exige domínio com ponto.
+     Mesmas regras no front (`shared/utils/formatos.ts`), com máscara,
+     endereço pelo CEP (ViaCEP) e diálogo próprio no lugar do
+     `confirm()`/`alert()` do navegador. Dado antigo só é cobrado quando a
+     ficha é salva de novo.
+   - Roteiro para rodar tudo no PC: README do `central-api-back`.
+   Confirmado nesta máquina: `mvn clean verify` `BUILD SUCCESS`, 208 testes.
