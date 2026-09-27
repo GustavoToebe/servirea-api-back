@@ -2598,3 +2598,7 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      as tabelas, sem policy, sem grant para anon/authenticated, RPC públicas
      fechadas e a view com `security_invoker`. Na Central, V008 (o mesmo; lá só
      faltava a `flyway_schema_history`).
+   - **Produção no ar** (servirea.com.br, VPS em Montreal + Supabase
+     ca-central-1). Sem o `UserDetailsServiceAutoConfiguration`: o usuário em
+     memória do Spring não era usado e só gerava "Using generated security
+     password" no log.
