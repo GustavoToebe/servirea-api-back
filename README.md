@@ -184,12 +184,15 @@ Flyway V001–V037 · JJWT 0.13 · Testcontainers 2.x.
 
 ## Próximos passos
 
-1. Projeto do Supabase recriado em 27/09/2026 (sa-east-1, senha nova; a antiga vazou em `f94b7b5`). Banco nasce
-   pelo Flyway; desligar a Data API e o cadastro do Supabase Auth no painel.
-2. Feito na V039: RLS em todas as tabelas, sem policy e sem grant para anon/authenticated.
-3. Definir `CSRF_COOKIE_DOMAIN` no deploy (lista completa das variáveis de produção em `.env.example`).
-4. Conferir Nginx/Caddy de produção com o snippet acima.
-5. Renomear a paróquia inicial (`placeholder`, V020) e recadastrar as pessoas.
-6. Configurar as variáveis `SERVIRE_INTEGRACAO_*` quando a Central subir (`.env.example`).
-7. No corte: migration apagando `plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e
+Em produção desde 27/09/2026: `https://app.servirea.com.br` e `https://api.servirea.com.br` (VPS em Montreal,
+Supabase ca-central-1 criado do zero, V001–V039). Deploy e variáveis: `deploy/` do
+[`central-api-back`](https://github.com/GustavoToebe/central-api-back). Supabase com a Data API e o cadastro do
+Auth desligados; a V039 fecha o `public` de qualquer forma.
+
+1. Criar a paróquia real pela Central (contratação → provisionamento → convite) e recadastrar as pessoas.
+2. Paróquia `placeholder` (V020) e `publicTenantSlug` do front: trocar pelo slug da paróquia real.
+3. Ajustes pedidos no uso (lista de assinatura e demais telas) e bugs.
+4. Escala do mês por WhatsApp e e-mail para os pais (via Central; só quem autorizou).
+5. Storage das fotos (`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` vazias em produção: só o envio de foto falha).
+6. Migration de limpeza de `plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e
    `usuario.operador_saas` (já fora do código).
