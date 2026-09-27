@@ -2583,3 +2583,9 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
    - Exportação da escala (PDF/PNG): data completa (05/09/2026) acima do dia da
      semana e letras maiores na grade.
    - Número curto: sem o texto "copiado" ao lado; o aviso fica só na dica.
+   - Campos de data com os mesmos componentes da Central
+     (`shared/components/datas/`): `app-campo-data` (digita `DD/MM/AAAA` ou
+     escolhe no calendário) no nascimento, no mandato, na inscrição pública e
+     em "Adicionar um dia" da escala; `app-campo-competencia` (`MM/AAAA`) no
+     filtro de mês da lista de escalas. Painel aberto no `body`, com as cores
+     do tema (paleta e modo noturno).
