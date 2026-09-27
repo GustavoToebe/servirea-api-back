@@ -2,12 +2,8 @@
 # mestre: Java 21 + Spring Boot + Docker, rodando num único VPS via Docker
 # Compose — sem ECS/ECR/Kubernetes no MVP).
 #
-# NÃO TESTADO nesta sessão: o Docker deste ambiente de execução não tinha
-# um daemon disponível (só o cliente), então este Dockerfile não foi
-# efetivamente construído/rodado aqui — foi escrito seguindo o padrão
-# multi-stage usual para Spring Boot + Maven, mas vale validar com
-# `docker build .` assim que houver um Docker funcional à mão (ex.: no
-# próprio VPS, ou na máquina do desenvolvedor).
+# Testado em 27/09/2026: imagem construída e subida com o profile prod
+# (deploy/ do central-api-back, que tem o compose e o Caddyfile).
 
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
