@@ -5,6 +5,7 @@ import br.com.servire.api.diocese.DioceseService;
 import br.com.servire.api.pessoa.Contatos;
 import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
 import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
+import br.com.servire.api.tenant.dto.EnderecoDto;
 import br.com.servire.api.tenant.dto.TenantRequest;
 import br.com.servire.api.web.Formatos;
 import br.com.servire.api.web.ResourceNotFoundException;
@@ -56,8 +57,18 @@ public class TenantService {
         tenant.setCnpj(Formatos.cnpj(request.cnpj()));
         tenant.setDiocese(dioceseService.resolver(request.diocese()));
         substituirContatos(tenant, request.emails(), request.telefones());
+        if (request.endereco() != null) {
+            EnderecoDto e = request.endereco();
+            tenant.setCep(Formatos.cep(e.cep()));
+            tenant.setLogradouro(opcional(e.logradouro()));
+            tenant.setNumero(opcional(e.numero()));
+            tenant.setComplemento(opcional(e.complemento()));
+            tenant.setBairro(opcional(e.bairro()));
+            tenant.setCidade(opcional(e.cidade()));
+            tenant.setUf(Formatos.uf(e.uf()));
+        }
         auditLogService.registrar("ATUALIZACAO", "TENANT", tenant.getId(),
-                List.of("nome", "razaoSocial", "cnpj", "diocese", "contatos"));
+                List.of("nome", "razaoSocial", "cnpj", "diocese", "contatos", "endereco"));
         Hibernate.initialize(tenant.getDiocese());
         return tenant;
     }

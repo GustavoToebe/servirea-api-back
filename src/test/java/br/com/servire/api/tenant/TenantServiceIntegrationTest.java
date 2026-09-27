@@ -2,7 +2,9 @@ package br.com.servire.api.tenant;
 
 import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.diocese.DioceseService;
+import br.com.servire.api.tenant.dto.EnderecoDto;
 import br.com.servire.api.tenant.dto.TenantRequest;
+import br.com.servire.api.tenant.dto.TenantResponse;
 import br.com.servire.api.web.ResourceNotFoundException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +69,7 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
         TenantContext.set(tenant.getId());
 
         Tenant atualizado = tenantService.atualizar(new TenantRequest(
-                " Paróquia Nova ", " Associação ", " 11222333000181 ", null, null, null));
+                " Paróquia Nova ", " Associação ", " 11222333000181 ", null, null, null, null));
 
         assertThat(atualizado.getNome()).isEqualTo("Paróquia Nova");
         assertThat(atualizado.getRazaoSocial()).isEqualTo("Associação");
@@ -87,7 +89,7 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
         String nomeB = tenantB.getNome();
         TenantContext.set(tenantA.getId());
 
-        tenantService.atualizar(new TenantRequest("Só o A", null, null, null, null, null));
+        tenantService.atualizar(new TenantRequest("Só o A", null, null, null, null, null, null));
 
         TenantContext.set(tenantB.getId());
         assertThat(tenantService.buscarAtual().getNome()).isEqualTo(nomeB);
@@ -101,10 +103,10 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
         Tenant tenantB = salvar("F");
 
         TenantContext.set(tenantA.getId());
-        Tenant a = tenantService.atualizar(new TenantRequest("Paróquia E", null, null, "  " + nome + "  ", null, null));
+        Tenant a = tenantService.atualizar(new TenantRequest("Paróquia E", null, null, "  " + nome + "  ", null, null, null));
         TenantContext.set(tenantB.getId());
         Tenant b = tenantService.atualizar(new TenantRequest(
-                "Paróquia F", null, null, nome.toUpperCase().replace(" ", "   "), null, null));
+                "Paróquia F", null, null, nome.toUpperCase().replace(" ", "   "), null, null, null));
 
         assertThat(a.getDiocese().getNome()).isEqualTo(nome);
         assertThat(b.getDiocese().getId()).isEqualTo(a.getDiocese().getId());
@@ -116,14 +118,31 @@ class TenantServiceIntegrationTest extends AbstractIntegrationTest {
         String nome = "Diocese Sozinha " + UUID.randomUUID();
         Tenant tenant = salvar("G");
         TenantContext.set(tenant.getId());
-        Tenant comDiocese = tenantService.atualizar(new TenantRequest("Paróquia G", null, null, nome, null, null));
+        Tenant comDiocese = tenantService.atualizar(new TenantRequest("Paróquia G", null, null, nome, null, null, null));
         UUID dioceseId = comDiocese.getDiocese().getId();
 
-        Tenant semDiocese = tenantService.atualizar(new TenantRequest("Paróquia G", null, null, "   ", null, null));
+        Tenant semDiocese = tenantService.atualizar(new TenantRequest("Paróquia G", null, null, "   ", null, null, null));
 
         assertThat(semDiocese.getDiocese()).isNull();
         assertThat(tenantService.buscarAtual().getDiocese()).isNull();
         assertThat(dioceseService.listarEmUso()).extracting(d -> d.getId()).doesNotContain(dioceseId);
+    }
+
+    @Test
+    void enderecoNormalizaCepEUfEEnderecoNuloNaoApagaOSalvo() {
+        Tenant tenant = salvar("H");
+        TenantContext.set(tenant.getId());
+        tenantService.atualizar(new TenantRequest("Paróquia H", null, null, null, null, null,
+                new EnderecoDto("85801000", " Rua Paraná ", "100", "", "Centro", "Cascavel", "pr")));
+
+        Tenant salvo = tenantService.atualizar(new TenantRequest("Paróquia H", null, null, null, null, null, null));
+
+        assertThat(salvo.getCep()).isEqualTo("85801-000");
+        assertThat(salvo.getLogradouro()).isEqualTo("Rua Paraná");
+        assertThat(salvo.getComplemento()).isNull();
+        assertThat(salvo.getCidade()).isEqualTo("Cascavel");
+        assertThat(salvo.getUf()).isEqualTo("PR");
+        assertThat(TenantResponse.de(salvo).endereco().cidade()).isEqualTo("Cascavel");
     }
 
     private Tenant salvar(String sufixoUnico) {

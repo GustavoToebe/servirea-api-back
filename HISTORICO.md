@@ -2607,3 +2607,8 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      título e subtítulo editáveis (subtítulo vem com o nome da paróquia),
      ordenar por nome/número/idade/tipo, crescente ou decrescente; PDF A4
      (25 linhas por folha) ou imagem. Colunas "Nome | Assinatura / Responsável".
+   - Endereço da paróquia (tela Paróquia, com busca por CEP): as colunas já
+     existiam no `tenant` (V027); o `PUT /tenant` recebe `endereco` (nulo = não
+     mexe). A lista de assinatura usa a cidade no subtítulo, numera as linhas
+     ("1. Nome"), tem letras maiores e o nome centralizado na linha (22 por folha).
+     Campo de mês das escalas mais largo.

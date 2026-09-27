@@ -17,7 +17,8 @@ public record TenantResponse(
         String diocese,
         Tenant.Status status,
         List<ContatoEmailResponse> emails,
-        List<ContatoTelefoneResponse> telefones
+        List<ContatoTelefoneResponse> telefones,
+        EnderecoDto endereco
 ) {
 
     public static TenantResponse de(Tenant t) {
@@ -31,6 +32,8 @@ public record TenantResponse(
                         .toList(),
                 t.getTelefones().stream()
                         .map(tel -> new ContatoTelefoneResponse(tel.getId(), tel.getTipo(), tel.getNumero(), tel.isPrincipal()))
-                        .toList());
+                        .toList(),
+                new EnderecoDto(t.getCep(), t.getLogradouro(), t.getNumero(), t.getComplemento(),
+                        t.getBairro(), t.getCidade(), t.getUf()));
     }
 }

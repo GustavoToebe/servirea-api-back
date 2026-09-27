@@ -20,6 +20,8 @@ public record TenantRequest(
         String cnpj,
         @Size(max = 150) String diocese,
         List<@Valid ContatoEmailRequest> emails,
-        List<@Valid ContatoTelefoneRequest> telefones
+        List<@Valid ContatoTelefoneRequest> telefones,
+        /** Nulo = não mexe no endereço salvo. */
+        @Valid EnderecoDto endereco
 ) {
 }
