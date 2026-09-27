@@ -2602,3 +2602,8 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      ca-central-1). Sem o `UserDetailsServiceAutoConfiguration`: o usuário em
      memória do Spring não era usado e só gerava "Using generated security
      password" no log.
+   - **Lista de assinatura** em Pessoas: marcar todos ou alguns (a seleção
+     respeita a aba e o filtro de tipo), "Gerar lista de assinatura" com
+     título e subtítulo editáveis (subtítulo vem com o nome da paróquia),
+     ordenar por nome/número/idade/tipo, crescente ou decrescente; PDF A4
+     (25 linhas por folha) ou imagem. Colunas "Nome | Assinatura / Responsável".
