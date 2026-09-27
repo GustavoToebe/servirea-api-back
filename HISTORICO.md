@@ -2589,3 +2589,5 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      em "Adicionar um dia" da escala; `app-campo-competencia` (`MM/AAAA`) no
      filtro de mês da lista de escalas. Painel aberto no `body`, com as cores
      do tema (paleta e modo noturno).
+   - Olho para ver a senha enquanto digita (`app-olho-senha`) no login, em
+     "Definir senha" e em "Meu perfil"; o mesmo no login da Central.
