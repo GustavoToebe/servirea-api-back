@@ -2591,3 +2591,10 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      do tema (paleta e modo noturno).
    - Olho para ver a senha enquanto digita (`app-olho-senha`) no login, em
      "Definir senha" e em "Meu perfil"; o mesmo no login da Central.
+   - **Projetos do Supabase novos (sa-east-1).** O do Servire foi recriado e o
+     da Central criado. Banco montado só pelo Flyway deixava 9 tabelas sem RLS
+     e as policies `authenticated ALL` da V014 valendo: com a chave publicável
+     e uma conta no Supabase Auth dava para ler voluntários. V039: RLS em todas
+     as tabelas, sem policy, sem grant para anon/authenticated, RPC públicas
+     fechadas e a view com `security_invoker`. Na Central, V008 (o mesmo; lá só
+     faltava a `flyway_schema_history`).

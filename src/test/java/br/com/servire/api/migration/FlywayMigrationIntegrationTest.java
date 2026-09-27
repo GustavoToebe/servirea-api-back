@@ -97,6 +97,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // De 34 para 36 em 25/09/2026: V035 (perfis e convite) e V036 (integracao v1).
         // De 36 para 37 em 25/09/2026: V037 (diocese só agrupamento, sem cota).
         // De 37 para 38 em 26/09/2026: V038 (número curto por paróquia).
+        // De 38 para 39 em 27/09/2026: V039 (fecha o public para a Data API do Supabase).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -105,10 +106,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(38);
-        assertThat(sucesso).isEqualTo(38);
+        assertThat(total).isEqualTo(39);
+        assertThat(sucesso).isEqualTo(39);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("sequencial por paroquia");
+        assertThat(descricoes.getLast()).isEqualTo("fecha data api do supabase");
     }
 
     @Test
@@ -164,5 +165,33 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
 
         assertThat(authenticatedCanApprove).isTrue();
         assertThat(authenticatedCanReject).isTrue();
+    }
+
+    /** V039: projeto novo do Supabase nasce pelo Flyway; nada do public pode ficar aberto para anon/authenticated. */
+    @Test
+    void publicFechadoParaADataApiDoSupabase() {
+        List<String> semRls = jdbcTemplate.queryForList("""
+                SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND NOT c.relrowsecurity
+                  AND c.relname <> 'flyway_schema_history'
+                """, String.class);
+        Integer policies = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM pg_policies WHERE schemaname = 'public'", Integer.class);
+        Integer grants = jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM information_schema.role_table_grants
+                WHERE table_schema = 'public' AND grantee IN ('anon', 'authenticated')
+                """, Integer.class);
+        Boolean anonChamaRpc = jdbcTemplate.queryForObject(
+                "SELECT has_function_privilege('anon', 'public.criar_inscricao_publica(jsonb, jsonb)', 'EXECUTE')",
+                Boolean.class);
+        String opcoesDaView = jdbcTemplate.queryForObject(
+                "SELECT array_to_string(reloptions, ',') FROM pg_class WHERE relname = 'vw_voluntario_compromissos'",
+                String.class);
+
+        assertThat(semRls).isEmpty();
+        assertThat(policies).isZero();
+        assertThat(grants).isZero();
+        assertThat(anonChamaRpc).isFalse();
+        assertThat(opcoesDaView).contains("security_invoker=true");
     }
 }

@@ -156,8 +156,9 @@ gatilho com contador em `tenant_sequencial`; entidade com `@Generated`. Não é 
 - `inscricoes.aprovado_por`/`rejeitado_por` e `escalas.created_by` apontam para `public.usuario` (V023); no
   banco antigo eram ids do Supabase Auth. Migrar dado antigo exige criar o `usuario` com o mesmo id antes.
 - Segredo nunca vai para `.env.example` (é versionado): só o nome da variável, valor vazio.
-- Tabela nova em `public` (que não seja tenant-aware com policy): `ENABLE ROW LEVEL SECURITY` sem
-  policy, senão a Data API do Supabase (chave anon) lê/grava. A API Java é dona das tabelas e não é afetada.
+- Tabela nova em `public`: `ENABLE ROW LEVEL SECURITY` sem policy (V039 apagou as policies antigas e tirou os
+  grants de anon/authenticated; o teste da V039 quebra se sobrar tabela sem RLS), senão a Data API do Supabase
+  (chave publicável) lê/grava. A API Java é dona das tabelas e não é afetada.
 - Entidade com **chave preenchida à mão** (`integracao_operacao`, `integracao_nonce`): o `save` do Spring
   Data faz `merge` (UPDATE) e a PK nunca esbarra — nonce repetido passava. Use `Persistable` com `isNew`
   (`IntegracaoOperacao`) ou `INSERT ... ON CONFLICT DO NOTHING` contando linhas (`IntegracaoNonceRepository`).

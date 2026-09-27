@@ -184,9 +184,9 @@ Flyway V001–V037 · JJWT 0.13 · Testcontainers 2.x.
 
 ## Próximos passos
 
-1. **Trocar a senha do banco de produção** (vazou no histórico do git em `f94b7b5`, `.env.example`).
-2. V033: `ENABLE ROW LEVEL SECURITY` nas tabelas que ainda não têm nas migrations (em produção o
-   script já ligou; banco recriado só pelo Flyway ficaria sem).
+1. Projeto do Supabase recriado em 27/09/2026 (sa-east-1, senha nova; a antiga vazou em `f94b7b5`). Banco nasce
+   pelo Flyway; desligar a Data API e o cadastro do Supabase Auth no painel.
+2. Feito na V039: RLS em todas as tabelas, sem policy e sem grant para anon/authenticated.
 3. Definir `CSRF_COOKIE_DOMAIN` no deploy (lista completa das variáveis de produção em `.env.example`).
 4. Conferir Nginx/Caddy de produção com o snippet acima.
 5. Renomear a paróquia inicial (`placeholder`, V020) e recadastrar as pessoas.
