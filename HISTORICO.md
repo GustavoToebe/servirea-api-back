@@ -2578,8 +2578,8 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
    27/09/2026 (teste de telas, continuação):
    - **#39 Lista de voluntários abria no canto da tela.** O `.card` tem
      `backdrop-filter`, que vira a referência do `position: fixed`; o painel do
-     #38 era calculado pela janela. `volunteer-picker` desconta a caixa do
-     ancestral com `backdrop-filter`/`filter`/`transform`.
+     #38 era calculado pela janela e, dentro do cartão, ainda era cortado. O
+     painel do `volunteer-picker` agora é movido para o `body` ao abrir.
    - Exportação da escala (PDF/PNG): data completa (05/09/2026) acima do dia da
      semana e letras maiores na grade.
    - Número curto: sem o texto "copiado" ao lado; o aviso fica só na dica.
