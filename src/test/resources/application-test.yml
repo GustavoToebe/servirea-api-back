@@ -40,6 +40,14 @@ servire:
   # poder trocar isso.
   email:
     provider: log
+  # WhatsApp dos comunicados: fixo em "log" e sem espera entre mensagens.
+  whatsapp:
+    provider: log
+    intervalo-min-ms: 0
+    intervalo-max-ms: 0
+  comunicado:
+    fila-ativa: false
+    pausa-email-ms: 0
   # Integração com a Central: chave de teste = segredo dos vetores do
   # contrato (docs da Central, seção 2.5), em Base64. Sem central-url, o
   # job de sincronização não faz nada.

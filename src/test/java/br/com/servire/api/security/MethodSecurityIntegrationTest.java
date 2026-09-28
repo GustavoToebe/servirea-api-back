@@ -43,6 +43,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -123,6 +124,12 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
 
     @MockitoBean
     private br.com.servire.api.comunicacao.LayoutService layoutService;
+
+    @MockitoBean
+    private br.com.servire.api.comunicacao.ComunicadoService comunicadoService;
+
+    @MockitoBean
+    private br.com.servire.api.comunicacao.ParoquiaWhatsappService paroquiaWhatsappService;
 
     @Test
     void semAutenticacaoRecebe401() throws Exception {
@@ -442,6 +449,54 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
     void semPermissaoLayoutExcluirRecebe403() throws Exception {
         mockMvc.perform(delete("/layouts/{id}", UUID.randomUUID())
                         .with(comoPerfil("LAYOUT")) // tem LAYOUT mas não LAYOUT_EXCLUIR
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void semComunicadoEnviarRecebe403AoMontarDestinatarios() throws Exception {
+        mockMvc.perform(post("/comunicados/destinatarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"canal\":\"EMAIL\",\"pessoaIds\":[\"" + UUID.randomUUID() + "\"],\"enviarPara\":\"PESSOA\",\"contatos\":\"PRINCIPAL\"}")
+                        .with(comoPerfil("COMUNICADO"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void semComunicadoRecebe403NoHistorico() throws Exception {
+        mockMvc.perform(get("/comunicados").with(comoPerfil("LAYOUT")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void whatsappDaParoquiaLeComParoquiaEGravaSoComParoquiaAlterar() throws Exception {
+        when(paroquiaWhatsappService.buscar())
+                .thenReturn(new br.com.servire.api.comunicacao.dto.WhatsappConfigResponse("sao-jose", true, true));
+        mockMvc.perform(get("/tenant/whatsapp").with(comoPerfil("PAROQUIA")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenConfigurado").value(true))
+                .andExpect(jsonPath("$.token").doesNotExist());
+        mockMvc.perform(put("/tenant/whatsapp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"instancia\":\"x\",\"token\":\"y\",\"ativo\":true}")
+                        .with(comoPerfil("PAROQUIA"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/tenant/whatsapp/testar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"telefone\":\"45999998888\"}")
+                        .with(comoPerfil("PAROQUIA"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void semEscalaAlterarRecebe403AoGravarIndisponibilidades() throws Exception {
+        mockMvc.perform(put("/escalas/indisponibilidades").param("ano", "2026").param("mes", "10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"itens\":[],\"semRestricao\":[]}")
+                        .with(comoPerfil("ESCALA"))
                         .with(csrf()))
                 .andExpect(status().isForbidden());
     }

@@ -12,5 +12,10 @@ public record EscalaEventoRequest(
         @NotNull LocalDate data,
         @NotNull LocalTime horario,
         String celebracao,
-        @NotEmpty List<@Valid EscalaVagaRequest> vagas) {
+        @NotEmpty List<@Valid EscalaVagaRequest> vagas,
+        Boolean referencia) {
+
+    public EscalaEventoRequest(LocalDate data, LocalTime horario, String celebracao, List<EscalaVagaRequest> vagas) {
+        this(data, horario, celebracao, vagas, null);
+    }
 }

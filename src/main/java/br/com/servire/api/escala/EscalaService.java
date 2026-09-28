@@ -48,6 +48,8 @@ public class EscalaService {
     private final DisponibilidadeVoluntarioRepository disponibilidadeRepository;
     private final AuditLogService auditLogService;
 
+    static final String REFERENCIA_SEM_ALOCACAO = "Linha de referência não recebe presença nem alocação.";
+
     public EscalaService(EscalaRepository escalaRepository, EscalaVagaRepository escalaVagaRepository,
                           EscalaEventoRepository escalaEventoRepository,
                           VoluntarioRepository voluntarioRepository,
@@ -152,6 +154,9 @@ public class EscalaService {
     public List<CandidatoResponse> listarCandidatos(UUID eventoId, FuncaoEscala funcao) {
         EscalaEvento evento = escalaEventoRepository.findById(eventoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+        if (evento.isReferencia()) {
+            return List.of();
+        }
         Set<UUID> jaAlocados = evento.getVagas().stream()
                 .map(EscalaVaga::getVoluntario)
                 .filter(v -> v != null)
@@ -259,6 +264,9 @@ public class EscalaService {
         if (escala.getStatus() != StatusEscala.RASCUNHO) {
             throw new ConflictException("Só é possível finalizar uma escala em RASCUNHO.");
         }
+        if (escala.getEventos().stream().anyMatch(EscalaEvento::isReferencia)) {
+            throw new BadRequestException("Apague as linhas de referência antes de finalizar a escala.");
+        }
         escala.setStatus(StatusEscala.FINALIZADA);
         auditLogService.registrar("FINALIZACAO", "ESCALA", id, List.of("status"));
         return inicializar(escala);
@@ -310,6 +318,9 @@ public class EscalaService {
     public EscalaVaga registrarPresenca(UUID vagaId, Presenca presenca) {
         EscalaVaga vaga = escalaVagaRepository.findById(vagaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaga não encontrada."));
+        if (vaga.getEvento().isReferencia()) {
+            throw new BadRequestException(REFERENCIA_SEM_ALOCACAO);
+        }
         if (vaga.getVoluntario() == null) {
             throw new BadRequestException("Esta vaga não tem voluntário alocado — não há presença para registrar.");
         }
@@ -340,6 +351,9 @@ public class EscalaService {
     private EscalaVaga alocar(UUID vagaId, UUID voluntarioId) {
         EscalaVaga vaga = escalaVagaRepository.findById(vagaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaga não encontrada."));
+        if (vaga.getEvento().isReferencia()) {
+            throw new BadRequestException(REFERENCIA_SEM_ALOCACAO);
+        }
         if (vaga.getEvento().getEscala().getStatus() != StatusEscala.RASCUNHO) {
             throw new ConflictException(
                     "Só é possível alocar voluntário numa escala em RASCUNHO — reabra a escala antes de editar.");
@@ -388,6 +402,7 @@ public class EscalaService {
         for (EscalaEventoRequest er : requests) {
             EscalaEvento evento = new EscalaEvento(er.data(), er.horario(), er.celebracao());
             evento.setEscala(escala);
+            evento.setReferencia(Boolean.TRUE.equals(er.referencia()));
             Set<UUID> voluntariosNesteEvento = new HashSet<>();
             for (EscalaVagaRequest vr : er.vagas()) {
                 EscalaVaga vaga = new EscalaVaga(vr.funcao(), vr.posicao());

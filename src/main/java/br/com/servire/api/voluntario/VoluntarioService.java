@@ -111,7 +111,7 @@ public class VoluntarioService {
     @Transactional(readOnly = true)
     public List<CompromissoResponse> listarCompromissos(UUID id) {
         buscarPorId(id);
-        return escalaVagaRepository.findByVoluntario_IdOrderByEvento_DataAscEvento_HorarioAsc(id).stream()
+        return escalaVagaRepository.findByVoluntario_IdAndEvento_ReferenciaFalseOrderByEvento_DataAscEvento_HorarioAsc(id).stream()
                 .map(CompromissoResponse::de)
                 .toList();
     }

@@ -61,6 +61,10 @@ public class EscalaEvento {
     @Column(nullable = false)
     private String celebracao = "Missa";
 
+    /** Linha de referência da escala replicada (V044): não finaliza, não recebe presença nem entra em compromissos. */
+    @Column(nullable = false)
+    private boolean referencia;
+
     @OneToMany(mappedBy = "evento", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("funcao ASC, posicao ASC")
     private List<EscalaVaga> vagas = new ArrayList<>();
@@ -116,6 +120,14 @@ public class EscalaEvento {
 
     public void setCelebracao(String celebracao) {
         this.celebracao = celebracao;
+    }
+
+    public boolean isReferencia() {
+        return referencia;
+    }
+
+    public void setReferencia(boolean referencia) {
+        this.referencia = referencia;
     }
 
     public List<EscalaVaga> getVagas() {

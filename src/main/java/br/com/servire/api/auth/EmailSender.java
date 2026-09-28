@@ -16,4 +16,10 @@ public interface EmailSender {
     void enviarAvisoAcesso(String destinatario, String nomeParoquia);
 
     void enviarAlertaIntegracao(String destinatario, String mensagem);
+
+    /**
+     * E-mail de comunicado da paróquia (PLANO-005): HTML já renderizado, anexos
+     * opcionais e {@code responderPara} (e-mail da paróquia) quando houver.
+     */
+    void enviarComunicado(String para, String assunto, String html, java.util.List<Anexo> anexos, String responderPara);
 }

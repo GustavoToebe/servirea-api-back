@@ -101,6 +101,9 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // De 39 para 40 em 28/09/2026: V040 (CPF único por paróquia).
         // De 40 para 41 em 28/09/2026: V041 (cuidado e acolhimento).
         // De 41 para 42 em 28/09/2026: V042 (layout de envio).
+        // De 42 para 43 em 28/09/2026: V043 (comunicado e fila).
+        // De 43 para 44 em 28/09/2026: V044 (linha de referência da escala).
+        // De 44 para 45 em 28/09/2026: V045 (indisponibilidade mensal).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -109,10 +112,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(42);
-        assertThat(sucesso).isEqualTo(42);
+        assertThat(total).isEqualTo(45);
+        assertThat(sucesso).isEqualTo(45);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("layout de envio");
+        assertThat(descricoes.getLast()).isEqualTo("indisponibilidade mensal");
     }
 
     @Test

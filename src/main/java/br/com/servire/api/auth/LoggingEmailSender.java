@@ -62,4 +62,10 @@ public class LoggingEmailSender implements EmailSender {
     public void enviarAlertaIntegracao(String destinatario, String mensagem) {
         log.debug("[STUB] Alerta de integração para {}: {}", destinatario, mensagem);
     }
+
+    @Override
+    public void enviarComunicado(String para, String assunto, String html, java.util.List<Anexo> anexos, String responderPara) {
+        log.debug("[STUB] Comunicado para {}: \"{}\" anexos={}", para, assunto,
+                anexos == null ? java.util.List.of() : anexos.stream().map(Anexo::nome).toList());
+    }
 }

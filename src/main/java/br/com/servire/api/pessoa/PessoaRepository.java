@@ -49,7 +49,15 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID>, JpaSpecif
     @Query("SELECT new br.com.servire.api.pessoa.dto.TelefoneParaDuplicidade(t.pessoa.id, t.numero) FROM PessoaTelefone t")
     List<br.com.servire.api.pessoa.dto.TelefoneParaDuplicidade> findAllTelefones();
 
-    @Query("SELECT new br.com.servire.api.pessoa.dto.ResponsavelParaDuplicidade(r.voluntario.id, r.responsavel.nomeCompleto) FROM PessoaRelacao r")
+    /** Irmãos (PLANO-007): pares de pessoas que compartilham algum responsável em {@code PessoaRelacao}. */
+    @Query("""
+            SELECT DISTINCT new br.com.servire.api.pessoa.dto.ParDeIrmaos(r1.voluntario.id, r2.voluntario.id)
+            FROM PessoaRelacao r1, PessoaRelacao r2
+            WHERE r1.responsavel = r2.responsavel AND r1.voluntario <> r2.voluntario
+            """)
+    List<br.com.servire.api.pessoa.dto.ParDeIrmaos> paresDeIrmaos();
+
+        @Query("SELECT new br.com.servire.api.pessoa.dto.ResponsavelParaDuplicidade(r.voluntario.id, r.responsavel.nomeCompleto) FROM PessoaRelacao r")
     List<br.com.servire.api.pessoa.dto.ResponsavelParaDuplicidade> findAllResponsaveis();
 
     Optional<Pessoa> findByCpf(String cpf);

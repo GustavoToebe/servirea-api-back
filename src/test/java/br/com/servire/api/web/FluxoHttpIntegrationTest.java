@@ -297,7 +297,8 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.voluntarioNome").value("Acólito Escalado"));
         mockMvc.perform(autenticado(get("/escalas/{id}", escalaId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.eventos[0].vagas[0].presenca").value("PRESENTE"));
+                .andExpect(jsonPath("$.eventos[0].vagas[0].presenca").value("PRESENTE"))
+                .andExpect(jsonPath("$.eventos[0].referencia").value(false));
     }
 
     @Test
@@ -472,5 +473,79 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.conteudo").exists());
+    }
+
+    @Test
+    void comunicadoPorEmailDoInicioAoHistoricoViaHttp() throws Exception {
+        String mae = mockMvc.perform(json(post("/pessoas"), """
+                {"papeis":["RESPONSAVEL"],"nomeCompleto":"Mãe Comunicado",
+                 "emails":[{"tipo":"Pessoal","email":"mae.comunicado@teste.com","principal":true}],
+                 "telefones":[],"responsaveis":[],"dependentes":[]}
+                """)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String pessoaId = JsonPath.read(mae, "$.id");
+        String layout = mockMvc.perform(json(post("/layouts"), """
+                {"nome":"Aviso HTTP","tipoLayout":"TODOS","tipoEnvio":"EMAIL","assunto":"Aviso","conteudo":"<p>Olá #PESSOA.PRIMEIRO_NOME#</p>","ativo":true}
+                """)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String layoutId = JsonPath.read(layout, "$.id");
+
+        mockMvc.perform(json(post("/comunicados/destinatarios"),
+                        "{\"canal\":\"EMAIL\",\"pessoaIds\":[\"" + pessoaId + "\"],\"enviarPara\":\"PESSOA\",\"contatos\":\"PRINCIPAL\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].destinos[0].endereco").value("mae.comunicado@teste.com"));
+        mockMvc.perform(json(post("/comunicados/pre-visualizar"),
+                        "{\"layoutId\":\"" + layoutId + "\",\"pessoaId\":\"" + pessoaId + "\",\"enviarPara\":\"PESSOA\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.conteudo").value("<p>Olá Mãe</p>"));
+
+        MockMultipartFile dados = new MockMultipartFile("dados", "", MediaType.APPLICATION_JSON_VALUE,
+                ("{\"canal\":\"EMAIL\",\"layoutId\":\"" + layoutId + "\",\"assunto\":\"Reunião\",\"enviarPara\":\"PESSOA\","
+                        + "\"contatos\":\"PRINCIPAL\",\"pessoaIds\":[\"" + pessoaId + "\"]}").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        MockMultipartFile anexo = new MockMultipartFile("anexos", "pauta.pdf", "application/pdf", "%PDF-1".getBytes());
+        String criado = mockMvc.perform(multipartAutenticado(multipart("/comunicados").file(dados).file(anexo)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.total").value(1))
+                .andReturn().getResponse().getContentAsString();
+        String comunicadoId = JsonPath.read(criado, "$.id");
+
+        mockMvc.perform(autenticado(get("/comunicados")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("NA_FILA"));
+        mockMvc.perform(autenticado(get("/comunicados/{id}", comunicadoId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.destinatarios[0].destino").value("mae.comunicado@teste.com"))
+                .andExpect(jsonPath("$.destinatarios[0].conteudo").doesNotExist())
+                .andExpect(jsonPath("$.anexos[0].nome").value("pauta.pdf"));
+    }
+
+    @Test
+    void whatsappDaParoquiaGravaSemDevolverOToken() throws Exception {
+        mockMvc.perform(autenticado(get("/tenant/whatsapp")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenConfigurado").value(false));
+        mockMvc.perform(json(put("/tenant/whatsapp"), "{\"instancia\":\"sao-jose\",\"token\":\"segredo-123\",\"ativo\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenConfigurado").value(true))
+                .andExpect(jsonPath("$.token").doesNotExist());
+        mockMvc.perform(json(post("/tenant/whatsapp/testar"), "{\"telefone\":\"(45) 99999-8888\"}"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void indisponibilidadesEApoioDaMensalViaHttp() throws Exception {
+        mockMvc.perform(json(put("/escalas/indisponibilidades").param("ano", "2026").param("mes", "10"),
+                        "{\"itens\":[],\"semRestricao\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mes").value(10));
+        mockMvc.perform(autenticado(get("/escalas/indisponibilidades").param("ano", "2026").param("mes", "10")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itens").isArray());
+        String escala = mockMvc.perform(json(post("/escalas"), """
+                {"titulo":"Mensal HTTP","tipo":"MENSAL","ano":2026,"mes":10,
+                 "eventos":[{"data":"2026-10-03","horario":"19:00","celebracao":"Missa","vagas":[{"funcao":"MISSAL","posicao":1}]}]}
+                """)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String escalaId = JsonPath.read(escala, "$.id");
+        mockMvc.perform(autenticado(get("/escalas/{id}/apoio", escalaId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.voluntarios").isArray());
     }
 }

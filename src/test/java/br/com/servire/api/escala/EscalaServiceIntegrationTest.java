@@ -61,6 +61,9 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private TenantRepository tenantRepository;
 
+    @Autowired
+    private br.com.servire.api.voluntario.VoluntarioService voluntarioService;
+
     @BeforeEach
     void definirTenant() {
         // Mesmo bug de teste do VoluntarioServiceIntegrationTest (mvn clean
@@ -235,6 +238,51 @@ class EscalaServiceIntegrationTest extends AbstractIntegrationTest {
     void registrarPresencaComVagaInexistenteLancaResourceNotFoundException() {
         assertThatThrownBy(() -> escalaService.registrarPresenca(UUID.randomUUID(), Presenca.PRESENTE))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    /** Uma referência (setembro) e um dia real (outubro), a mesma pessoa nos dois. */
+    private Escala escalaComReferencia(UUID voluntarioId) {
+        EscalaEventoRequest referencia = new EscalaEventoRequest(LocalDate.of(2026, 9, 29), LocalTime.of(19, 0), "Missa",
+                List.of(new EscalaVagaRequest(FuncaoEscala.MISSAL, 1, voluntarioId)), true);
+        EscalaEventoRequest real = new EscalaEventoRequest(LocalDate.of(2026, 10, 1), LocalTime.of(19, 0), "Missa",
+                List.of(new EscalaVagaRequest(FuncaoEscala.MISSAL, 1, voluntarioId)), false);
+        return escalaService.criar(new EscalaRequest("Semanal Outubro", TipoEscala.SEMANAL, 2026, 10, null, null,
+                List.of(referencia, real)), null);
+    }
+
+    @Test
+    void referenciaGravaVoltaENaoDeixaFinalizar() {
+        Voluntario v = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário da Referência");
+        Escala criada = escalaComReferencia(v.getId());
+        Escala lida = escalaService.buscarPorId(criada.getId());
+        assertThat(lida.getEventos()).extracting(EscalaEvento::isReferencia).containsExactlyInAnyOrder(true, false);
+
+        assertThatThrownBy(() -> escalaService.finalizar(criada.getId()))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("linhas de referência");
+
+        EscalaRequest semReferencia = new EscalaRequest("Semanal Outubro", TipoEscala.SEMANAL, 2026, 10, null,
+                lida.getVersion(), List.of(new EscalaEventoRequest(LocalDate.of(2026, 10, 1), LocalTime.of(19, 0), "Missa",
+                List.of(new EscalaVagaRequest(FuncaoEscala.MISSAL, 1, v.getId())))));
+        escalaService.atualizar(criada.getId(), semReferencia);
+        assertThat(escalaService.finalizar(criada.getId()).getStatus()).isEqualTo(StatusEscala.FINALIZADA);
+    }
+
+    @Test
+    void referenciaNaoRecebePresencaNemAlocacaoENaoEntraEmCompromissos() {
+        Voluntario v = Pessoas.persistirVoluntario(pessoaRepository, "Voluntário Só Referência");
+        Escala criada = escalaComReferencia(v.getId());
+        EscalaEvento ref = criada.getEventos().stream().filter(EscalaEvento::isReferencia).findFirst().orElseThrow();
+        UUID vagaRef = ref.getVagas().get(0).getId();
+
+        assertThatThrownBy(() -> escalaService.registrarPresenca(vagaRef, Presenca.PRESENTE))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("referência");
+        assertThatThrownBy(() -> escalaService.alocarVaga(vagaRef, null))
+                .isInstanceOf(BadRequestException.class).hasMessageContaining("referência");
+        assertThat(escalaService.listarCandidatos(ref.getId(), null)).isEmpty();
+
+        assertThat(voluntarioService.listarCompromissos(v.getId()))
+                .extracting(c -> c.data()).containsExactly(LocalDate.of(2026, 10, 1));
     }
 
     private EscalaRequest requestComUmEvento(Long version) {

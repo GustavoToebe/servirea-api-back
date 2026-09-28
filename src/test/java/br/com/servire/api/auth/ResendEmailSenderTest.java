@@ -123,4 +123,25 @@ class ResendEmailSenderTest {
                 .isInstanceOf(EmailException.class);
         server.verify();
     }
+
+    @Test
+    void comunicadoVaiComAnexoEmBase64EReplyTo() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo(API_URL))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.to").value("mae@teste.com"))
+                .andExpect(jsonPath("$.subject").value("Reunião"))
+                .andExpect(jsonPath("$.reply_to").value("secretaria@paroquia.test"))
+                .andExpect(jsonPath("$.attachments[0].filename").value("aviso.pdf"))
+                .andExpect(jsonPath("$.attachments[0].content").value("JVBERi0x"))
+                .andRespond(withSuccess("{\"id\": \"x\"}", MediaType.APPLICATION_JSON));
+
+        ResendEmailSender sender = new ResendEmailSender(
+                builder, new ResendProperties("re_chave_teste", "onboarding@resend.dev", API_URL));
+
+        sender.enviarComunicado("mae@teste.com", "Reunião", "<p>Olá</p>",
+                java.util.List.of(new Anexo("aviso.pdf", "application/pdf", "%PDF-1".getBytes())), "secretaria@paroquia.test");
+        server.verify();
+    }
 }

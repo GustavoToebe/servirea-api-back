@@ -20,7 +20,8 @@ import java.util.UUID;
 public interface EscalaVagaRepository extends JpaRepository<EscalaVaga, UUID> {
 
     @EntityGraph(attributePaths = {"evento", "evento.escala", "voluntario.pessoa"})
-    List<EscalaVaga> findByVoluntario_IdOrderByEvento_DataAscEvento_HorarioAsc(UUID voluntarioId);
+    /** Compromissos do voluntário: linha de referência (V044) não conta. */
+    List<EscalaVaga> findByVoluntario_IdAndEvento_ReferenciaFalseOrderByEvento_DataAscEvento_HorarioAsc(UUID voluntarioId);
 
     @Override
     @EntityGraph(attributePaths = {"evento", "evento.escala", "evento.vagas", "evento.vagas.voluntario.pessoa", "voluntario.pessoa"})

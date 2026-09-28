@@ -50,12 +50,12 @@ seção "Onde está o código (disco + GitHub)".
 | `auth/` | `Usuario`, `UsuarioTenant` (`perfil_id`; a `role` antiga só vale se o perfil for nulo), refresh token, token de senha (`RESET` 1h / `CONVITE` 7 dias), `EmailSender` (`LoggingEmailSender` / `ResendEmailSender`), `/auth/**` |
 | `pessoa/` | cadastro pessoa-primeiro: `Pessoa` (`e_voluntario`/`e_responsavel`, podem coexistir), e-mails/telefones 1:N, `PessoaRelacao` (é/de, opcional), `/pessoas/**`; com foto, `CadastroComFotoService` grava ficha e foto na mesma transação (multipart) |
 | `voluntario/` | perfil 1:1 `@MapsId` com `Pessoa` (escala, foto, ativo, disponibilidade), `/voluntarios/**` — identidade não mora mais aqui |
-| `escala/` | `Escala` → `EscalaEvento` → `EscalaVaga`, presença, picker de candidatos, `/escalas/**` |
+| `escala/` | `Escala` → `EscalaEvento` → `EscalaVaga`, presença, picker de candidatos, `/escalas/**`. Indisponibilidade mensal (`IndisponibilidadeService`, `/escalas/indisponibilidades` e `/escalas/{id}/apoio`): negativa, por data e período, digitada pela equipe ≠ `DisponibilidadeVoluntario` (positiva, V025). Irmãos = responsável em comum em `PessoaRelacao` (`PessoaRepository.paresDeIrmaos`, JPQL) |
 | `inscricao/` | inscrição pública (`/public/{slug}/inscricoes`, rate limit + Turnstile) e fila `/inscricoes/**`; aprovar materializa `Pessoa` e reusa RESPONSAVEL por e-mail principal |
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
 | `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me` (devolve `permissoes`: códigos efetivos do catálogo, para o menu). `CatalogoPermissao` é a **única** lista de permissões (seção → módulo → ações); `PermissoesDaSessao` vira `PERM_<código>`; `ConcessaoDePermissao` impede conceder mais do que a sessão tem |
-| `comunicacao/` | layouts de envio, `CatalogoDeTags` é a única lista de tags; `Renderizador` escapa HTML no e-mail |
+| `comunicacao/` | layouts de envio, `CatalogoDeTags` é a única lista de tags; `Renderizador` escapa HTML no e-mail. Comunicados: `ComunicadoService` monta os destinatários e renderiza cada mensagem; `FilaDeEnvio` (a cada 15 s, por paróquia liberada com `TenantContext` + `TransactionTemplate`, envio fora de transação, 3 tentativas) manda pelo `EmailSender.enviarComunicado` ou pelo `WhatsappSender` (`log` ou `evolution`). O token do WhatsApp da paróquia nunca volta na API nem vai para log |
 | `integracao/` | contrato v1 com a Central: `IntegracaoFiltro` (HMAC → `PERM_INTEGRACAO`), provisionamento idempotente, `direitos_locais`, `AcessoParoquia` (regra única de paróquia liberada, usada no login e no filtro), webhook, sync de 8h + alerta, código de suporte, `CatalogoDeRecursos` (`GET /integracao/v1/recursos`: códigos de limite/funcionalidade e se já são aplicados; aplicar um = trocar `aplicado` no mesmo commit), `RelatorioDeErros` (erros 5xx do `GlobalExceptionHandler` para a Central a cada minuto, contrato 6.2; usuário só pelo id e, no erro inesperado, só o tipo da exceção) |
 | `diocese/` | diocese **só como agrupamento informativo** da paróquia (V037, sem cota). Global, sem `@TenantId`. A paróquia escolhe ou digita o nome no `PUT /tenant` (`DioceseService.resolver`: mesmo nome sem diferenciar maiúsculas = mesma diocese); `GET /dioceses` sugere as já usadas. Diocese que contrate em bloco vira cliente na Central, não regra do Servire |
 
@@ -72,6 +72,9 @@ gatilho com contador em `tenant_sequencial`; entidade com `@Generated`. Não é 
 V040: CPF único por paróquia, índice parcial; checar duplicados em produção antes do deploy.
 V041: Cuidado e acolhimento. Condição especial é dado de saúde (LGPD art. 11): nunca em log, PDF, export ou e-mail sem pedido explícito.
 V042: Layouts de envio.
+V043: comunicado e fila (`paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`); o conteúdo dos anexos vira NULL quando o comunicado conclui.
+V044: `escala_eventos.referencia` (linha de referência da escala semanal replicada). Evento `referencia` não finaliza, não recebe presença nem alocação, não tem candidatos e não entra em compromissos.
+V045: `indisponibilidade_voluntario` (período nulo = dia inteiro, índices únicos parciais) e `resposta_indisponibilidade` ("sem restrição" no mês; sem linha = pendente).
 
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
@@ -112,6 +115,7 @@ V042: Layouts de envio.
   `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`). Em `application-dev.yml`, **não** colocar placeholder vazio
   `${X:}` para chave que vem de `application-dev-local.yml`: o vazio sobrescreve o arquivo importado.
   Env var nova do profile `prod` entra também no `.env.example` (é a lista usada no deploy).
+  WhatsApp dos comunicados: `WHATSAPP_PROVIDER` (`log` padrão, `evolution`) e `EVOLUTION_URL`; o token é de cada paróquia (`/tenant/whatsapp`).
 
 ## Armadilhas já pagas (não repetir)
 - `open-in-view: false` → acessar coleção lazy no controller dá `LazyInitializationException`. Use

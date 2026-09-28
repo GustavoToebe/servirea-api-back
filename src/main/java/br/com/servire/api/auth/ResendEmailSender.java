@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -126,6 +129,36 @@ public class ResendEmailSender implements EmailSender {
                     .toBodilessEntity();
         } catch (RestClientException e) {
             log.error("Falha ao enviar e-mail via Resend para {}", destinatario, e);
+            throw new EmailException("Não foi possível enviar o e-mail no momento.", e);
+        }
+    }
+
+    @Override
+    public void enviarComunicado(String para, String assunto, String html, List<Anexo> anexos, String responderPara) {
+        requireConfigurado();
+        Map<String, Object> corpo = new LinkedHashMap<>();
+        corpo.put("from", properties.from());
+        corpo.put("to", para);
+        corpo.put("subject", assunto);
+        corpo.put("html", html);
+        if (responderPara != null && !responderPara.isBlank()) {
+            corpo.put("reply_to", responderPara);
+        }
+        if (anexos != null && !anexos.isEmpty()) {
+            corpo.put("attachments", anexos.stream()
+                    .map(a -> Map.of("filename", a.nome(), "content", Base64.getEncoder().encodeToString(a.conteudo())))
+                    .toList());
+        }
+        try {
+            restClient.post()
+                    .uri(properties.apiUrl())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(corpo)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (RestClientException e) {
+            log.error("Falha ao enviar comunicado via Resend", e);
             throw new EmailException("Não foi possível enviar o e-mail no momento.", e);
         }
     }

@@ -27,6 +27,10 @@ Este repo é o `servire-api-back`; o Angular é o irmão `servire-api-front`
 | Auditoria | Pronto | `GET /audit-log` (ADMIN da paróquia) |
 | Perfis e usuários | Etapa 1 | `/perfis`, `/usuarios` (convite de 7 dias, sem senha no formulário), `/me` (inclui `permissoes` da paróquia atual). Cada endpoint pede a ação do catálogo (`PERM_ESCALA_EXCLUIR`…); ninguém concede mais do que tem |
 | Integração Central | Etapa 2 | `/integracao/v1` com HMAC (`PERM_INTEGRACAO`). Sem chave configurada, a rota recusa; sem `direitos_locais`, a paróquia segue no status do tenant. Login e filtro usam a mesma regra (72h). Publica o catálogo de recursos (`GET /integracao/v1/recursos`) e manda os erros 5xx à tela "Logs" da Central (contrato 5.5 e 6.2) |
+| Escala: replicar e mensal | V044–V045 | `referencia` no evento (linha da escala replicada, fora de finalizar/presença/compromissos); `GET`/`PUT /escalas/indisponibilidades?ano=&mes=` (substitui o mês); `GET /escalas/{id}/apoio` (situação, datas indisponíveis e irmãos por voluntário ativo) |
+| Layouts de envio (`/layouts/**`) | V042 | CRUD, `GET /layouts/tags?tipoLayout=` e `POST /layouts/pre-visualizar`; tags trocadas pelo `Renderizador` |
+| Comunicados (`/comunicados/**`) | V043 | `POST /comunicados/destinatarios`, `POST /comunicados/pre-visualizar`, `POST /comunicados` (multipart `dados` + `anexos`, vai para a fila), `GET /comunicados`, `GET /comunicados/{id}`, `POST /comunicados/{id}/reenviar-falhas`. E-mail pelo Resend, WhatsApp pelo Evolution Go |
+| WhatsApp da paróquia (`/tenant/whatsapp`) | V043 | `GET` (sem o token), `PUT` (token vazio mantém), `POST /tenant/whatsapp/testar` |
 | Número curto | V038 | `sequencial` por paróquia em pessoa, escala, inscrição, perfil e usuário, para ditar e copiar |
 | Front Angular | Migrado | Login JWT, `/pessoas`, inscrições, escalas, perfis, usuários e meu perfil. O painel `/admin` saiu |
 

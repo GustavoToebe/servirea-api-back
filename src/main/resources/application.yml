@@ -107,6 +107,18 @@ servire:
     tolerancia-horas: ${SERVIRE_INTEGRACAO_TOLERANCIA_HORAS:72}
     alerta-email: ${SERVIRE_INTEGRACAO_ALERTA_EMAIL:}
 
+  # WhatsApp dos comunicados (PLANO-005): "log" (padrão, nunca envia) ou
+  # "evolution" (Evolution Go). Sem segredo global: o token é da instância de
+  # cada paróquia (tela Paróquia). Intervalo aleatório entre mensagens para
+  # reduzir o risco de bloqueio do número.
+  whatsapp:
+    provider: ${WHATSAPP_PROVIDER:log}
+    evolution:
+      url: ${EVOLUTION_URL:}
+      caminho-texto: ${EVOLUTION_CAMINHO_TEXTO:/send/text}
+    intervalo-min-ms: 4000
+    intervalo-max-ms: 9000
+
 server:
   port: ${PORT:8080}
   # Dev/test: não confiar em X-Forwarded-For (um cliente forjaria o IP do
