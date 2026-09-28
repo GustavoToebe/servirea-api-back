@@ -36,9 +36,11 @@ import java.util.UUID;
 public class InscricaoController {
 
     private final InscricaoService inscricaoService;
+    private final br.com.servire.api.pessoa.Duplicidades duplicidades;
 
-    public InscricaoController(InscricaoService inscricaoService) {
+    public InscricaoController(InscricaoService inscricaoService, br.com.servire.api.pessoa.Duplicidades duplicidades) {
         this.inscricaoService = inscricaoService;
+        this.duplicidades = duplicidades;
     }
 
     @PreAuthorize("hasAuthority('PERM_INSCRICAO')")
@@ -51,6 +53,21 @@ public class InscricaoController {
     @GetMapping("/{id}")
     public InscricaoResponse buscarPorId(@PathVariable UUID id) {
         return InscricaoResponse.de(inscricaoService.buscarPorId(id));
+    }
+
+    @PreAuthorize("hasAuthority('PERM_INSCRICAO')")
+    @GetMapping("/{id}/duplicidades")
+    public List<br.com.servire.api.pessoa.dto.DuplicidadeResponse> verificarDuplicidades(@PathVariable UUID id) {
+        var inscricao = inscricaoService.buscarPorId(id);
+        var req = new br.com.servire.api.pessoa.dto.DuplicidadeRequest(
+                null,
+                inscricao.getNomeCompleto(),
+                inscricao.getCpf(),
+                inscricao.getDataNascimento(),
+                inscricao.getTelefones().stream().map(br.com.servire.api.inscricao.InscricaoTelefone::getNumero).toList(),
+                inscricao.getResponsaveis().stream().map(br.com.servire.api.inscricao.InscricaoResponsavel::getNome).toList()
+        );
+        return duplicidades.verificar(req);
     }
 
     @PreAuthorize("hasAuthority('PERM_INSCRICAO_ALTERAR')")

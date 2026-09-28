@@ -42,4 +42,15 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID>, JpaSpecif
             ORDER BY p.eResponsavel DESC, p.createdAt ASC
             """)
     List<Pessoa> findPorEmailPrincipal(@Param("email") String email);
+
+    @Query("SELECT new br.com.servire.api.pessoa.dto.PessoaBasicoParaDuplicidade(p.id, p.sequencial, p.nomeCompleto, p.cpf, p.dataNascimento) FROM Pessoa p")
+    List<br.com.servire.api.pessoa.dto.PessoaBasicoParaDuplicidade> findAllBasico();
+
+    @Query("SELECT new br.com.servire.api.pessoa.dto.TelefoneParaDuplicidade(t.pessoa.id, t.numero) FROM PessoaTelefone t")
+    List<br.com.servire.api.pessoa.dto.TelefoneParaDuplicidade> findAllTelefones();
+
+    @Query("SELECT new br.com.servire.api.pessoa.dto.ResponsavelParaDuplicidade(r.voluntario.id, r.responsavel.nomeCompleto) FROM PessoaRelacao r")
+    List<br.com.servire.api.pessoa.dto.ResponsavelParaDuplicidade> findAllResponsaveis();
+
+    Optional<Pessoa> findByCpf(String cpf);
 }

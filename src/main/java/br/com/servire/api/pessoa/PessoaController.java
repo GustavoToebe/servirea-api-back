@@ -26,10 +26,12 @@ public class PessoaController {
 
     private final PessoaService pessoaService;
     private final CadastroComFotoService cadastroComFoto;
+    private final Duplicidades duplicidades;
 
-    public PessoaController(PessoaService pessoaService, CadastroComFotoService cadastroComFoto) {
+    public PessoaController(PessoaService pessoaService, CadastroComFotoService cadastroComFoto, Duplicidades duplicidades) {
         this.pessoaService = pessoaService;
         this.cadastroComFoto = cadastroComFoto;
+        this.duplicidades = duplicidades;
     }
 
     @PreAuthorize("hasAuthority('PERM_PESSOA')")
@@ -43,6 +45,12 @@ public class PessoaController {
     @GetMapping("/{id}")
     public PessoaResponse buscarPorId(@PathVariable UUID id) {
         return PessoaResponse.de(pessoaService.buscarPorId(id));
+    }
+
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
+    @PostMapping("/duplicidades")
+    public List<br.com.servire.api.pessoa.dto.DuplicidadeResponse> verificarDuplicidades(@RequestBody @Valid br.com.servire.api.pessoa.dto.DuplicidadeRequest request) {
+        return duplicidades.verificar(request);
     }
 
     @PreAuthorize("hasAuthority('PERM_PESSOA_CRIAR')")

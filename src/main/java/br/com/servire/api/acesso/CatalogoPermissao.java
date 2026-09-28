@@ -53,6 +53,13 @@ public final class CatalogoPermissao {
                             new Acao("INSCRICAO_ALTERAR", "Alterar"),
                             new Acao("INSCRICAO_APROVAR", "Aprovar"),
                             new Acao("INSCRICAO_REJEITAR", "Rejeitar"))))),
+            new Secao("Comunicação", List.of(
+                    new Modulo("LAYOUT", "Layouts", List.of(
+                            new Acao("LAYOUT_CRIAR", "Criar"),
+                            new Acao("LAYOUT_ALTERAR", "Alterar"),
+                            new Acao("LAYOUT_EXCLUIR", "Excluir"))),
+                    new Modulo("COMUNICADO", "Comunicados", List.of(
+                            new Acao("COMUNICADO_ENVIAR", "Enviar"))))),
             new Secao("Relatórios", List.of(
                     new Modulo("AUDITORIA", "Auditoria", List.of())))
     );

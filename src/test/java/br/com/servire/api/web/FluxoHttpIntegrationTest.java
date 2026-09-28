@@ -403,4 +403,74 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
     private MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder request, String corpo) {
         return autenticado(request).contentType(MediaType.APPLICATION_JSON).content(corpo);
     }
+
+    @org.junit.jupiter.api.Test
+    void verificarDuplicidadesPessoasResponde200ComJson() throws Exception {
+        String json = "{\"nomeCompleto\": \"Joao Silva\", \"cpf\": \"123.456.789-09\", \"telefones\": [], \"nomesResponsaveis\": []}";
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/pessoas/duplicidades")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + this.token)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(json))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+    }
+
+    @org.junit.jupiter.api.Test
+    void pessoaCpfRepetidoRetorna409() throws Exception {
+        String json1 = "{\"nomeCompleto\": \"Joao Silva\", \"cpf\": \"123.456.789-09\", \"papeis\": [\"RESPONSAVEL\"]}";
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/pessoas")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + this.token)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(json1))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+
+        String json2 = "{\"nomeCompleto\": \"Maria Silva\", \"cpf\": \"123.456.789-09\", \"papeis\": [\"RESPONSAVEL\"]}";
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/pessoas")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + this.token)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(json2))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isConflict());
+    }
+
+    @org.junit.jupiter.api.Test
+    void getPessoaDevolveCondicoesComoListaDeStrings() throws Exception {
+        String json = "{\"nomeCompleto\": \"Pessoa com Condicoes\", \"papeis\": [\"VOLUNTARIO\"], \"emails\": [], \"telefones\": [], \"responsaveis\": [], \"dependentes\": [], \"condicoes\": [\"TEA\", \"TDAH\"], \"nivelSuporteTea\": 1, \"cuidados\": \"Cuidado especial\", \"voluntario\": {\"tipo\": \"COROINHA\", \"ativo\": true, \"autorizaWhatsapp\": false, \"funcoesHabilitadas\": []}}";
+        String response = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/pessoas")
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + this.token)
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(json))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        
+        String id = com.jayway.jsonpath.JsonPath.read(response, "$.id");
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/pessoas/" + id)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + this.token))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.condicoes[0]").value("TEA"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.condicoes[1]").value("TDAH"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.nivelSuporteTea").value(1))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.cuidados").value("Cuidado especial"));
+    }
+
+    @Test
+    void layoutsListaTagsEPreVisualizarRespondem200ComJson() throws Exception {
+        // GET /layouts — lista vazia inicialmente
+        mockMvc.perform(autenticado(get("/layouts")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        // GET /layouts/tags?tipoLayout=TODOS
+        mockMvc.perform(autenticado(get("/layouts/tags").param("tipoLayout", "TODOS")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].codigo").exists())
+                .andExpect(jsonPath("$[0].descricao").exists());
+
+        // POST /layouts/pre-visualizar
+        mockMvc.perform(json(post("/layouts/pre-visualizar"), """
+                {"tipoLayout":"TODOS","tipoEnvio":"EMAIL","assunto":"Olá #PESSOA.NOME#","conteudo":"<p>Bem-vindo, #PESSOA.PRIMEIRO_NOME#!</p>"}
+                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.conteudo").exists());
+    }
 }

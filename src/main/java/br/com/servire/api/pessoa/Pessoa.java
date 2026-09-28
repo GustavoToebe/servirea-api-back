@@ -15,6 +15,11 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 import org.hibernate.annotations.TenantId;
+import org.hibernate.annotations.ColumnTransformer;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -80,6 +85,21 @@ public class Pessoa {
     private String bairro;
 
     private String observacoes;
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Enumerated(EnumType.STRING)
+    @ColumnTransformer(write = "?::condicao_especial[]")
+    @Column(name = "condicoes", nullable = false)
+    private CondicaoEspecial[] condicoes = new CondicaoEspecial[0];
+
+    @Column(name = "nivel_suporte_tea")
+    private Integer nivelSuporteTea;
+
+    @Column(name = "condicao_outra")
+    private String condicaoOutra;
+
+    @Column(name = "cuidados")
+    private String cuidados;
 
     @OneToMany(mappedBy = "pessoa", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("principal DESC, email ASC")
@@ -262,6 +282,38 @@ public class Pessoa {
 
     public void setObservacoes(String observacoes) {
         this.observacoes = observacoes;
+    }
+
+    public CondicaoEspecial[] getCondicoes() {
+        return condicoes;
+    }
+
+    public void setCondicoes(CondicaoEspecial[] condicoes) {
+        this.condicoes = condicoes != null ? condicoes : new CondicaoEspecial[0];
+    }
+
+    public Integer getNivelSuporteTea() {
+        return nivelSuporteTea;
+    }
+
+    public void setNivelSuporteTea(Integer nivelSuporteTea) {
+        this.nivelSuporteTea = nivelSuporteTea;
+    }
+
+    public String getCondicaoOutra() {
+        return condicaoOutra;
+    }
+
+    public void setCondicaoOutra(String condicaoOutra) {
+        this.condicaoOutra = condicaoOutra;
+    }
+
+    public String getCuidados() {
+        return cuidados;
+    }
+
+    public void setCuidados(String cuidados) {
+        this.cuidados = cuidados;
     }
 
     public List<PessoaEmail> getEmails() {

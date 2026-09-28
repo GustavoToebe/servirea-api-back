@@ -121,6 +121,9 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
     @MockitoBean
     private DioceseService dioceseService;
 
+    @MockitoBean
+    private br.com.servire.api.comunicacao.LayoutService layoutService;
+
     @Test
     void semAutenticacaoRecebe401() throws Exception {
         mockMvc.perform(get("/voluntarios"))
@@ -406,5 +409,40 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
         List<GrantedAuthority> authorities = PermissoesDaSessao.daRole(role);
         return SecurityMockMvcRequestPostProcessors.authentication(
                 new UsernamePasswordAuthenticationToken(usuario, null, authorities));
+    }
+
+    @Test
+    void semPermissaoPessoaRecebe403NoDuplicidades() throws Exception {
+        mockMvc.perform(post("/pessoas/duplicidades")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nomeCompleto\":\"Teste\",\"cpf\":null,\"dataNascimento\":null,\"telefones\":[],\"nomesResponsaveis\":[]}")
+                        .with(comoPerfil("OUTRA_PERMISSAO"))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void semPermissaoInscricaoRecebe403NoDuplicidades() throws Exception {
+        mockMvc.perform(get("/inscricoes/" + UUID.randomUUID() + "/duplicidades")
+                        .with(comoPerfil("OUTRA_PERMISSAO")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void semPermissaoLayoutCriarRecebe403() throws Exception {
+        mockMvc.perform(post("/layouts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Teste\",\"tipoLayout\":\"TODOS\",\"tipoEnvio\":\"EMAIL\",\"conteudo\":\"Olá\",\"ativo\":true}")
+                        .with(comoPerfil("LAYOUT")) // tem LAYOUT mas não LAYOUT_CRIAR
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void semPermissaoLayoutExcluirRecebe403() throws Exception {
+        mockMvc.perform(delete("/layouts/{id}", UUID.randomUUID())
+                        .with(comoPerfil("LAYOUT")) // tem LAYOUT mas não LAYOUT_EXCLUIR
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
     }
 }

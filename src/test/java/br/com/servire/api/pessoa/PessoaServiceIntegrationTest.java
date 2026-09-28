@@ -35,6 +35,48 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private TenantRepository tenantRepository;
 
+    @Test
+    void criarComCpfRepetidoLancaConflictException() {
+        PessoaRequest req1 = new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO), "Primeiro CPF", null, null, "123.456.789-09", null,
+                List.of(), List.of(), List.of(), List.of(), null, null, null, null, null, null, null, null,
+                null, null, null, null,
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null)
+        );
+        pessoaService.criar(req1);
+
+        PessoaRequest req2 = new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO), "Segundo CPF", null, null, "12345678909", null,
+                List.of(), List.of(), List.of(), List.of(), null, null, null, null, null, null, null, null,
+                null, null, null, null,
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null)
+        );
+
+        assertThatThrownBy(() -> pessoaService.criar(req2))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Já existe um cadastro com este CPF");
+    }
+
+    @Test
+    void editarAPropriaPessoaMantendoCpfOk() {
+        PessoaRequest req1 = new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO), "Pessoa Unica", null, null, "529.982.247-25", null,
+                List.of(), List.of(), List.of(), List.of(), null, null, null, null, null, null, null, null,
+                null, null, null, null,
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null)
+        );
+        Pessoa p = pessoaService.criar(req1);
+
+        PessoaRequest reqAtualizar = new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO), "Pessoa Atualizada", null, null, "529.982.247-25", null,
+                List.of(), List.of(), List.of(), List.of(), null, null, null, null, null, null, null, null,
+                null, null, null, null,
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null)
+        );
+        Pessoa atualizada = pessoaService.atualizar(p.getId(), reqAtualizar);
+        assertThat(atualizada.getNomeCompleto()).isEqualTo("Pessoa Atualizada");
+    }
+
     @BeforeEach
     void definirTenant() {
         String sufixo = UUID.randomUUID().toString();
@@ -139,7 +181,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 List.of(
                         new ContatoEmailRequest("E-mail pessoal", "a@teste.com", false),
                         new ContatoEmailRequest("Secundário", "b@teste.com", false)),
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> pessoaService.criar(request))
                 .isInstanceOf(BadRequestException.class)
@@ -263,6 +305,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 Set.of(PessoaPapel.VOLUNTARIO), "Só Voluntário", null, null, null, null,
                 List.of(), List.of(), List.of(), List.of(new RelacaoRequest(filho.getId(), "Irmão", "Irmão", false)),
                 null, null, null, null, null, null, null, null,
+                null, null, null, null,
                 new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
 
         assertThatThrownBy(() -> pessoaService.criar(request))
@@ -281,7 +324,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 Set.of(PessoaPapel.RESPONSAVEL), nome, null, null, null, null,
                 List.of(new ContatoEmailRequest("E-mail pessoal", nome.toLowerCase() + UUID.randomUUID() + "@teste.com", true)),
                 List.of(new ContatoTelefoneRequest("celular", "11999990000", true)),
-                List.of(), List.of(), null, null, null, null, null, null, null, null, null);
+                List.of(), List.of(), null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private PessoaRequest requestVoluntario(List<RelacaoRequest> relacoes) {
@@ -289,7 +332,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 Set.of(PessoaPapel.VOLUNTARIO), "Nome de Teste " + UUID.randomUUID(), null, null, null, null,
                 List.of(new ContatoEmailRequest("E-mail pessoal", "vol-" + UUID.randomUUID() + "@teste.com", true)),
                 List.of(new ContatoTelefoneRequest("celular", "11988887777", true)),
-                relacoes, List.of(), null, null, null, null, null, null, null, null,
+                relacoes, List.of(), null, null, null, null, null, null, null, null, null, null, null, null,
                 new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
     }
 
@@ -301,7 +344,7 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
         return new PessoaRequest(
                 Set.of(PessoaPapel.RESPONSAVEL), nome, null, null, null, null,
                 List.of(), List.of(), List.of(), dependentes,
-                null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private PessoaRequest requestAmbos(String nome, List<RelacaoRequest> responsaveis, List<RelacaoRequest> dependentes) {
@@ -310,6 +353,61 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
                 List.of(new ContatoEmailRequest("E-mail pessoal", "ambos-" + UUID.randomUUID() + "@teste.com", true)),
                 List.of(new ContatoTelefoneRequest("celular", "11977776666", true)),
                 responsaveis, dependentes, null, null, null, null, null, null, null, null,
+                null, null, null, null,
                 new VoluntarioPerfilRequest(TipoVoluntario.ACOLITO, true, null, null, null, null, false, List.of(), null, null));
+    }
+
+    @Test
+    void gravarELerTeaNivel2ECuidados() {
+        PessoaRequest request = new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO), "Menino TEA", null, null, null, null,
+                List.of(new ContatoEmailRequest("E-mail", "tea@teste.com", true)),
+                List.of(), List.of(), List.of(), null, null, null, null, null, null, null, null,
+                List.of(CondicaoEspecial.TEA), 2, null, "Precisa de abafador",
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
+
+        Pessoa salva = pessoaService.criar(request);
+
+        PessoaResponse resposta = PessoaResponse.de(pessoaService.buscarPorId(salva.getId()));
+        assertThat(resposta.condicoes()).containsExactly(CondicaoEspecial.TEA);
+        assertThat(resposta.nivelSuporteTea()).isEqualTo(2);
+        assertThat(resposta.cuidados()).isEqualTo("Precisa de abafador");
+    }
+
+    @Test
+    void tirarTeaZeraONivel() {
+        PessoaRequest req1 = new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO), "Menino TEA", null, null, null, null,
+                List.of(new ContatoEmailRequest("E-mail", "tea2@teste.com", true)),
+                List.of(), List.of(), List.of(), null, null, null, null, null, null, null, null,
+                List.of(CondicaoEspecial.TEA), 2, null, null,
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
+        Pessoa salva = pessoaService.criar(req1);
+
+        PessoaRequest req2 = new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO), "Menino TEA", null, null, null, null,
+                List.of(new ContatoEmailRequest("E-mail", "tea2@teste.com", true)),
+                List.of(), List.of(), List.of(), null, null, null, null, null, null, null, null,
+                List.of(CondicaoEspecial.SINDROME_DOWN), 2, null, null,
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
+        Pessoa atualizada = pessoaService.atualizar(salva.getId(), req2);
+
+        PessoaResponse resposta = PessoaResponse.de(pessoaService.buscarPorId(atualizada.getId()));
+        assertThat(resposta.condicoes()).containsExactly(CondicaoEspecial.SINDROME_DOWN);
+        assertThat(resposta.nivelSuporteTea()).isNull();
+    }
+
+    @Test
+    void outraCondicaoSemTextoLancaBadRequest() {
+        PessoaRequest request = new PessoaRequest(
+                Set.of(PessoaPapel.VOLUNTARIO), "Menino OUTRA", null, null, null, null,
+                List.of(new ContatoEmailRequest("E-mail", "outra@teste.com", true)),
+                List.of(), List.of(), List.of(), null, null, null, null, null, null, null, null,
+                List.of(CondicaoEspecial.OUTRA), null, "   ", null,
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
+
+        assertThatThrownBy(() -> pessoaService.criar(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Descreva a outra condição");
     }
 }

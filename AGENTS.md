@@ -55,6 +55,7 @@ seção "Onde está o código (disco + GitHub)".
 | `storage/` | `SupabaseStorageService` (REST via `RestClient`, bucket privado `voluntarios-fotos`) |
 | `audit/` | `AuditLog`, `AuditLogService.registrar(...)`, `GET /audit-log` (ADMIN) |
 | `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me` (devolve `permissoes`: códigos efetivos do catálogo, para o menu). `CatalogoPermissao` é a **única** lista de permissões (seção → módulo → ações); `PermissoesDaSessao` vira `PERM_<código>`; `ConcessaoDePermissao` impede conceder mais do que a sessão tem |
+| `comunicacao/` | layouts de envio, `CatalogoDeTags` é a única lista de tags; `Renderizador` escapa HTML no e-mail |
 | `integracao/` | contrato v1 com a Central: `IntegracaoFiltro` (HMAC → `PERM_INTEGRACAO`), provisionamento idempotente, `direitos_locais`, `AcessoParoquia` (regra única de paróquia liberada, usada no login e no filtro), webhook, sync de 8h + alerta, código de suporte, `CatalogoDeRecursos` (`GET /integracao/v1/recursos`: códigos de limite/funcionalidade e se já são aplicados; aplicar um = trocar `aplicado` no mesmo commit), `RelatorioDeErros` (erros 5xx do `GlobalExceptionHandler` para a Central a cada minuto, contrato 6.2; usuário só pelo id e, no erro inesperado, só o tipo da exceção) |
 | `diocese/` | diocese **só como agrupamento informativo** da paróquia (V037, sem cota). Global, sem `@TenantId`. A paróquia escolhe ou digita o nome no `PUT /tenant` (`DioceseService.resolver`: mesmo nome sem diferenciar maiúsculas = mesma diocese); `GET /dioceses` sugere as já usadas. Diocese que contrate em bloco vira cliente na Central, não regra do Servire |
 
@@ -67,6 +68,11 @@ V036 (integração v1) são aditivas: as tabelas de billing continuam no banco a
 V037 tira a cota da diocese (gatilho, `tenant.voluntarios_ativos` e `diocese.cota_voluntarios`) e troca o único de `nome` por `lower(nome)`.
 V038: número curto por paróquia (`sequencial`) em pessoa, escalas, inscricoes, perfil e usuario_tenant, numerado por
 gatilho com contador em `tenant_sequencial`; entidade com `@Generated`. Não é `numero` (pessoa e inscrição já têm, do endereço).
+
+V040: CPF único por paróquia, índice parcial; checar duplicados em produção antes do deploy.
+V041: Cuidado e acolhimento. Condição especial é dado de saúde (LGPD art. 11): nunca em log, PDF, export ou e-mail sem pedido explícito.
+V042: Layouts de envio.
+
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).

@@ -1,5 +1,6 @@
 package br.com.servire.api.inscricao;
 
+import br.com.servire.api.pessoa.CondicaoEspecial;
 import br.com.servire.api.voluntario.FuncaoEscala;
 import br.com.servire.api.voluntario.TipoVoluntario;
 import br.com.servire.api.voluntario.Voluntario;
@@ -105,6 +106,24 @@ public class Inscricao {
     @ColumnTransformer(write = "?::funcao_escala[]")
     @Column(name = "funcoes_habilitadas", nullable = false)
     private FuncaoEscala[] funcoesHabilitadas = new FuncaoEscala[0];
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Enumerated(EnumType.STRING)
+    @ColumnTransformer(write = "?::condicao_especial[]")
+    @Column(name = "condicoes", nullable = false)
+    private CondicaoEspecial[] condicoes = new CondicaoEspecial[0];
+
+    @Column(name = "nivel_suporte_tea")
+    private Integer nivelSuporteTea;
+
+    @Column(name = "condicao_outra")
+    private String condicaoOutra;
+
+    @Column(name = "cuidados")
+    private String cuidados;
+
+    @Column(name = "consentimento_cuidados_em")
+    private Instant consentimentoCuidadosEm;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -328,6 +347,46 @@ public class Inscricao {
 
     public void setFuncoesHabilitadas(FuncaoEscala[] funcoesHabilitadas) {
         this.funcoesHabilitadas = funcoesHabilitadas != null ? funcoesHabilitadas : new FuncaoEscala[0];
+    }
+
+    public CondicaoEspecial[] getCondicoes() {
+        return condicoes;
+    }
+
+    public void setCondicoes(CondicaoEspecial[] condicoes) {
+        this.condicoes = condicoes != null ? condicoes : new CondicaoEspecial[0];
+    }
+
+    public Integer getNivelSuporteTea() {
+        return nivelSuporteTea;
+    }
+
+    public void setNivelSuporteTea(Integer nivelSuporteTea) {
+        this.nivelSuporteTea = nivelSuporteTea;
+    }
+
+    public String getCondicaoOutra() {
+        return condicaoOutra;
+    }
+
+    public void setCondicaoOutra(String condicaoOutra) {
+        this.condicaoOutra = condicaoOutra;
+    }
+
+    public String getCuidados() {
+        return cuidados;
+    }
+
+    public void setCuidados(String cuidados) {
+        this.cuidados = cuidados;
+    }
+
+    public Instant getConsentimentoCuidadosEm() {
+        return consentimentoCuidadosEm;
+    }
+
+    public void setConsentimentoCuidadosEm(Instant consentimentoCuidadosEm) {
+        this.consentimentoCuidadosEm = consentimentoCuidadosEm;
     }
 
     public StatusInscricao getStatus() {

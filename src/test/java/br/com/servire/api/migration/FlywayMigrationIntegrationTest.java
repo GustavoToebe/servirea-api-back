@@ -98,6 +98,9 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // De 36 para 37 em 25/09/2026: V037 (diocese só agrupamento, sem cota).
         // De 37 para 38 em 26/09/2026: V038 (número curto por paróquia).
         // De 38 para 39 em 27/09/2026: V039 (fecha o public para a Data API do Supabase).
+        // De 39 para 40 em 28/09/2026: V040 (CPF único por paróquia).
+        // De 40 para 41 em 28/09/2026: V041 (cuidado e acolhimento).
+        // De 41 para 42 em 28/09/2026: V042 (layout de envio).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -106,10 +109,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(39);
-        assertThat(sucesso).isEqualTo(39);
+        assertThat(total).isEqualTo(42);
+        assertThat(sucesso).isEqualTo(42);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("fecha data api do supabase");
+        assertThat(descricoes.getLast()).isEqualTo("layout de envio");
     }
 
     @Test

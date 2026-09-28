@@ -29,6 +29,10 @@ public record PessoaResponse(
         String complemento,
         String bairro,
         String observacoes,
+        List<br.com.servire.api.pessoa.CondicaoEspecial> condicoes,
+        Integer nivelSuporteTea,
+        String condicaoOutra,
+        String cuidados,
         VoluntarioPerfilResponse voluntario) {
 
     public static PessoaResponse de(Pessoa p) {
@@ -63,6 +67,10 @@ public record PessoaResponse(
                 p.getComplemento(),
                 p.getBairro(),
                 p.getObservacoes(),
+                p.getCondicoes() != null ? java.util.Arrays.asList(p.getCondicoes()) : List.of(),
+                p.getNivelSuporteTea(),
+                p.getCondicaoOutra(),
+                p.getCuidados(),
                 VoluntarioPerfilResponse.de(p.getVoluntario()));
     }
 }

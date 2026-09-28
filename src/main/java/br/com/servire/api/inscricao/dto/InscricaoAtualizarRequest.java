@@ -36,5 +36,9 @@ public record InscricaoAtualizarRequest(
         Voluntario.HorarioEstudo horarioEstudo,
         String observacoes,
         boolean autorizaWhatsapp,
-        List<FuncaoEscala> funcoesHabilitadas) {
+        List<FuncaoEscala> funcoesHabilitadas,
+        List<br.com.servire.api.pessoa.CondicaoEspecial> condicoes,
+        Integer nivelSuporteTea,
+        String condicaoOutra,
+        @jakarta.validation.constraints.Size(max = 1000) String cuidados) {
 }

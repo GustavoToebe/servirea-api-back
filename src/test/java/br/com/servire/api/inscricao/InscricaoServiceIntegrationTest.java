@@ -418,7 +418,8 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         return new InscricaoPublicaRequest(
                 "token-turnstile-qualquer", nomeCompleto, null, null, null, null,
                 TipoVoluntario.COROINHA, null, null, null, null, null, responsaveis,
-                null, null, null, null, null, null, null, null, null, false, List.of());
+                null, null, null, null, null, null, null, null, null, false, List.of(),
+                null, null, null, null, false);
     }
 
     private InscricaoAtualizarRequest requestAtualizar(String nomeCompleto,
@@ -426,12 +427,86 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         return new InscricaoAtualizarRequest(
                 nomeCompleto, null, null, null, null, TipoVoluntario.COROINHA,
                 null, null, null, null, null, responsaveis,
-                null, null, null, null, null, null, null, null, null, false, List.of());
+                null, null, null, null, null, null, null, null, null, false, List.of(),
+                null, null, null, null);
     }
 
     private Tenant criarTenant(String rotulo) {
         return tenantRepository.saveAndFlush(new Tenant(
                 "TENANT-" + rotulo.toUpperCase() + "-TESTE", "tenant-" + rotulo + "-teste-" + UUID.randomUUID(),
                 "Paróquia de teste (" + rotulo + ")", Tenant.Status.ATIVO));
+    }
+
+    @org.junit.jupiter.api.Test
+    void aprovarComCpfRepetidoLancaConflictException() {
+        Tenant tenant = criarTenant("cpf-repetido");
+        br.com.servire.api.tenant.TenantContext.set(tenant.getId());
+
+        br.com.servire.api.pessoa.dto.PessoaRequest pReq = new br.com.servire.api.pessoa.dto.PessoaRequest(
+                java.util.Set.of(br.com.servire.api.pessoa.PessoaPapel.RESPONSAVEL), "Joao Antigo", null, null, "123.456.789-09", null,
+                java.util.List.of(), java.util.List.of(), java.util.List.of(), java.util.List.of(), null, null, null, null, null, null, null, null, null, null, null, null, null);
+        pessoaService.criar(pReq);
+
+        Inscricao inscricao = new Inscricao();
+        inscricao.setNomeCompleto("Joao Novo");
+        inscricao.setCpf("123.456.789-09");
+        inscricao.setTipo(br.com.servire.api.voluntario.TipoVoluntario.COROINHA);
+        inscricao = inscricaoRepository.save(inscricao);
+
+        final java.util.UUID id = inscricao.getId();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> inscricaoService.aprovar(id, java.util.UUID.randomUUID()))
+                .isInstanceOf(br.com.servire.api.web.ConflictException.class)
+                .hasMessageContaining("com este CPF");
+
+        Inscricao aposErro = inscricaoRepository.findById(id).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(aposErro.getStatus()).isEqualTo(br.com.servire.api.inscricao.StatusInscricao.PENDENTE);
+
+        br.com.servire.api.tenant.TenantContext.clear();
+    }
+
+    @org.junit.jupiter.api.Test
+    void publicaComCondicaoSemConsentimentoLancaBadRequest() {
+        Tenant tenant = criarTenant("cuidado-bad-request");
+        
+        InscricaoPublicaRequest request = new InscricaoPublicaRequest(
+                "token-turnstile", "Com Condicao", null, null, null, null,
+                TipoVoluntario.COROINHA, null, null, null, null, null, List.of(),
+                null, null, null, null, null, null, null, null, null, false, List.of(),
+                List.of(br.com.servire.api.pessoa.CondicaoEspecial.TDAH), null, null, null, false);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> inscricaoService.criarPublica(tenant.getSlug(), request, null, "127.0.0.1"))
+                .isInstanceOf(br.com.servire.api.web.BadRequestException.class)
+                .hasMessageContaining("marque a autorização");
+    }
+
+    @org.junit.jupiter.api.Test
+    void publicaComConsentimentoGravaADataEAprovarCopiaParaAPessoa() {
+        Tenant tenant = criarTenant("cuidado-aprovar");
+        br.com.servire.api.tenant.TenantContext.set(tenant.getId());
+
+        InscricaoPublicaRequest request = new InscricaoPublicaRequest(
+                "token", "Com Consentimento", null, null, null, null,
+                TipoVoluntario.COROINHA, null, null, null, null, null, List.of(),
+                null, null, null, null, null, null, null, null, null, false, List.of(),
+                List.of(br.com.servire.api.pessoa.CondicaoEspecial.TEA), 1, null, "Acolhimento especial", true);
+
+        Inscricao inscricao = inscricaoService.criarPublica(tenant.getSlug(), request, null, "127.0.0.1");
+        
+        br.com.servire.api.tenant.TenantContext.set(tenant.getId());
+
+        org.assertj.core.api.Assertions.assertThat(inscricao.getConsentimentoCuidadosEm()).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(inscricao.getCondicoes()).containsExactly(br.com.servire.api.pessoa.CondicaoEspecial.TEA);
+
+        br.com.servire.api.auth.Usuario aprovador = new br.com.servire.api.auth.Usuario("aprovador" + java.util.UUID.randomUUID() + "@teste.com", "Aprovador Teste");
+        aprovador = usuarioRepository.saveAndFlush(aprovador);
+
+        Inscricao aprovada = inscricaoService.aprovar(inscricao.getId(), aprovador.getId());
+        Pessoa voluntario = pessoaService.buscarPorId(aprovada.getVoluntarioId());
+
+        org.assertj.core.api.Assertions.assertThat(voluntario.getCondicoes()).containsExactly(br.com.servire.api.pessoa.CondicaoEspecial.TEA);
+        org.assertj.core.api.Assertions.assertThat(voluntario.getNivelSuporteTea()).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(voluntario.getCuidados()).isEqualTo("Acolhimento especial");
+        
+        br.com.servire.api.tenant.TenantContext.clear();
     }
 }

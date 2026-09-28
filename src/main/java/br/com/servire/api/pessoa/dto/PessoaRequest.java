@@ -40,5 +40,9 @@ public record PessoaRequest(
         String complemento,
         String bairro,
         String observacoes,
+        List<br.com.servire.api.pessoa.CondicaoEspecial> condicoes,
+        Integer nivelSuporteTea,
+        String condicaoOutra,
+        @jakarta.validation.constraints.Size(max = 1000) String cuidados,
         @Valid VoluntarioPerfilRequest voluntario) {
 }

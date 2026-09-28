@@ -137,6 +137,13 @@ public class PessoaService {
         }
         validarRequest(request, novos);
         pessoa.setPapeis(novos);
+        List<String> alterados = new ArrayList<>(List.of("identidade", "contatos", "responsaveis", "dependentes", "papeis"));
+        CondicaoEspecial[] antigas = pessoa.getCondicoes();
+        CondicaoEspecial[] novas = request.condicoes() == null ? new CondicaoEspecial[0] : request.condicoes().toArray(new CondicaoEspecial[0]);
+        if (!java.util.Arrays.equals(antigas, novas)) {
+            alterados.add("condicoes");
+        }
+        
         aplicarIdentidade(pessoa, request);
         substituirContatos(pessoa, request.emails(), request.telefones());
         if (pessoa.isVoluntario()) {
@@ -144,7 +151,7 @@ public class PessoaService {
         }
         substituirRelacoes(pessoa, request);
         pessoaRepository.save(pessoa);
-        auditLogService.registrar("ATUALIZACAO", "PESSOA", id, List.of("identidade", "contatos", "responsaveis", "dependentes", "papeis"));
+        auditLogService.registrar("ATUALIZACAO", "PESSOA", id, alterados);
         return buscarPorId(id);
     }
 
@@ -238,7 +245,15 @@ public class PessoaService {
         pessoa.setNomeCompleto(request.nomeCompleto().trim());
         pessoa.setDataNascimento(request.dataNascimento());
         pessoa.setSexo(Formatos.sexo(request.sexo()));
-        pessoa.setCpf(Formatos.cpf(request.cpf()));
+        String cpfFormatado = Formatos.cpf(request.cpf());
+        if (cpfFormatado != null && !cpfFormatado.isBlank()) {
+            pessoaRepository.findByCpf(cpfFormatado).ifPresent(p -> {
+                if (!p.getId().equals(pessoa.getId())) {
+                    throw new ConflictException("Já existe um cadastro com este CPF: " + p.getNomeCompleto() + " (" + p.getSequencial() + ").");
+                }
+            });
+        }
+        pessoa.setCpf(cpfFormatado);
         pessoa.setRg(Formatos.rg(request.rg()));
         pessoa.setCep(Formatos.cep(request.cep()));
         pessoa.setCidade(opcional(request.cidade()));
@@ -248,6 +263,16 @@ public class PessoaService {
         pessoa.setComplemento(opcional(request.complemento()));
         pessoa.setBairro(opcional(request.bairro()));
         pessoa.setObservacoes(opcional(request.observacoes()));
+        
+        CondicaoEspecial[] condicoes = request.condicoes() == null ? new CondicaoEspecial[0] : request.condicoes().toArray(new CondicaoEspecial[0]);
+        Integer[] nivelRef = { request.nivelSuporteTea() };
+        String[] outraRef = { request.condicaoOutra() };
+        CondicaoEspecial.validar(condicoes, nivelRef, outraRef);
+        
+        pessoa.setCondicoes(condicoes);
+        pessoa.setNivelSuporteTea(nivelRef[0]);
+        pessoa.setCondicaoOutra(outraRef[0]);
+        pessoa.setCuidados(opcional(request.cuidados()));
     }
 
     private void aplicarPerfilVoluntario(Pessoa pessoa, VoluntarioPerfilRequest perfil) {

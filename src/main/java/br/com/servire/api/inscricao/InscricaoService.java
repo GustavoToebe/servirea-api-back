@@ -116,11 +116,29 @@ public class InscricaoService {
     private Inscricao gravarInscricaoPublica(InscricaoPublicaRequest request, MultipartFile foto) {
         validarContatos(request.emails(), request.telefones(), request.responsaveis());
         Inscricao inscricao = new Inscricao(request.nomeCompleto().trim());
+        
+        boolean temCuidado = (request.condicoes() != null && !request.condicoes().isEmpty()) || (request.cuidados() != null && !request.cuidados().isBlank());
+        if (temCuidado && !request.consentimentoCuidados()) {
+            throw new BadRequestException("Para guardar as informações de cuidado, marque a autorização.");
+        }
+        
         aplicarCampos(inscricao, request.dataNascimento(), request.sexo(), request.cpf(), request.rg(),
                 request.tipo(), request.etapaCatequese(), request.eucaristiaAno(), request.crismaAno(),
                 request.cep(), request.cidade(), request.uf(), request.rua(), request.numero(),
                 request.complemento(), request.bairro(), request.horarioEstudo(), request.observacoes(),
                 request.autorizaWhatsapp(), request.funcoesHabilitadas());
+                
+        br.com.servire.api.pessoa.CondicaoEspecial[] condicoes = request.condicoes() == null ? new br.com.servire.api.pessoa.CondicaoEspecial[0] : request.condicoes().toArray(new br.com.servire.api.pessoa.CondicaoEspecial[0]);
+        Integer[] nivelRef = { request.nivelSuporteTea() };
+        String[] outraRef = { request.condicaoOutra() };
+        br.com.servire.api.pessoa.CondicaoEspecial.validar(condicoes, nivelRef, outraRef);
+        inscricao.setCondicoes(condicoes);
+        inscricao.setNivelSuporteTea(nivelRef[0]);
+        inscricao.setCondicaoOutra(outraRef[0]);
+        inscricao.setCuidados(opcional(request.cuidados()));
+        if (temCuidado && request.consentimentoCuidados()) {
+            inscricao.setConsentimentoCuidadosEm(Instant.now());
+        }
         substituirContatos(inscricao, request.emails(), request.telefones());
         substituirResponsaveis(inscricao, request.responsaveis());
         inscricao = inscricaoRepository.save(inscricao);
@@ -180,6 +198,15 @@ public class InscricaoService {
                 request.cep(), request.cidade(), request.uf(), request.rua(), request.numero(),
                 request.complemento(), request.bairro(), request.horarioEstudo(), request.observacoes(),
                 request.autorizaWhatsapp(), request.funcoesHabilitadas());
+                
+        br.com.servire.api.pessoa.CondicaoEspecial[] condicoes = request.condicoes() == null ? new br.com.servire.api.pessoa.CondicaoEspecial[0] : request.condicoes().toArray(new br.com.servire.api.pessoa.CondicaoEspecial[0]);
+        Integer[] nivelRef = { request.nivelSuporteTea() };
+        String[] outraRef = { request.condicaoOutra() };
+        br.com.servire.api.pessoa.CondicaoEspecial.validar(condicoes, nivelRef, outraRef);
+        inscricao.setCondicoes(condicoes);
+        inscricao.setNivelSuporteTea(nivelRef[0]);
+        inscricao.setCondicaoOutra(outraRef[0]);
+        inscricao.setCuidados(opcional(request.cuidados()));
         substituirContatos(inscricao, request.emails(), request.telefones());
         substituirResponsaveis(inscricao, request.responsaveis());
         auditLogService.registrar("ATUALIZACAO", "INSCRICAO", inscricao.getId(),
@@ -197,10 +224,17 @@ public class InscricaoService {
         Inscricao inscricao = buscarPorId(id);
         exigirPendente(inscricao);
 
+        String cpfFormatado = Formatos.cpf(inscricao.getCpf());
+        if (cpfFormatado != null && !cpfFormatado.isBlank()) {
+            pessoaRepository.findByCpf(cpfFormatado).ifPresent(p -> {
+                throw new ConflictException("Já existe um cadastro com este CPF: " + p.getNomeCompleto() + " (" + p.getSequencial() + ").");
+            });
+        }
+
         Pessoa voluntarioPessoa = new Pessoa(Set.of(PessoaPapel.VOLUNTARIO), inscricao.getNomeCompleto());
         voluntarioPessoa.setDataNascimento(inscricao.getDataNascimento());
         voluntarioPessoa.setSexo(opcional(inscricao.getSexo()));
-        voluntarioPessoa.setCpf(opcional(inscricao.getCpf()));
+        voluntarioPessoa.setCpf(cpfFormatado);
         voluntarioPessoa.setRg(opcional(inscricao.getRg()));
         voluntarioPessoa.setCep(opcional(inscricao.getCep()));
         voluntarioPessoa.setCidade(opcional(inscricao.getCidade()));
@@ -210,6 +244,11 @@ public class InscricaoService {
         voluntarioPessoa.setComplemento(opcional(inscricao.getComplemento()));
         voluntarioPessoa.setBairro(opcional(inscricao.getBairro()));
         voluntarioPessoa.setObservacoes(opcional(inscricao.getObservacoes()));
+        
+        voluntarioPessoa.setCondicoes(inscricao.getCondicoes());
+        voluntarioPessoa.setNivelSuporteTea(inscricao.getNivelSuporteTea());
+        voluntarioPessoa.setCondicaoOutra(inscricao.getCondicaoOutra());
+        voluntarioPessoa.setCuidados(inscricao.getCuidados());
         copiarEmailsParaPessoa(voluntarioPessoa, inscricao.getEmails());
         copiarTelefonesParaPessoa(voluntarioPessoa, inscricao.getTelefones());
 

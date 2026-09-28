@@ -46,7 +46,12 @@ public record InscricaoResponse(
         UUID voluntarioId,
         Instant dataRejeicao,
         UUID rejeitadoPor,
-        String motivoRejeicao) {
+        String motivoRejeicao,
+        List<br.com.servire.api.pessoa.CondicaoEspecial> condicoes,
+        Integer nivelSuporteTea,
+        String condicaoOutra,
+        String cuidados,
+        Instant consentimentoCuidadosEm) {
 
     public static InscricaoResponse de(Inscricao i) {
         return new InscricaoResponse(
@@ -86,6 +91,11 @@ public record InscricaoResponse(
                 i.getVoluntarioId(),
                 i.getDataRejeicao(),
                 i.getRejeitadoPor(),
-                i.getMotivoRejeicao());
+                i.getMotivoRejeicao(),
+                i.getCondicoes() != null ? java.util.Arrays.asList(i.getCondicoes()) : List.of(),
+                i.getNivelSuporteTea(),
+                i.getCondicaoOutra(),
+                i.getCuidados(),
+                i.getConsentimentoCuidadosEm());
     }
 }
