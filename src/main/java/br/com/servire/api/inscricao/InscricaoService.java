@@ -13,6 +13,7 @@ import br.com.servire.api.pessoa.PessoaRepository;
 import br.com.servire.api.pessoa.PessoaTelefone;
 import br.com.servire.api.pessoa.dto.ContatoEmailRequest;
 import br.com.servire.api.pessoa.dto.ContatoTelefoneRequest;
+import br.com.servire.api.storage.ExtensaoDeFoto;
 import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
@@ -144,7 +145,7 @@ public class InscricaoService {
         inscricao = inscricaoRepository.save(inscricao);
 
         if (foto != null && !foto.isEmpty()) {
-            String caminho = "inscricoes/" + inscricao.getId() + "/foto" + extensaoDe(foto);
+            String caminho = "inscricoes/" + inscricao.getId() + "/foto" + ExtensaoDeFoto.de(foto.getContentType());
             byte[] conteudo;
             try {
                 conteudo = foto.getBytes();
@@ -511,16 +512,4 @@ public class InscricaoService {
         return valor.trim();
     }
 
-    private String extensaoDe(MultipartFile foto) {
-        String nomeOriginal = foto.getOriginalFilename();
-        if (nomeOriginal != null && nomeOriginal.contains(".")) {
-            return nomeOriginal.substring(nomeOriginal.lastIndexOf('.'));
-        }
-        return switch (String.valueOf(foto.getContentType())) {
-            case "image/png" -> ".png";
-            case "image/webp" -> ".webp";
-            case "image/heic" -> ".heic";
-            default -> ".jpg";
-        };
-    }
 }

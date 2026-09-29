@@ -142,6 +142,16 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void fichaNaoAlteraAtivoDoVoluntario() {
+        Pessoa criado = pessoaService.criar(requestVoluntario(List.of(), false));
+        assertThat(criado.getVoluntario().isAtivo()).isTrue();
+
+        pessoaService.atualizar(criado.getId(), requestVoluntario(List.of(), false));
+
+        assertThat(pessoaService.buscarPorId(criado.getId()).getVoluntario().isAtivo()).isTrue();
+    }
+
+    @Test
     void atualizarSubstituiRelacoesDoVoluntario() {
         Pessoa mae = pessoaService.criar(requestResponsavel("Original"));
         Pessoa avo = pessoaService.criar(requestResponsavel("Novo"));
@@ -328,12 +338,16 @@ class PessoaServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     private PessoaRequest requestVoluntario(List<RelacaoRequest> relacoes) {
+        return requestVoluntario(relacoes, true);
+    }
+
+    private PessoaRequest requestVoluntario(List<RelacaoRequest> relacoes, boolean ativoNoJson) {
         return new PessoaRequest(
                 Set.of(PessoaPapel.VOLUNTARIO), "Nome de Teste " + UUID.randomUUID(), null, null, null, null,
                 List.of(new ContatoEmailRequest("E-mail pessoal", "vol-" + UUID.randomUUID() + "@teste.com", true)),
                 List.of(new ContatoTelefoneRequest("celular", "11988887777", true)),
                 relacoes, List.of(), null, null, null, null, null, null, null, null, null, null, null, null,
-                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, true, null, null, null, null, false, List.of(), null, null));
+                new VoluntarioPerfilRequest(TipoVoluntario.COROINHA, ativoNoJson, null, null, null, null, false, List.of(), null, null));
     }
 
     private PessoaRequest requestAmbos(String nome) {

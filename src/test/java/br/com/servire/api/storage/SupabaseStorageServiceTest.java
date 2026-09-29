@@ -70,6 +70,17 @@ class SupabaseStorageServiceTest {
     }
 
     @Test
+    void recusaZipDisfarcadoDeImagem() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer.bindTo(builder).build();
+        SupabaseStorageService service = new SupabaseStorageService(builder, properties(BASE_URL, "chave-teste"));
+
+        assertThatThrownBy(() -> service.armazenar("x.jpg", new byte[]{'P', 'K', 3, 4, 0}, "image/jpeg"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("não é uma imagem");
+    }
+
+    @Test
     void recusaArquivoVazio() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer.bindTo(builder).build();

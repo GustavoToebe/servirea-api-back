@@ -282,7 +282,8 @@ public class PessoaService {
             pessoa.setVoluntario(voluntario);
         }
         voluntario.setTipo(perfil.tipo());
-        voluntario.setAtivo(perfil.ativo());
+        // `ativo` do JSON é ignorado. Novo perfil nasce ativo (default da entidade);
+        // ligar/desligar depois só em PATCH /voluntarios/{id}/ativo (PERM_PESSOA_ATIVAR_INATIVAR).
         voluntario.setEtapaCatequese(opcional(perfil.etapaCatequese()));
         voluntario.setEucaristiaAno(opcional(perfil.eucaristiaAno()));
         voluntario.setCrismaAno(opcional(perfil.crismaAno()));

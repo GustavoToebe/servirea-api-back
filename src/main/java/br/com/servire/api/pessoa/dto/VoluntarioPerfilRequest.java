@@ -8,7 +8,11 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
 
-/** Bloco de serviço — obrigatório quando {@code papeis} contém VOLUNTARIO. */
+/**
+ * Bloco de serviço — obrigatório quando {@code papeis} contém VOLUNTARIO.
+ * {@code ativo} permanece no JSON por compatibilidade e é ignorado:
+ * o flag só muda em {@code PATCH /voluntarios/{id}/ativo}.
+ */
 public record VoluntarioPerfilRequest(
         @NotNull TipoVoluntario tipo,
         boolean ativo,

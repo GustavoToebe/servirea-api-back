@@ -2,6 +2,7 @@ package br.com.servire.api.voluntario;
 
 import br.com.servire.api.audit.AuditLogService;
 import br.com.servire.api.escala.EscalaVagaRepository;
+import br.com.servire.api.storage.ExtensaoDeFoto;
 import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.voluntario.dto.CompromissoResponse;
 import br.com.servire.api.web.BadRequestException;
@@ -95,7 +96,7 @@ public class VoluntarioService {
         if (foto == null || foto.isEmpty()) {
             throw new BadRequestException("Nenhum arquivo de foto enviado.");
         }
-        String caminho = voluntario.getId() + "/perfil-" + System.currentTimeMillis() + extensaoDe(foto);
+        String caminho = voluntario.getId() + "/perfil-" + System.currentTimeMillis() + ExtensaoDeFoto.de(foto.getContentType());
         byte[] conteudo;
         try {
             conteudo = foto.getBytes();
@@ -125,16 +126,4 @@ public class VoluntarioService {
         return storageService.gerarUrlAssinada(voluntario.getFotoPath());
     }
 
-    private String extensaoDe(MultipartFile foto) {
-        String nomeOriginal = foto.getOriginalFilename();
-        if (nomeOriginal != null && nomeOriginal.contains(".")) {
-            return nomeOriginal.substring(nomeOriginal.lastIndexOf('.'));
-        }
-        return switch (String.valueOf(foto.getContentType())) {
-            case "image/png" -> ".png";
-            case "image/webp" -> ".webp";
-            case "image/heic" -> ".heic";
-            default -> ".jpg";
-        };
-    }
 }

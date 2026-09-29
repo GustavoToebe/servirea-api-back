@@ -25,6 +25,7 @@ import br.com.servire.api.tenant.TenantRepository;
 import br.com.servire.api.tenant.TenantTelefone;
 import br.com.servire.api.voluntario.Voluntario;
 import br.com.servire.api.web.BadRequestException;
+import br.com.servire.api.web.ZipSeguro;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Sort;
@@ -302,9 +303,24 @@ public class ComunicadoService {
             if (!TIPOS_ANEXO.contains(f.getContentType())) {
                 throw new BadRequestException("Tipo de anexo não aceito: " + nomeArquivo(f) + ". Use PDF, JPG, PNG, DOCX ou XLSX.");
             }
+            byte[] conteudo = bytes(f);
+            if (ehImagem(f.getContentType()) && ZipSeguro.pareceZip(conteudo)) {
+                throw new BadRequestException("Tipo de anexo não aceito: " + nomeArquivo(f) + ". Use PDF, JPG, PNG, DOCX ou XLSX.");
+            }
+            if (ehOffice(f.getContentType())) {
+                ZipSeguro.verificar(conteudo);
+            }
             soma += f.getSize();
         }
         if (soma > MAX_BYTES_ANEXOS) throw new BadRequestException("Os anexos passam de 10 MB somados.");
+    }
+
+    private static boolean ehImagem(String tipo) {
+        return "image/jpeg".equals(tipo) || "image/png".equals(tipo);
+    }
+
+    private static boolean ehOffice(String tipo) {
+        return tipo != null && (tipo.endsWith("wordprocessingml.document") || tipo.endsWith("spreadsheetml.sheet"));
     }
 
     private static String nomeArquivo(MultipartFile f) {

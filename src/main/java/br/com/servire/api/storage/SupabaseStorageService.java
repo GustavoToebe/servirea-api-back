@@ -1,6 +1,7 @@
 package br.com.servire.api.storage;
 
 import br.com.servire.api.web.BadRequestException;
+import br.com.servire.api.web.ZipSeguro;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -89,7 +90,7 @@ public class SupabaseStorageService implements StorageService {
 
     @Override
     public String armazenar(String caminho, byte[] conteudo, String contentType) {
-        validarArquivo(contentType, conteudo == null ? 0 : conteudo.length);
+        validarArquivo(contentType, conteudo);
         requireConfigurado();
         try {
             restClient.post()
@@ -146,10 +147,14 @@ public class SupabaseStorageService implements StorageService {
         }
     }
 
-    private void validarArquivo(String contentType, long tamanhoBytes) {
+    private void validarArquivo(String contentType, byte[] conteudo) {
         if (contentType == null || !properties.allowedMimeTypes().contains(contentType)) {
             throw new BadRequestException(
                     "Tipo de arquivo não permitido. Tipos aceitos: " + String.join(", ", properties.allowedMimeTypes()) + ".");
+        }
+        long tamanhoBytes = conteudo == null ? 0 : conteudo.length;
+        if (ZipSeguro.pareceZip(conteudo)) {
+            throw new BadRequestException("O arquivo enviado não é uma imagem válida.");
         }
         if (tamanhoBytes <= 0) {
             throw new BadRequestException("Arquivo vazio.");
