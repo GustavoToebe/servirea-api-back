@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -29,7 +30,9 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>O refresh token nunca aparece no corpo de nenhuma resposta — só num
  * cookie HttpOnly+Secure+SameSite=None, escopado a {@code /auth} (seção
- * 92, decisão tomada com o usuário em 21/09/2026 ao iniciar esta fase).
+ * 92, decisão tomada com o usuário em 21/09/2026 ao iniciar esta fase). Em
+ * produção a API fica em {@code /api} do domínio do app e o Caddy tira o prefixo,
+ * então o caminho do cookie é {@code /api/auth}: {@code servire.security.refresh-cookie-path}.
  * {@code /auth/refresh} e {@code /auth/logout} são os únicos endpoints que
  * dependem desse cookie — por isso são os únicos que continuam protegidos
  * por CSRF em {@code SecurityConfig} (os demais não dependem de nenhuma
@@ -43,10 +46,13 @@ public class AuthController {
 
     private final AuthService authService;
     private final SecurityProperties properties;
+    private final String refreshCookiePath;
 
-    public AuthController(AuthService authService, SecurityProperties properties) {
+    public AuthController(AuthService authService, SecurityProperties properties,
+                          @Value("${servire.security.refresh-cookie-path:/auth}") String refreshCookiePath) {
         this.authService = authService;
         this.properties = properties;
+        this.refreshCookiePath = refreshCookiePath;
     }
 
     @PostMapping("/login")
@@ -124,7 +130,7 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("None")
-                .path("/auth")
+                .path(refreshCookiePath)
                 .maxAge(properties.refreshTokenTtl())
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
@@ -135,7 +141,7 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("None")
-                .path("/auth")
+                .path(refreshCookiePath)
                 .maxAge(0)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

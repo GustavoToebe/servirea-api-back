@@ -30,6 +30,9 @@ servire:
     # /auth/refresh e /auth/logout. Vazio = cookie só do host da API.
     csrf:
       cookie-domain: ${CSRF_COOKIE_DOMAIN:}
+    # A API é servida em /api do domínio do app (o Caddy tira o prefixo). O
+    # cookie de refresh só vai ao navegador de volta nesse caminho.
+    refresh-cookie-path: /api/auth
   frontend:
     base-url: ${FRONTEND_BASE_URL}
   # SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY/TURNSTILE_SECRET_KEY obrigatórios
