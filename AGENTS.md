@@ -75,6 +75,7 @@ V042: Layouts de envio.
 V043: comunicado e fila (`paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`); o conteúdo dos anexos vira NULL quando o comunicado conclui.
 V044: `escala_eventos.referencia` (linha de referência da escala semanal replicada). Evento `referencia` não finaliza, não recebe presença nem alocação, não tem candidatos e não entra em compromissos.
 V045: `indisponibilidade_voluntario` (período nulo = dia inteiro, índices únicos parciais) e `resposta_indisponibilidade` ("sem restrição" no mês; sem linha = pendente).
+V048: índices compostos `(tenant_id, …)` em `escala_eventos.escala_id`, `escala_vagas.evento_id`, `escala_vagas.voluntario_id` e `inscricoes.status`. Disponibilidade já indexa `voluntario_id` (V025).
 
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
