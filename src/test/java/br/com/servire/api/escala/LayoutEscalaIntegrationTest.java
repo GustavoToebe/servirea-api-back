@@ -32,9 +32,10 @@ public class LayoutEscalaIntegrationTest extends AbstractIntegrationTest {
     @WithMockUser(authorities = "PERM_ESCALA_ALTERAR")
     void deveCriarLayout() throws Exception {
         br.com.servire.api.tenant.TenantContext.set(UUID.randomUUID());
-        LayoutEscalaDto dto = new LayoutEscalaDto(null, "Meu Layout", TipoEscala.SEMANAL, List.of(new ColunaEscalaDto(FuncaoEscala.MISSAL, "Acolito")), true, false);
+        LayoutEscalaDto dto = new LayoutEscalaDto(null, "Meu Layout", TipoEscala.SEMANAL,
+                List.of(new ColunaEscalaDto(1, FuncaoEscala.MISSAL, 1, "Acólito Missal")), true, false);
         String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(dto);
-        mvc.perform(post("/api/escalas/layouts")
+        mvc.perform(post("/escalas/layouts")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
                 .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf()))

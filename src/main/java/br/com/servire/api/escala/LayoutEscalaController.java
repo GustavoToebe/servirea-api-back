@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/escalas/layouts")
+@RequestMapping("/escalas/layouts")
 public class LayoutEscalaController {
     private final LayoutEscalaService service;
 
