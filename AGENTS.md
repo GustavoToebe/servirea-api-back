@@ -157,7 +157,7 @@ V045: `indisponibilidade_voluntario` (período nulo = dia inteiro, índices úni
 - Supabase Storage: enviar **os dois** headers `Authorization: Bearer` e `apikey`; não usar template `{caminho}` na URI (codifica `/`).
 - Foto: a extensão do caminho sai de `ExtensaoDeFoto` (o Content-Type), nunca do nome do arquivo. Bytes que começam com `PK` não são imagem.
 - Ativo do voluntário não muda no `POST`/`PUT /pessoas` (o campo no JSON é ignorado). Só `PATCH /voluntarios/{id}/ativo`, com `PERM_PESSOA_ATIVAR_INATIVAR`.
-- Anexo DOCX/XLSX passa por `ZipSeguro` antes de gravar: teto de entradas, tamanho descompactado e um nível de zip dentro do outro. Não inflar o anexo fora dessa classe.
+- Anexo DOCX/XLSX passa por `ZipSeguro` antes de gravar: teto de entradas, tamanho descompactado e um nível de zip dentro do outro. Não há teto de razão descompactado/compactado: planilha com linhas repetidas pode passar de 100:1 e continua válida. Não inflar o anexo fora dessa classe.
 - Enum nativo do Postgres: `@Enumerated(STRING)` + `@JdbcTypeCode(SqlTypes.NAMED_ENUM)`; array de enum:
   `@JdbcTypeCode(ARRAY)` + `@ColumnTransformer(write = "?::tipo[]")`. Em JPQL, enum **sempre por
   parâmetro** (`c.status = :status`), nunca literal (`Tenant.Status.ATIVO`): o literal vira

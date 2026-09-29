@@ -15,7 +15,6 @@ public final class ZipSeguro {
     static final int MAX_ENTRADAS = 128;
     static final long MAX_POR_ENTRADA = 16L * 1024 * 1024;
     static final long MAX_TOTAL = 32L * 1024 * 1024;
-    static final int MAX_RAZAO = 100;
     static final int MAX_PROFUNDIDADE = 2;
 
     private static final String LIMITE = "Este anexo compactado passa do limite seguro.";
@@ -73,9 +72,6 @@ public final class ZipSeguro {
             }
             total += descompactado;
             if (total > MAX_TOTAL) {
-                throw new BadRequestException(LIMITE);
-            }
-            if (compactado > 0 && descompactado > compactado * (long) MAX_RAZAO) {
                 throw new BadRequestException(LIMITE);
             }
             if (descompactado > 0 && (metodo == 0 || metodo == 8)) {

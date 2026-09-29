@@ -5,9 +5,11 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -44,14 +46,16 @@ class ZipSeguroTest {
     }
 
     @Test
-    void recusaRazaoDeCompactacaoAbsurda() throws IOException {
-        byte[] zip = zip("a.txt", "pequeno".getBytes(StandardCharsets.UTF_8));
-        long compactado = lerCompactado(zip);
-        definirDescompactado(zip, compactado * (ZipSeguro.MAX_RAZAO + 1));
+    void aceitaConteudoRepetidoAbaixoDoTeto() throws IOException {
+        byte[] repetido = new byte[200_000];
+        Arrays.fill(repetido, (byte) 'a');
+        byte[] arquivo = zip("planilha.xml", repetido);
+        int i = indiceCentral(arquivo);
+        long compactado = u32(arquivo, i + 20);
+        long descompactado = u32(arquivo, i + 24);
+        assertThat(descompactado).isGreaterThan(compactado * 100);
 
-        assertThatThrownBy(() -> ZipSeguro.verificar(zip))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("limite");
+        assertThatCode(() -> ZipSeguro.verificar(arquivo)).doesNotThrowAnyException();
     }
 
     @Test
@@ -96,10 +100,9 @@ class ZipSeguroTest {
         throw new AssertionError("sem diretório central");
     }
 
-    private static long lerCompactado(byte[] zip) {
-        int i = indiceCentral(zip);
-        return (zip[i + 20] & 0xffL) | ((zip[i + 21] & 0xffL) << 8)
-                | ((zip[i + 22] & 0xffL) << 16) | ((zip[i + 23] & 0xffL) << 24);
+    private static long u32(byte[] zip, int i) {
+        return (zip[i] & 0xffL) | ((zip[i + 1] & 0xffL) << 8)
+                | ((zip[i + 2] & 0xffL) << 16) | ((zip[i + 3] & 0xffL) << 24);
     }
 
     private static void definirDescompactado(byte[] zip, long valor) {
