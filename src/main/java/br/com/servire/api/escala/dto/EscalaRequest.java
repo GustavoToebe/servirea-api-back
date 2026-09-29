@@ -8,7 +8,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
+import br.com.servire.api.escala.ColunaEscalaDto;
+
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Payload de {@code POST}/{@code PUT /escalas} (Fase 9, seção 46/109).
@@ -29,6 +32,16 @@ public record EscalaRequest(
         @Min(2020) @Max(2100) Integer ano,
         @Min(1) @Max(12) Integer mes,
         String observacao,
+        UUID layoutId,
+        List<ColunaEscalaDto> colunas,
         Long version,
         @NotEmpty List<@Valid EscalaEventoRequest> eventos) {
+        
+    public EscalaRequest(String titulo, TipoEscala tipo, Integer ano, Integer mes, String observacao, Long version, List<EscalaEventoRequest> eventos) {
+        this(titulo, tipo, ano, mes, observacao, null, null, version, eventos);
+    }
+
+    public EscalaRequest(String titulo, TipoEscala tipo, Integer ano, Integer mes, List<EscalaEventoRequest> eventos) {
+        this(titulo, tipo, ano, mes, null, null, null, null, eventos);
+    }
 }

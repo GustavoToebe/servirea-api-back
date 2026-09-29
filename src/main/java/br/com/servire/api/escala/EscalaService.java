@@ -46,6 +46,7 @@ public class EscalaService {
     private final EscalaEventoRepository escalaEventoRepository;
     private final VoluntarioRepository voluntarioRepository;
     private final DisponibilidadeVoluntarioRepository disponibilidadeRepository;
+    private final LayoutEscalaRepository layoutEscalaRepository;
     private final AuditLogService auditLogService;
 
     static final String REFERENCIA_SEM_ALOCACAO = "Linha de referência não recebe presença nem alocação.";
@@ -54,12 +55,14 @@ public class EscalaService {
                           EscalaEventoRepository escalaEventoRepository,
                           VoluntarioRepository voluntarioRepository,
                           DisponibilidadeVoluntarioRepository disponibilidadeRepository,
+                          LayoutEscalaRepository layoutEscalaRepository,
                           AuditLogService auditLogService) {
         this.escalaRepository = escalaRepository;
         this.escalaVagaRepository = escalaVagaRepository;
         this.escalaEventoRepository = escalaEventoRepository;
         this.voluntarioRepository = voluntarioRepository;
         this.disponibilidadeRepository = disponibilidadeRepository;
+        this.layoutEscalaRepository = layoutEscalaRepository;
         this.auditLogService = auditLogService;
     }
 
@@ -216,6 +219,9 @@ public class EscalaService {
         escala.setMes(request.mes());
         escala.setObservacao(request.observacao());
         escala.setCreatedBy(usuarioIdCriador);
+        
+        preencherLayoutEColunas(escala, request);
+
         substituirEventos(escala, request.eventos());
         escala = escalaRepository.save(escala);
         auditLogService.registrar("CRIACAO", "ESCALA", escala.getId(), null);
@@ -252,10 +258,33 @@ public class EscalaService {
         escala.setAno(request.ano());
         escala.setMes(request.mes());
         escala.setObservacao(request.observacao());
+        
+        preencherLayoutEColunas(escala, request);
+
         substituirEventos(escala, request.eventos());
         auditLogService.registrar("ATUALIZACAO", "ESCALA", escala.getId(),
-                List.of("titulo", "tipo", "ano", "mes", "observacao", "eventos"));
+                List.of("titulo", "tipo", "ano", "mes", "observacao", "eventos", "layoutId", "colunas"));
         return inicializar(escala);
+    }
+
+    private void preencherLayoutEColunas(Escala escala, EscalaRequest request) {
+        if (request.colunas() != null && !request.colunas().isEmpty()) {
+            escala.setColunas(request.colunas());
+            escala.setLayoutId(request.layoutId());
+        } else if (request.layoutId() != null) {
+            LayoutEscala layout = layoutEscalaRepository.findById(request.layoutId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Layout não encontrado."));
+            escala.setColunas(layout.getColunas());
+            escala.setLayoutId(layout.getId());
+        } else {
+            LayoutEscala layout = layoutEscalaRepository.findFirstByTipoAndSistemaTrueAndAtivoTrue(escala.getTipo()).orElse(null);
+            if (layout != null) {
+                escala.setColunas(layout.getColunas());
+                escala.setLayoutId(layout.getId());
+            } else {
+                escala.setColunas(java.util.List.of());
+            }
+        }
     }
 
     @Transactional

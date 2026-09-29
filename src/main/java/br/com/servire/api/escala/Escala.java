@@ -91,6 +91,12 @@ public class Escala {
     @OrderBy("data ASC, horario ASC")
     private List<EscalaEvento> eventos = new ArrayList<>();
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<ColunaEscalaDto> colunas;
+
+    @Column(name = "layout_id")
+    private UUID layoutId;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -187,5 +193,21 @@ public class Escala {
     }
     public Long getSequencial() {
         return sequencial;
+    }
+
+    public List<ColunaEscalaDto> getColunas() {
+        return colunas;
+    }
+
+    public void setColunas(List<ColunaEscalaDto> colunas) {
+        this.colunas = colunas;
+    }
+
+    public UUID getLayoutId() {
+        return layoutId;
+    }
+
+    public void setLayoutId(UUID layoutId) {
+        this.layoutId = layoutId;
     }
 }

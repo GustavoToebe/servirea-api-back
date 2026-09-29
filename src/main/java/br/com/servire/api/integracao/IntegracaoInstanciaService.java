@@ -53,6 +53,7 @@ public class IntegracaoInstanciaService {
     private final TransactionTemplate transacao;
     private final AcessoParoquia acessoParoquia;
     private final String frontendBaseUrl;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public IntegracaoInstanciaService(IntegracaoOperacaoRepository operacoes,
                                        DireitosLocaisRepository direitos,
@@ -67,7 +68,8 @@ public class IntegracaoInstanciaService {
                                        JsonMapper json,
                                        PlatformTransactionManager transactionManager,
                                        AcessoParoquia acessoParoquia,
-                                       @Value("${servire.frontend.base-url}") String frontendBaseUrl) {
+                                       @Value("${servire.frontend.base-url}") String frontendBaseUrl,
+                                       org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.operacoes = operacoes;
         this.direitos = direitos;
         this.suporteCodigos = suporteCodigos;
@@ -82,6 +84,7 @@ public class IntegracaoInstanciaService {
         this.transacao = new TransactionTemplate(transactionManager);
         this.acessoParoquia = acessoParoquia;
         this.frontendBaseUrl = frontendBaseUrl;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     public ResultadoProvisionamento provisionar(String idempotencyKey, byte[] corpo, ProvisionarInstanciaRequest request) {
@@ -178,6 +181,15 @@ public class IntegracaoInstanciaService {
                 DireitosAplicacao.statusDe(request.direitos()));
         tenant.setVigenciaAte(request.direitos().vigenteAte());
         tenant = tenants.saveAndFlush(tenant);
+
+        final UUID tenantId = tenant.getId();
+        TenantContext.set(tenantId);
+        transacao.execute(status -> {
+            jdbcTemplate.update("INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo) VALUES (?, 'Padrão Semanal', 'SEMANAL', '[]'::jsonb, true, true)", tenantId);
+            jdbcTemplate.update("INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo) VALUES (?, 'Padrão Mensal', 'MENSAL', '[]'::jsonb, true, true)", tenantId);
+            return null;
+        });
+        TenantContext.clear();
 
         Perfil administrador = perfilService.criarPadrao(tenant.getId());
         String email = request.administrador().email().trim().toLowerCase();
