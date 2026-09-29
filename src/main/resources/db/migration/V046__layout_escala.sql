@@ -32,14 +32,12 @@ DECLARE
     v_funcao text;
     v_qtd int;
     i int;
-    v_ordem int;
     label text;
 BEGIN
     FOR r IN (SELECT id FROM public.escalas WHERE colunas IS NULL) LOOP
         SELECT id INTO ev_id FROM public.escala_eventos WHERE escala_id = r.id AND referencia = false ORDER BY data ASC, horario ASC LIMIT 1;
         
         json_cols := '[]'::jsonb;
-        v_ordem := 1;
         
         IF ev_id IS NOT NULL THEN
             FOR v_funcao IN SELECT unnest(ARRAY['MISSAL', 'CRUZ', 'CREDENCIA', 'VELA', 'COLETA', 'SINO', 'OUTRO']) LOOP
@@ -49,7 +47,7 @@ BEGIN
                         IF v_funcao = 'MISSAL' THEN
                             label := 'Acólito Missal';
                         ELSIF v_funcao = 'CRUZ' THEN
-                            label := 'Cruz';
+                            label := 'Cruciferário';
                         ELSIF v_funcao = 'CREDENCIA' THEN
                             label := 'Credência';
                         ELSIF v_funcao = 'VELA' THEN
@@ -66,8 +64,7 @@ BEGIN
                             label := label || ' ' || i;
                         END IF;
                         
-                        json_cols := json_cols || jsonb_build_object('ordem', v_ordem, 'funcao', v_funcao, 'posicao', i, 'rotulo', label);
-                        v_ordem := v_ordem + 1;
+                        json_cols := json_cols || jsonb_build_object('funcao', v_funcao, 'rotulo', label);
                     END LOOP;
                 END IF;
             END LOOP;
@@ -79,7 +76,7 @@ END
 $$;
 
 INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo)
-SELECT id, 'Padrão Semanal', 'SEMANAL', '[{"ordem": 1, "funcao": "MISSAL", "posicao": 1, "rotulo": "Acólito Missal"}, {"ordem": 2, "funcao": "CRUZ", "posicao": 1, "rotulo": "Cruz"}, {"ordem": 3, "funcao": "CREDENCIA", "posicao": 1, "rotulo": "Credência"}, {"ordem": 4, "funcao": "VELA", "posicao": 1, "rotulo": "Vela 1"}, {"ordem": 5, "funcao": "VELA", "posicao": 2, "rotulo": "Vela 2"}, {"ordem": 6, "funcao": "SINO", "posicao": 1, "rotulo": "Sino 1"}, {"ordem": 7, "funcao": "SINO", "posicao": 2, "rotulo": "Sino 2"}]'::jsonb, true, true FROM public.tenant;
+SELECT id, 'Padrão Semanal', 'SEMANAL', '[]'::jsonb, true, true FROM public.tenant;
 
 INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo)
-SELECT id, 'Padrão Mensal', 'MENSAL', '[{"ordem": 1, "funcao": "MISSAL", "posicao": 1, "rotulo": "Acólito Missal"}, {"ordem": 2, "funcao": "CRUZ", "posicao": 1, "rotulo": "Cruz"}, {"ordem": 3, "funcao": "CREDENCIA", "posicao": 1, "rotulo": "Credência"}, {"ordem": 4, "funcao": "VELA", "posicao": 1, "rotulo": "Vela 1"}, {"ordem": 5, "funcao": "VELA", "posicao": 2, "rotulo": "Vela 2"}, {"ordem": 6, "funcao": "COLETA", "posicao": 1, "rotulo": "Coleta"}, {"ordem": 7, "funcao": "COLETA", "posicao": 2, "rotulo": "Coleta"}, {"ordem": 8, "funcao": "COLETA", "posicao": 3, "rotulo": "Coleta"}, {"ordem": 9, "funcao": "COLETA", "posicao": 4, "rotulo": "Coleta"}, {"ordem": 10, "funcao": "SINO", "posicao": 1, "rotulo": "Sino 1"}, {"ordem": 11, "funcao": "SINO", "posicao": 2, "rotulo": "Sino 2"}]'::jsonb, true, true FROM public.tenant;
+SELECT id, 'Padrão Mensal', 'MENSAL', '[]'::jsonb, true, true FROM public.tenant;
