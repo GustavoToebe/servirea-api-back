@@ -122,6 +122,8 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("X-Request-Id"));
         configuration.setAllowCredentials(true);
+        // O navegador guarda o preflight (hoje cada tela dispara o OPTIONS de novo).
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
