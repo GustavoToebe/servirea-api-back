@@ -152,6 +152,13 @@ reverse_proxy 127.0.0.1:8080 {
 }
 ```
 
+O Caddy comprime a resposta da API (`encode zstd gzip` no site
+`api.servirea.com.br` e no `/api` do app). O Spring **não** liga
+`server.compression`: comprimir de novo no Tomcat só gastaria CPU
+(e o Tomcat só faz gzip, sem zstd). O front em produção chama
+`https://app.servirea.com.br/api`, mesma origem, sem preflight.
+O host `api.servirea.com.br` continua para quem ainda não atualizou.
+
 ## Como rodar
 
 Docker Desktop aberto para os testes (Testcontainers). Segredos de
