@@ -6,6 +6,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -33,6 +35,10 @@ public class RequestIdFilter extends GenericFilterBean {
 
     public static final String REQUEST_ID_HEADER = "X-Request-Id";
     public static final String MDC_KEY = "requestId";
+    /** Duração do Kill Switch, gravada pelo filtro JWT para o log de requisição lenta. */
+    public static final String JWT_MS = "servire.jwtMs";
+    private static final long LIMITE_LENTO_MS = 500;
+    private static final Logger log = LoggerFactory.getLogger(RequestIdFilter.class);
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -47,9 +53,17 @@ public class RequestIdFilter extends GenericFilterBean {
 
         httpResponse.setHeader(REQUEST_ID_HEADER, requestId);
         MDC.put(MDC_KEY, requestId);
+        long inicio = System.nanoTime();
         try {
             chain.doFilter(request, response);
         } finally {
+            long ms = (System.nanoTime() - inicio) / 1_000_000;
+            if (ms > LIMITE_LENTO_MS) {
+                Object jwt = httpRequest.getAttribute(JWT_MS);
+                log.warn("requisição lenta metodo={} caminho={} status={} ms={} jwtMs={} requestId={}",
+                        httpRequest.getMethod(), httpRequest.getRequestURI(), httpResponse.getStatus(),
+                        ms, jwt == null ? "-" : jwt, requestId);
+            }
             // Sempre limpar o MDC ao final — threads (inclusive virtuais, que
             // podem ser reaproveitadas de outras formas pelo runtime) não
             // devem carregar contexto de uma requisição para a próxima.

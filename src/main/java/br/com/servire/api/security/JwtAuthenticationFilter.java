@@ -10,6 +10,7 @@ import br.com.servire.api.auth.UsuarioTenantRepository;
 import br.com.servire.api.tenant.Tenant;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.tenant.TenantRepository;
+import br.com.servire.api.web.RequestIdFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -72,6 +73,7 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String VINCULO_DA_REQUISICAO = "servire.vinculo";
 
     /** Mesma chave de MDC já usada pelo antigo {@code DevFixedTenantFilter} (seção 65: campo "tenantId" nos logs). */
     public static final String MDC_KEY = "tenantId";
@@ -97,8 +99,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+        long inicioJwt = System.nanoTime();
         Optional<AuthenticatedUser> autenticado = autenticar(request);
         if (autenticado.isEmpty()) {
+            request.setAttribute(RequestIdFilter.JWT_MS, (System.nanoTime() - inicioJwt) / 1_000_000);
             filterChain.doFilter(request, response);
             return;
         }
@@ -109,7 +113,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             MDC.put(MDC_KEY, usuario.tenantId().toString());
         }
         try {
-            List<GrantedAuthority> authorities = autoridadesDe(usuario);
+            List<GrantedAuthority> authorities = autoridadesDe(request, usuario);
+            request.setAttribute(RequestIdFilter.JWT_MS, (System.nanoTime() - inicioJwt) / 1_000_000);
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(usuario, null, authorities);
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -147,12 +152,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return autenticarSuporteApp(token);
         }
         if (JwtService.PURPOSE_ACCESS.equals(purpose)) {
-            return autenticarAccess(token);
+            return autenticarAccess(request, token);
         }
         return Optional.empty();
     }
 
-    private Optional<AuthenticatedUser> autenticarAccess(String token) {
+    private Optional<AuthenticatedUser> autenticarAccess(HttpServletRequest request, String token) {
         JwtService.AccessTokenClaims claims;
         try {
             claims = jwtService.validarAccessToken(token);
@@ -175,6 +180,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (vinculo.isEmpty() || vinculo.get().getStatus() != UsuarioTenant.Status.ATIVO) {
             return Optional.empty();
         }
+        request.setAttribute(VINCULO_DA_REQUISICAO, vinculo.get());
         if (vinculo.get().getPerfil() != null && !vinculo.get().getPerfil().isAtivo()) {
             return Optional.empty();
         }
@@ -210,9 +216,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * perfil da paróquia ({@link PermissoesDaSessao}). Suporte recebe o
      * conjunto do acesso total.
      */
-    private List<GrantedAuthority> autoridadesDe(AuthenticatedUser usuario) {
+    private List<GrantedAuthority> autoridadesDe(HttpServletRequest request, AuthenticatedUser usuario) {
         if (usuario.suporte()) {
             return PermissoesDaSessao.acessoTotal();
+        }
+        Object guardado = request.getAttribute(VINCULO_DA_REQUISICAO);
+        if (guardado instanceof UsuarioTenant vinculo) {
+            return PermissoesDaSessao.de(vinculo);
         }
         return usuarioTenantRepository
                 .findComPerfilByUsuario_IdAndTenant_Id(usuario.usuarioId(), usuario.tenantId())
