@@ -2,6 +2,7 @@ package br.com.servire.api.voluntario;
 
 import br.com.servire.api.voluntario.dto.CompromissoResponse;
 import br.com.servire.api.voluntario.dto.FotoUrlResponse;
+import br.com.servire.api.voluntario.dto.ContagemVoluntarios;
 import br.com.servire.api.voluntario.dto.VoluntarioResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,6 +58,12 @@ public class VoluntarioController {
     @GetMapping("/count")
     public long contar(@RequestParam boolean ativo) {
         return voluntarioService.contarPorAtivo(ativo);
+    }
+
+    @PreAuthorize("hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')")
+    @GetMapping("/contagens")
+    public ContagemVoluntarios contagens() {
+        return voluntarioService.contarAtivosEInativos();
     }
 
     @PreAuthorize("hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')")

@@ -5,6 +5,7 @@ import br.com.servire.api.escala.EscalaVagaRepository;
 import br.com.servire.api.storage.ExtensaoDeFoto;
 import br.com.servire.api.storage.StorageService;
 import br.com.servire.api.voluntario.dto.CompromissoResponse;
+import br.com.servire.api.voluntario.dto.ContagemVoluntarios;
 import br.com.servire.api.web.BadRequestException;
 import br.com.servire.api.web.ResourceNotFoundException;
 import jakarta.persistence.criteria.JoinType;
@@ -73,6 +74,22 @@ public class VoluntarioService {
     @Transactional(readOnly = true)
     public long contarPorAtivo(boolean ativo) {
         return voluntarioRepository.countByAtivo(ativo);
+    }
+
+    @Transactional(readOnly = true)
+    public ContagemVoluntarios contarAtivosEInativos() {
+        long ativos = 0;
+        long inativos = 0;
+        for (Object[] linha : voluntarioRepository.contarAgrupadoPorAtivo()) {
+            boolean ativo = Boolean.TRUE.equals(linha[0]);
+            long quantidade = (Long) linha[1];
+            if (ativo) {
+                ativos = quantidade;
+            } else {
+                inativos = quantidade;
+            }
+        }
+        return new ContagemVoluntarios(ativos, inativos);
     }
 
     @Transactional(readOnly = true)

@@ -37,10 +37,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -390,6 +393,39 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.emails", hasSize(2)))
                 .andExpect(jsonPath("$.responsaveis", hasSize(2)));
+    }
+
+    @Test
+    void preflightDeOrigemPermitidaGuardaMaxAge() throws Exception {
+        mockMvc.perform(options("/voluntarios/contagens")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:4200")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_MAX_AGE, "3600"));
+    }
+
+    @Test
+    void contagensDeAtivosEInativosNumaChamada() throws Exception {
+        String corpo = """
+                {"papeis":["VOLUNTARIO"],"nomeCompleto":"%s","emails":[],"telefones":[],
+                 "voluntario":{"tipo":"COROINHA","ativo":%s,"autorizaWhatsapp":false,"funcoesHabilitadas":["VELA"]}}
+                """;
+        mockMvc.perform(json(post("/pessoas"), corpo.formatted("Ativo Um", "true"))).andExpect(status().isOk());
+        mockMvc.perform(json(post("/pessoas"), corpo.formatted("Ativo Dois", "true"))).andExpect(status().isOk());
+        String criado = mockMvc.perform(json(post("/pessoas"), corpo.formatted("Inativo", "true")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(criado, "$.id");
+        mockMvc.perform(autenticado(patch("/voluntarios/{id}/ativo", id).param("ativo", "false")))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(autenticado(get("/voluntarios/contagens")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ativos").value(2))
+                .andExpect(jsonPath("$.inativos").value(1));
+        mockMvc.perform(autenticado(get("/voluntarios/count").param("ativo", "true")))
+                .andExpect(status().isOk())
+                .andExpect(content().string("2"));
     }
 
     private MockHttpServletRequestBuilder autenticado(MockHttpServletRequestBuilder request) {
