@@ -1,4 +1,10 @@
-CREATE TABLE public.layout_escala (
+import re
+
+semanal_json = '[{"ordem": 1, "funcao": "MISSAL", "posicao": 1, "rotulo": "Acólito Missal"}, {"ordem": 2, "funcao": "CRUZ", "posicao": 1, "rotulo": "Cruz"}, {"ordem": 3, "funcao": "CREDENCIA", "posicao": 1, "rotulo": "Credência"}, {"ordem": 4, "funcao": "VELA", "posicao": 1, "rotulo": "Vela 1"}, {"ordem": 5, "funcao": "VELA", "posicao": 2, "rotulo": "Vela 2"}, {"ordem": 6, "funcao": "SINO", "posicao": 1, "rotulo": "Sino 1"}, {"ordem": 7, "funcao": "SINO", "posicao": 2, "rotulo": "Sino 2"}]'
+
+mensal_json = '[{"ordem": 1, "funcao": "MISSAL", "posicao": 1, "rotulo": "Acólito Missal"}, {"ordem": 2, "funcao": "CRUZ", "posicao": 1, "rotulo": "Cruz"}, {"ordem": 3, "funcao": "CREDENCIA", "posicao": 1, "rotulo": "Credência"}, {"ordem": 4, "funcao": "VELA", "posicao": 1, "rotulo": "Vela 1"}, {"ordem": 5, "funcao": "VELA", "posicao": 2, "rotulo": "Vela 2"}, {"ordem": 6, "funcao": "COLETA", "posicao": 1, "rotulo": "Coleta"}, {"ordem": 7, "funcao": "COLETA", "posicao": 2, "rotulo": "Coleta"}, {"ordem": 8, "funcao": "COLETA", "posicao": 3, "rotulo": "Coleta"}, {"ordem": 9, "funcao": "COLETA", "posicao": 4, "rotulo": "Coleta"}, {"ordem": 10, "funcao": "SINO", "posicao": 1, "rotulo": "Sino 1"}, {"ordem": 11, "funcao": "SINO", "posicao": 2, "rotulo": "Sino 2"}]'
+
+sql_content = f'''CREATE TABLE public.layout_escala (
     id uuid NOT NULL DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
     nome varchar(255) NOT NULL,
@@ -79,7 +85,33 @@ END
 $$;
 
 INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo)
-SELECT id, 'Padrão Semanal', 'SEMANAL', '[{"ordem": 1, "funcao": "MISSAL", "posicao": 1, "rotulo": "Acólito Missal"}, {"ordem": 2, "funcao": "CRUZ", "posicao": 1, "rotulo": "Cruz"}, {"ordem": 3, "funcao": "CREDENCIA", "posicao": 1, "rotulo": "Credência"}, {"ordem": 4, "funcao": "VELA", "posicao": 1, "rotulo": "Vela 1"}, {"ordem": 5, "funcao": "VELA", "posicao": 2, "rotulo": "Vela 2"}, {"ordem": 6, "funcao": "SINO", "posicao": 1, "rotulo": "Sino 1"}, {"ordem": 7, "funcao": "SINO", "posicao": 2, "rotulo": "Sino 2"}]'::jsonb, true, true FROM public.tenant;
+SELECT id, 'Padrão Semanal', 'SEMANAL', '{semanal_json}'::jsonb, true, true FROM public.tenant;
 
 INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo)
-SELECT id, 'Padrão Mensal', 'MENSAL', '[{"ordem": 1, "funcao": "MISSAL", "posicao": 1, "rotulo": "Acólito Missal"}, {"ordem": 2, "funcao": "CRUZ", "posicao": 1, "rotulo": "Cruz"}, {"ordem": 3, "funcao": "CREDENCIA", "posicao": 1, "rotulo": "Credência"}, {"ordem": 4, "funcao": "VELA", "posicao": 1, "rotulo": "Vela 1"}, {"ordem": 5, "funcao": "VELA", "posicao": 2, "rotulo": "Vela 2"}, {"ordem": 6, "funcao": "COLETA", "posicao": 1, "rotulo": "Coleta"}, {"ordem": 7, "funcao": "COLETA", "posicao": 2, "rotulo": "Coleta"}, {"ordem": 8, "funcao": "COLETA", "posicao": 3, "rotulo": "Coleta"}, {"ordem": 9, "funcao": "COLETA", "posicao": 4, "rotulo": "Coleta"}, {"ordem": 10, "funcao": "SINO", "posicao": 1, "rotulo": "Sino 1"}, {"ordem": 11, "funcao": "SINO", "posicao": 2, "rotulo": "Sino 2"}]'::jsonb, true, true FROM public.tenant;
+SELECT id, 'Padrão Mensal', 'MENSAL', '{mensal_json}'::jsonb, true, true FROM public.tenant;
+'''
+
+with open('src/main/resources/db/migration/V046__layout_escala.sql', 'w', encoding='utf-8') as f:
+    f.write(sql_content)
+
+import os
+os.system("git checkout src/main/java/br/com/servire/api/integracao/IntegracaoInstanciaService.java")
+
+with open('src/main/java/br/com/servire/api/integracao/IntegracaoInstanciaService.java', 'r', encoding='utf-8') as f:
+    java = f.read()
+
+s_json_esc = semanal_json.replace('"', '\\"')
+m_json_esc = mensal_json.replace('"', '\\"')
+
+new_block = f"""
+        transacao.execute(status -> {{
+            jdbcTemplate.update("INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo) VALUES (?, 'Padrão Semanal', 'SEMANAL', ?::jsonb, true, true)", tenantId, "{s_json_esc}");
+            jdbcTemplate.update("INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo) VALUES (?, 'Padrão Mensal', 'MENSAL', ?::jsonb, true, true)", tenantId, "{m_json_esc}");
+            return null;
+        }});
+"""
+
+java = re.sub(r"transacao\.execute\(status -> \{[\s\S]*?return null;\s*\}\);", new_block.strip(), java)
+
+with open('src/main/java/br/com/servire/api/integracao/IntegracaoInstanciaService.java', 'w', encoding='utf-8') as f:
+    f.write(java)
