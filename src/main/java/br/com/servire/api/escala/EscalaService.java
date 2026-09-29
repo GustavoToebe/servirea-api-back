@@ -165,12 +165,16 @@ public class EscalaService {
                 .filter(v -> v != null)
                 .map(Voluntario::getId)
                 .collect(Collectors.toSet());
-        Map<UUID, List<DisponibilidadeVoluntario>> porVoluntario = disponibilidadeRepository.findAll().stream()
-                .collect(Collectors.groupingBy(d -> d.getVoluntario().getId()));
+        List<Voluntario> ativos = voluntarioRepository.findByAtivoTrueOrderByPessoa_NomeCompletoAsc();
+        List<UUID> idsAtivos = ativos.stream().map(Voluntario::getId).toList();
+        Map<UUID, List<DisponibilidadeVoluntario>> porVoluntario = idsAtivos.isEmpty()
+                ? Map.of()
+                : disponibilidadeRepository.findByVoluntario_IdIn(idsAtivos).stream()
+                        .collect(Collectors.groupingBy(d -> d.getVoluntario().getId()));
         Periodo periodo = periodoDe(evento.getHorario());
         DayOfWeek diaSemana = evento.getData().getDayOfWeek();
         LocalDate data = evento.getData();
-        return voluntarioRepository.findByAtivoTrueOrderByPessoa_NomeCompletoAsc().stream()
+        return ativos.stream()
                 .filter(v -> !jaAlocados.contains(v.getId()))
                 .filter(v -> temFuncao(v, funcao))
                 .filter(v -> disponivelEm(porVoluntario.getOrDefault(v.getId(), List.of()), data, diaSemana, periodo))
