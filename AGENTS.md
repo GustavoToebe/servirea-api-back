@@ -82,9 +82,7 @@ V051: remove o financeiro antigo que ficou no Servire (`plano`, `preco_plano`, `
 
 
 ## Deploy em produção
-O push na `main` **não** publica. O deploy é manual, na VPS (`184.107.176.76`, a mesma de `app.servirea.com.br`; roteiro completo
-em `central-api-back/deploy/README.md`): `bash /opt/ecossistema/central-api-back/deploy/atualizar.sh` (faz `git pull` nos quatro
-repositórios, compila os fronts e recria os containers; migration nova roda na subida da API).
+Push na `main` roda `.github/workflows/deploy.yml` (nos quatro repositórios): primeiro **testa** (back: `mvn test`; front: build de produção) e só então **publica**, entrando na VPS (`184.107.176.76`, a mesma de `app.servirea.com.br`; roteiro em `central-api-back/deploy/README.md`) com uma chave própria do deploy que só consegue rodar o `atualizar.sh` (comando fixo no `authorized_keys`). Commit só de `.md` não publica. O `atualizar.sh` tem trava (`flock`): um deploy por vez, mesmo vindo de repositórios diferentes. O job precisa dos secrets `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` e `VPS_KNOWN_HOSTS`; sem eles, o job `publicar` falha e a produção não muda. Também dá para rodar pelo botão "Run workflow" (Actions) ou à mão na VPS: `bash /opt/ecossistema/central-api-back/deploy/atualizar.sh`. **Migration destrutiva vai para produção assim que a `main` passar nos testes: confira os dados antes do push.**
 **O PC do desenvolvedor (`ICONDESKTOP_02`) tem acesso SSH à VPS** com a chave `~/.ssh/id_ed25519_servirea` (usuário `root`, sem
 alias no `~/.ssh/config`): `ssh -i ~/.ssh/id_ed25519_servirea root@184.107.176.76`. Em 30/09/2026 o usuário autorizou o Claude a
 rodar o deploy a partir deste PC e dispensou o backup daquela vez (V050, que apaga escalas e layouts). Cada deploy novo continua
