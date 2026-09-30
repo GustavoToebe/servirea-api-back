@@ -80,6 +80,15 @@ V049: `layout_escala.descricao` e `padrao` (no máximo um padrão por paróquia 
 V050: **destrutiva** (30/09/2026, decisão do usuário): apaga todas as escalas e layouts de todas as paróquias e recria "Padrão Semanal"/"Padrão Mensal" no formato do editor visual (`LayoutsDeFabrica` tem o mesmo JSON, usado no provisionamento de paróquia nova).
 
 
+## Deploy em produção
+O push na `main` **não** publica. O deploy é manual, na VPS (`184.107.176.76`, a mesma de `app.servirea.com.br`; roteiro completo
+em `central-api-back/deploy/README.md`): `bash /opt/ecossistema/central-api-back/deploy/atualizar.sh` (faz `git pull` nos quatro
+repositórios, compila os fronts e recria os containers; migration nova roda na subida da API).
+**O PC do desenvolvedor (`ICONDESKTOP_02`) tem acesso SSH à VPS** com a chave `~/.ssh/id_ed25519_servirea` (usuário `root`, sem
+alias no `~/.ssh/config`): `ssh -i ~/.ssh/id_ed25519_servirea root@184.107.176.76`. Em 30/09/2026 o usuário autorizou o Claude a
+rodar o deploy a partir deste PC e dispensou o backup daquela vez (V050, que apaga escalas e layouts). Cada deploy novo continua
+dependendo de o usuário pedir; migration destrutiva pede confirmação do backup de novo.
+
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
   `Tenant` e `Usuario` são globais. FKs compostas `(tenant_id, id)` no banco (V021).
