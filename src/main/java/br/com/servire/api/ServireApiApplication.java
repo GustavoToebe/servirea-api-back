@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration;
 
 /**
- * Ponto de entrada da API do Servire.
+ * Ponto de entrada da API do Servirea.
  *
  * <p>Fase 2 do plano mestre (seção 102/125): esta é só a fundação —
  * health check, tratamento de exceções, logging estruturado com

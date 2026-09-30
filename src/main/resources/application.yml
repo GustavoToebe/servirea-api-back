@@ -144,5 +144,5 @@ management:
 
 info:
   app:
-    name: Servire API
-    description: API multi-tenant de gestão paroquial (Servire)
+    name: Servirea API
+    description: API multi-tenant de gestão paroquial (Servirea)

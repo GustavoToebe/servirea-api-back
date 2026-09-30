@@ -1,6 +1,6 @@
 # AGENTS.md — servire-api
 
-Backend Java do **Servire** (SaaS multi-tenant de gestão paroquial: voluntários/coroinhas,
+Backend Java do **Servirea** (SaaS multi-tenant de gestão paroquial: voluntários/coroinhas,
 escalas de missa, inscrições públicas). Este repo é o **`servire-api-back`**; o Angular
 é o irmão **`servire-api-front`** (outro git — não misturar). Substitui aos poucos o
 acesso direto do front ao Supabase. Idioma do código, comentários, mensagens de erro
@@ -57,7 +57,7 @@ seção "Onde está o código (disco + GitHub)".
 | `acesso/` | perfis da paróquia, usuários por convite, `GET/PUT /me` (devolve `permissoes`: códigos efetivos do catálogo, para o menu). `CatalogoPermissao` é a **única** lista de permissões (seção → módulo → ações); `PermissoesDaSessao` vira `PERM_<código>`; `ConcessaoDePermissao` impede conceder mais do que a sessão tem |
 | `comunicacao/` | layouts de envio, `CatalogoDeTags` é a única lista de tags; `Renderizador` escapa HTML no e-mail. Comunicados: `ComunicadoService` monta os destinatários e renderiza cada mensagem; `FilaDeEnvio` (a cada 15 s, por paróquia liberada com `TenantContext` + `TransactionTemplate`, envio fora de transação, 3 tentativas) manda pelo `EmailSender.enviarComunicado` ou pelo `WhatsappSender` (`log` ou `evolution`). O token do WhatsApp da paróquia nunca volta na API nem vai para log |
 | `integracao/` | contrato v1 com a Central: `IntegracaoFiltro` (HMAC → `PERM_INTEGRACAO`), provisionamento idempotente, `direitos_locais`, `AcessoParoquia` (regra única de paróquia liberada, usada no login e no filtro), webhook, sync de 8h + alerta, código de suporte, `CatalogoDeRecursos` (`GET /integracao/v1/recursos`: códigos de limite/funcionalidade e se já são aplicados; aplicar um = trocar `aplicado` no mesmo commit), `RelatorioDeErros` (erros 5xx do `GlobalExceptionHandler` para a Central a cada minuto, contrato 6.2; usuário só pelo id e, no erro inesperado, só o tipo da exceção) |
-| `diocese/` | diocese **só como agrupamento informativo** da paróquia (V037, sem cota). Global, sem `@TenantId`. A paróquia escolhe ou digita o nome no `PUT /tenant` (`DioceseService.resolver`: mesmo nome sem diferenciar maiúsculas = mesma diocese); `GET /dioceses` sugere as já usadas. Diocese que contrate em bloco vira cliente na Central, não regra do Servire |
+| `diocese/` | diocese **só como agrupamento informativo** da paróquia (V037, sem cota). Global, sem `@TenantId`. A paróquia escolhe ou digita o nome no `PUT /tenant` (`DioceseService.resolver`: mesmo nome sem diferenciar maiúsculas = mesma diocese); `GET /dioceses` sugere as já usadas. Diocese que contrate em bloco vira cliente na Central, não regra do Servirea |
 
 Migrations: `src/main/resources/db/migration/V001..V037`. **V001–V015 são o baseline, nunca editar.**
 Mudança de schema = nova migration `V0NN__descricao.sql`. V030: `pessoa` + contatos 1:N + `pessoa_relacao` + `tenant_email`/`tenant_telefone` (globais) + espelho da inscrição; drop de `responsaveis`. V031: papéis concomitantes (`e_voluntario`/`e_responsavel`); responsável deixa de ser obrigatório. V032: drop do enum órfão `pessoa_papel`.

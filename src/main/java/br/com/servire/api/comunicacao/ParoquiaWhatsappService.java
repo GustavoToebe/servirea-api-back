@@ -17,7 +17,7 @@ import java.util.UUID;
 @Service
 public class ParoquiaWhatsappService {
 
-    static final String TEXTO_TESTE = "Teste do Servire: o WhatsApp da paróquia está conectado. ✅";
+    static final String TEXTO_TESTE = "Teste do Servirea: o WhatsApp da paróquia está conectado. ✅";
 
     private final ParoquiaWhatsappRepository repository;
     private final WhatsappSender whatsappSender;

@@ -91,7 +91,7 @@ public class SincronizacaoDireitosService {
             Set<UUID> vistos = new HashSet<>();
             int pagina = 0;
             while (true) {
-                String caminho = "/integracao/v1/produtos/SERVIRE/direitos?pagina=" + pagina + "&tamanho=100";
+                String caminho = "/integracao/v1/produtos/SERVIREA/direitos?pagina=" + pagina + "&tamanho=100";
                 String corpo = pedir(segredo, caminho);
                 JsonNode raiz = json.readTree(corpo);
                 JsonNode itens = raiz.get("itens");

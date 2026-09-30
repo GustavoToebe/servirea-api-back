@@ -1,4 +1,4 @@
-# Histórico do Servire API
+# Histórico do Servirea API
 
 Estado atual, contrato do front e como rodar: **`README.md`**.
 Instruções para agentes: **`AGENTS.md`**. Este arquivo guarda o diário
@@ -7,7 +7,7 @@ que a API faz hoje.
 
 ---
 
-# Servire API — Fases 2 a 11 + backoffice + billing + cadastro pessoa-primeiro
+# Servirea API — Fases 2 a 11 + backoffice + billing + cadastro pessoa-primeiro
 
 Este projeto cobre a **FASE 2** (fundação Spring Boot, seção 102/125), a
 **FASE 3** (modelo SaaS lógico, seção 103/126), a **FASE 4**
@@ -1126,7 +1126,7 @@ Validação manual contra o projeto real `qcybebkhwhrudbwoweip`. Com
 `base-url`/`service-role-key` já chegando no processo, o upload ia até
 o Storage e voltava HTTP 400 com corpo
 `{"statusCode":"403","error":"Unauthorized","message":"Invalid Compact JWS","code":"AccessDenied"}`
-— a API Servire mapeava isso para 503 ("Não foi possível enviar o
+— a API Servirea mapeava isso para 503 ("Não foi possível enviar o
 arquivo…"). A `service_role` JWT estava bem formada (`keyLen=219`,
 dois pontos). O gateway (Kong) exige **os dois** headers:
 `Authorization: Bearer <key>` **e** `apikey: <key>`. Só o Bearer não
@@ -2466,7 +2466,7 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
    domínio `servirea.com.br` ainda estava Pending/Checking DNS no
    painel). A API respondeu 202; o Resend entregou no Gmail do dono da
    conta (`gustavotoebe4@gmail.com`) o e-mail "Redefinição de senha —
-   Servire" com o link de reset. Confirma o `POST https://api.resend.com/emails`
+   Servirea" com o link de reset. Confirma o `POST https://api.resend.com/emails`
    (`Authorization: Bearer`, corpo `from`/`to`/`subject`/`html`).
    `${EMAIL_PROVIDER:log}` em `application-dev.yml` **sobrescrevia** o
    arquivo local e mantinha o `LoggingEmailSender` (mesmo padrão do
@@ -2541,7 +2541,7 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
    do Angular (115). O front precisa trocar o cadastro para `/pessoas`
    (outro git).
 
-8c. ✅ **Primeiro teste de telas com Central + Servire no PC — 26/09/2026.**
+8c. ✅ **Primeiro teste de telas com Central + Servirea no PC — 26/09/2026.**
    Achados e correções do mesmo dia:
    - Central: contratação cancelada enquanto o app estava fora do ar era
      provisionada na repetição seguinte (paróquia criada já bloqueada e
@@ -2567,7 +2567,7 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      tem `overflow-hidden`; o painel do `volunteer-picker` agora é `fixed`,
      posicionado pelo botão, e abre para cima sem espaço embaixo.
    - Campo inválido fica vermelho e a tela rola até ele (`focarPrimeiroInvalido`).
-   - `GET /integracao/v1/recursos` (contrato 5.5): o Servire publica os códigos
+   - `GET /integracao/v1/recursos` (contrato 5.5): o Servirea publica os códigos
      de limite/funcionalidade que entende; hoje nenhum é aplicado.
    - `RelatorioDeErros` (contrato 6.2): erros 5xx vão à tela "Logs" da Central
      a cada minuto; usuário só pelo id, erro inesperado só com o tipo.
@@ -2591,7 +2591,7 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      do tema (paleta e modo noturno).
    - Olho para ver a senha enquanto digita (`app-olho-senha`) no login, em
      "Definir senha" e em "Meu perfil"; o mesmo no login da Central.
-   - **Projetos do Supabase novos (sa-east-1).** O do Servire foi recriado e o
+   - **Projetos do Supabase novos (sa-east-1).** O do Servirea foi recriado e o
      da Central criado. Banco montado só pelo Flyway deixava 9 tabelas sem RLS
      e as policies `authenticated ALL` da V014 valendo: com a chave publicável
      e uma conta no Supabase Auth dava para ler voluntários. V039: RLS em todas

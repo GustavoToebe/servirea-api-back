@@ -1,4 +1,4 @@
-# PLANO MESTRE DE EVOLUÇÃO — Servire — SaaS de Gestão Paroquial Multi-Tenant
+# PLANO MESTRE DE EVOLUÇÃO — Servirea — SaaS de Gestão Paroquial Multi-Tenant
 
 **Versão:** 2.0 — MVP de baixo custo  
 **Data de consolidação:** 21/09/2026  
@@ -11,10 +11,10 @@
 ## Nome oficial
 
 ```text
-Servire
+Servirea
 ```
 
-“Servire” vem do latim, ligado a **servir**, e representa bem a proposta do produto: organizar pessoas, ministérios, escalas e atividades paroquiais sem limitar a solução apenas ao contexto de coroinhas.
+“Servirea” vem do latim, ligado a **servir**, e representa bem a proposta do produto: organizar pessoas, ministérios, escalas e atividades paroquiais sem limitar a solução apenas ao contexto de coroinhas.
 
 O nome foi escolhido para permitir a evolução natural do produto para outros contextos de serviço dentro da paróquia, como:
 
@@ -31,11 +31,11 @@ O nome foi escolhido para permitir a evolução natural do produto para outros c
 ## Nomes dos produtos
 
 ```text
-Servire
-Servire Web
-Servire API
-Servire Admin
-Servire Mobile
+Servirea
+Servirea Web
+Servirea API
+Servirea Admin
+Servirea Mobile
 ```
 
 ## Nomes técnicos sugeridos
@@ -50,11 +50,11 @@ servire-mobile
 ## Posicionamento sugerido
 
 ```text
-Servire
+Servirea
 Gestão de escalas e ministérios paroquiais em um só lugar.
 ```
 
-O nome **Servire** deverá ser utilizado como referência principal do produto em documentação, repositórios, artefatos técnicos, interfaces e comunicação futura.
+O nome **Servirea** deverá ser utilizado como referência principal do produto em documentação, repositórios, artefatos técnicos, interfaces e comunicação futura.
 
 
 ---
@@ -1093,7 +1093,7 @@ Unique:
 (usuario_id, tenant_id)
 ```
 
-> **CONFIRMADO em 21/09/2026:** a resposta registrada à seção 122, item 1 (ver seção 131.1) foi confirmada explicitamente pelo usuário — um mesmo usuário **realmente vai gerenciar múltiplas paróquias já no MVP**, trocando de paróquia ativa dentro do sistema (não é só a arquitetura preparada para o futuro). O usuário deu como exemplo de referência de UX o seletor de "condomínio ativo" de um sistema de gestão de condomínios que ele conhece (ver seção 131.1 para o detalhe): um seletor no topo da tela, ao lado do nome do usuário, que lista as unidades (no caso do Servire, as paróquias) disponíveis para aquele usuário e, ao trocar a seleção, recarrega o dashboard/tela atual já filtrado pela paróquia escolhida. Isso eleva definitivamente a prioridade da FASE 10 (multi-tenant real) e da tela/seletor de seleção de tenant (seção 30): deixam de ser "validação de arquitetura" e passam a ser fluxo real de uso desde o lançamento.
+> **CONFIRMADO em 21/09/2026:** a resposta registrada à seção 122, item 1 (ver seção 131.1) foi confirmada explicitamente pelo usuário — um mesmo usuário **realmente vai gerenciar múltiplas paróquias já no MVP**, trocando de paróquia ativa dentro do sistema (não é só a arquitetura preparada para o futuro). O usuário deu como exemplo de referência de UX o seletor de "condomínio ativo" de um sistema de gestão de condomínios que ele conhece (ver seção 131.1 para o detalhe): um seletor no topo da tela, ao lado do nome do usuário, que lista as unidades (no caso do Servirea, as paróquias) disponíveis para aquele usuário e, ao trocar a seleção, recarrega o dashboard/tela atual já filtrado pela paróquia escolhida. Isso eleva definitivamente a prioridade da FASE 10 (multi-tenant real) e da tela/seletor de seleção de tenant (seção 30): deixam de ser "validação de arquitetura" e passam a ser fluxo real de uso desde o lançamento.
 
 ---
 
@@ -3851,7 +3851,7 @@ Limites de planos gratuitos e preços de fornecedores são externos ao código e
 
 # 130. Conclusão
 
-A arquitetura oficial do **Servire** no SaaS MVP passa a ser:
+A arquitetura oficial do **Servirea** no SaaS MVP passa a ser:
 
 ```text
 Cloudflare Pages
@@ -3893,7 +3893,7 @@ Ao mesmo tempo preserva uma fundação SaaS correta através de:
 - Storage privado;
 - abstrações que permitem trocar os fornecedores posteriormente.
 
-A evolução do **Servire** para AWS, banco dedicado por tenant ou infraestrutura distribuída deverá ocorrer apenas quando volume, receita, performance, SLA ou requisitos comerciais justificarem o custo adicional.
+A evolução do **Servirea** para AWS, banco dedicado por tenant ou infraestrutura distribuída deverá ocorrer apenas quando volume, receita, performance, SLA ou requisitos comerciais justificarem o custo adicional.
 
 ---
 
@@ -3915,7 +3915,7 @@ Resposta inicial do usuário: *"Um usuário vai realmente gerenciar múltiplas p
 
 **Decisão final (CONFIRMADA): SIM — um mesmo usuário vai realmente gerenciar mais de uma paróquia já no MVP**, trocando a paróquia ativa através de um seletor sempre visível no cabeçalho, análogo ao exemplo do sistema de condomínios acima (substituindo "condomínio" por "paróquia"). Ao trocar, a tela atual deve recarregar os dados já filtrados pela paróquia recém-selecionada. Isso não é mais uma leitura a confirmar — é a decisão de produto vigente. Ver notas atualizadas nas seções 29, 30 e 110, que passam a tratar a tela/seletor de troca de tenant como entregável real do MVP, não como validação técnica de arquitetura.
 
-**Nota de design a observar na implementação:** o padrão de referência (busca + lista + troca com recarregamento) é um bom modelo de UX a seguir, mas os detalhes finos (onde exatamente o seletor fica no layout do Servire, se mostra código/ID da paróquia como no exemplo, etc.) ainda não foram desenhados especificamente para o Servire — usar o exemplo como inspiração de comportamento, não copiar o layout literalmente sem antes validar com o usuário/design do Servire.
+**Nota de design a observar na implementação:** o padrão de referência (busca + lista + troca com recarregamento) é um bom modelo de UX a seguir, mas os detalhes finos (onde exatamente o seletor fica no layout do Servirea, se mostra código/ID da paróquia como no exemplo, etc.) ainda não foram desenhados especificamente para o Servirea — usar o exemplo como inspiração de comportamento, não copiar o layout literalmente sem antes validar com o usuário/design do Servirea.
 
 ## 131.2 Item 2 — Padre
 

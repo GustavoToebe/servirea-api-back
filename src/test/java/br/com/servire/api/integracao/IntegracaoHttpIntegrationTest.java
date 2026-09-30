@@ -268,7 +268,7 @@ class IntegracaoHttpIntegrationTest extends AbstractIntegrationTest {
     }
 
     private String direitos(UUID contratacao, int versao, String situacao, boolean liberado) {
-        return "{\"contratacaoId\":\"" + contratacao + "\",\"produto\":\"SERVIRE\",\"versao\":" + versao
+        return "{\"contratacaoId\":\"" + contratacao + "\",\"produto\":\"SERVIREA\",\"versao\":" + versao
                 + ",\"situacao\":\"" + situacao + "\",\"acessoLiberado\":" + liberado
                 + ",\"plano\":{\"codigo\":\"PROFISSIONAL\",\"nome\":\"Profissional\"}"
                 + ",\"limites\":{\"voluntarios\":100},\"funcionalidades\":[\"ESCALAS\"]}";

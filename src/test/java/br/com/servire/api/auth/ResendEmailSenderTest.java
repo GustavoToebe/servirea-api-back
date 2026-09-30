@@ -72,7 +72,7 @@ class ResendEmailSenderTest {
                 .andExpect(header("Authorization", "Bearer re_chave_teste"))
                 .andExpect(jsonPath("$.from").value("onboarding@resend.dev"))
                 .andExpect(jsonPath("$.to").value("destino@teste.com"))
-                .andExpect(jsonPath("$.subject").value("Redefinição de senha — Servire"))
+                .andExpect(jsonPath("$.subject").value("Redefinição de senha — Servirea"))
                 .andExpect(jsonPath("$.html").value(containsString("https://app/reset?token=abc")))
                 .andRespond(withSuccess("{\"id\": \"resend-id-qualquer\"}", MediaType.APPLICATION_JSON));
 

@@ -1,4 +1,4 @@
-# Dockerfile multi-stage para o backend Servire (seção 1.2/11 do plano
+# Dockerfile multi-stage para o backend Servirea (seção 1.2/11 do plano
 # mestre: Java 21 + Spring Boot + Docker, rodando num único VPS via Docker
 # Compose — sem ECS/ECR/Kubernetes no MVP).
 #

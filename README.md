@@ -1,6 +1,6 @@
-# Servire API
+# Servirea API
 
-Backend Java do **Servire** (SaaS multi-tenant de gestão paroquial).
+Backend Java do **Servirea** (SaaS multi-tenant de gestão paroquial).
 Este repo é o `servire-api-back`; o Angular é o irmão `servire-api-front`
 (outro git). Idioma do código e dos commits: **português**.
 
@@ -174,7 +174,7 @@ mvn spring-boot:run -DskipTests "-Dspring-boot.run.profiles=dev"
 `src/test/resources/testcontainers/supabase-stubs.sql` antes do
 Flyway. Detalhe em `HISTORICO.md`, seção "Como rodar localmente".
 
-**Tudo junto no PC** (Servire + Central + os dois fronts, Postgres no Docker, comando para
+**Tudo junto no PC** (Servirea + Central + os dois fronts, Postgres no Docker, comando para
 dar pull nos quatro repositórios e problemas já vistos): README do
 [`central-api-back`](https://github.com/GustavoToebe/central-api-back), seção
 "Ponta a ponta local (Windows, tudo no PC)".

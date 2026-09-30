@@ -42,7 +42,7 @@ public class RelatorioDeErros {
 
     static final int MAXIMO = 500;
     static final int LOTE = 100;
-    static final String CAMINHO = "/integracao/v1/produtos/SERVIRE/erros";
+    static final String CAMINHO = "/integracao/v1/produtos/SERVIREA/erros";
     static final int TAMANHO_MENSAGEM = 1000;
 
     private static final Logger log = LoggerFactory.getLogger(RelatorioDeErros.class);

@@ -3,7 +3,7 @@ package br.com.servire.api.integracao;
 import java.util.List;
 
 /**
- * Limites e funcionalidades que o Servire entende nos direitos vindos da
+ * Limites e funcionalidades que o Servirea entende nos direitos vindos da
  * Central (contrato v1, seção 5.5). A Central usa esta lista como sugestão
  * ao cadastrar recursos, para o código nunca divergir do que o app lê em
  * {@code limites}/{@code funcionalidades} (26/09/2026).

@@ -78,7 +78,7 @@ class RelatorioDeErrosTest {
     @Test
     void enviaAssinadoETiraDaFilaQuandoACentralAceita() {
         relatorio.registrar(503, "X", "falhou", requisicao());
-        central.expect(requestTo("http://central.test/integracao/v1/produtos/SERVIRE/erros"))
+        central.expect(requestTo("http://central.test/integracao/v1/produtos/SERVIREA/erros"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(request -> {
                     MockClientHttpRequest mock = (MockClientHttpRequest) request;
@@ -103,7 +103,7 @@ class RelatorioDeErrosTest {
     @Test
     void centralForaDoArMantemOsErrosParaAProximaTentativa() {
         relatorio.registrar(500, null, "Erro inesperado (NullPointerException)", requisicao());
-        central.expect(requestTo("http://central.test/integracao/v1/produtos/SERVIRE/erros"))
+        central.expect(requestTo("http://central.test/integracao/v1/produtos/SERVIREA/erros"))
                 .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
 
         relatorio.enviar();
