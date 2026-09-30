@@ -33,7 +33,7 @@ public class LayoutEscalaIntegrationTest extends AbstractIntegrationTest {
     void deveCriarLayout() throws Exception {
         br.com.servire.api.tenant.TenantContext.set(UUID.randomUUID());
         LayoutEscalaDto dto = new LayoutEscalaDto(null, "Meu Layout", TipoEscala.SEMANAL,
-                List.of(new ColunaEscalaDto(1, FuncaoEscala.MISSAL, 1, "Acólito Missal")), true, false);
+                List.of(new ColunaEscalaDto(1, FuncaoEscala.MISSAL, 1, "Acólito Missal")), true, false, null, null);
         String json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(dto);
         mvc.perform(post("/escalas/layouts")
                 .contentType(MediaType.APPLICATION_JSON)

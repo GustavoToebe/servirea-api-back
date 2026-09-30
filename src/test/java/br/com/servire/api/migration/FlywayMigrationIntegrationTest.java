@@ -106,6 +106,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // De 44 para 45 em 28/09/2026: V045 (indisponibilidade mensal).
         // De 45 para 47 em 29/09/2026: V047 (layout escala).
         // De 47 para 48 em 29/09/2026: V048 (índices de filtro).
+        // De 48 para 50 em 30/09/2026: V049 (descrição e padrão do layout) e V050 (recria escalas e layouts).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -114,10 +115,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(48);
-        assertThat(sucesso).isEqualTo(48);
+        assertThat(total).isEqualTo(50);
+        assertThat(sucesso).isEqualTo(50);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("indices de filtro");
+        assertThat(descricoes.getLast()).isEqualTo("recria escalas e layouts");
     }
 
     @Test

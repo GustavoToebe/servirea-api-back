@@ -281,7 +281,9 @@ public class EscalaService {
             escala.setColunas(layout.getColunas());
             escala.setLayoutId(layout.getId());
         } else {
-            LayoutEscala layout = layoutEscalaRepository.findFirstByTipoAndSistemaTrueAndAtivoTrue(escala.getTipo()).orElse(null);
+            LayoutEscala layout = layoutEscalaRepository.findFirstByTipoAndPadraoTrueAndAtivoTrue(escala.getTipo())
+                    .or(() -> layoutEscalaRepository.findFirstByTipoAndSistemaTrueAndAtivoTrue(escala.getTipo()))
+                    .orElse(null);
             if (layout != null) {
                 escala.setColunas(layout.getColunas());
                 escala.setLayoutId(layout.getId());

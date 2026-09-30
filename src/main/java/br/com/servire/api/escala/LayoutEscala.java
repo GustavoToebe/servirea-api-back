@@ -44,6 +44,13 @@ public class LayoutEscala {
     @Column(nullable = false, updatable = false)
     private boolean sistema = false;
 
+    @Column
+    private String descricao;
+
+    /** No máximo um por paróquia e modelo (índice parcial da V049): o que a escala nova usa quando ninguém escolhe. */
+    @Column(nullable = false)
+    private boolean padrao = false;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
@@ -70,6 +77,10 @@ public class LayoutEscala {
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
     public boolean isSistema() { return sistema; }
+    public String getDescricao() { return descricao; }
+    public void setDescricao(String descricao) { this.descricao = descricao; }
+    public boolean isPadrao() { return padrao; }
+    public void setPadrao(boolean padrao) { this.padrao = padrao; }
     public void setSistema(boolean sistema) { this.sistema = sistema; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

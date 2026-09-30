@@ -1,5 +1,6 @@
 package br.com.servire.api.integracao;
 
+import br.com.servire.api.escala.LayoutsDeFabrica;
 import br.com.servire.api.acesso.Perfil;
 import br.com.servire.api.acesso.PerfilService;
 import br.com.servire.api.auth.EmailSender;
@@ -185,8 +186,10 @@ public class IntegracaoInstanciaService {
         final UUID tenantId = tenant.getId();
         TenantContext.set(tenantId);
         transacao.execute(status -> {
-            jdbcTemplate.update("INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo) VALUES (?, 'Padrão Semanal', 'SEMANAL', ?::jsonb, true, true)", tenantId, "[{\"ordem\": 1, \"funcao\": \"MISSAL\", \"posicao\": 1, \"rotulo\": \"Acólito Missal\"}, {\"ordem\": 2, \"funcao\": \"CRUZ\", \"posicao\": 1, \"rotulo\": \"Cruz\"}, {\"ordem\": 3, \"funcao\": \"CREDENCIA\", \"posicao\": 1, \"rotulo\": \"Credência\"}, {\"ordem\": 4, \"funcao\": \"VELA\", \"posicao\": 1, \"rotulo\": \"Vela 1\"}, {\"ordem\": 5, \"funcao\": \"VELA\", \"posicao\": 2, \"rotulo\": \"Vela 2\"}, {\"ordem\": 6, \"funcao\": \"SINO\", \"posicao\": 1, \"rotulo\": \"Sino 1\"}, {\"ordem\": 7, \"funcao\": \"SINO\", \"posicao\": 2, \"rotulo\": \"Sino 2\"}]");
-            jdbcTemplate.update("INSERT INTO public.layout_escala (tenant_id, nome, tipo, colunas, sistema, ativo) VALUES (?, 'Padrão Mensal', 'MENSAL', ?::jsonb, true, true)", tenantId, "[{\"ordem\": 1, \"funcao\": \"MISSAL\", \"posicao\": 1, \"rotulo\": \"Acólito Missal\"}, {\"ordem\": 2, \"funcao\": \"CRUZ\", \"posicao\": 1, \"rotulo\": \"Cruz\"}, {\"ordem\": 3, \"funcao\": \"CREDENCIA\", \"posicao\": 1, \"rotulo\": \"Credência\"}, {\"ordem\": 4, \"funcao\": \"VELA\", \"posicao\": 1, \"rotulo\": \"Vela 1\"}, {\"ordem\": 5, \"funcao\": \"VELA\", \"posicao\": 2, \"rotulo\": \"Vela 2\"}, {\"ordem\": 6, \"funcao\": \"COLETA\", \"posicao\": 1, \"rotulo\": \"Coleta\"}, {\"ordem\": 7, \"funcao\": \"COLETA\", \"posicao\": 2, \"rotulo\": \"Coleta\"}, {\"ordem\": 8, \"funcao\": \"COLETA\", \"posicao\": 3, \"rotulo\": \"Coleta\"}, {\"ordem\": 9, \"funcao\": \"COLETA\", \"posicao\": 4, \"rotulo\": \"Coleta\"}, {\"ordem\": 10, \"funcao\": \"SINO\", \"posicao\": 1, \"rotulo\": \"Sino 1\"}, {\"ordem\": 11, \"funcao\": \"SINO\", \"posicao\": 2, \"rotulo\": \"Sino 2\"}]");
+            jdbcTemplate.update("INSERT INTO public.layout_escala (tenant_id, nome, descricao, tipo, colunas, sistema, ativo, padrao) VALUES (?, ?, ?, 'SEMANAL', ?::jsonb, true, true, true)",
+                    tenantId, LayoutsDeFabrica.NOME_SEMANAL, LayoutsDeFabrica.DESCRICAO_SEMANAL, LayoutsDeFabrica.COLUNAS_SEMANAL);
+            jdbcTemplate.update("INSERT INTO public.layout_escala (tenant_id, nome, descricao, tipo, colunas, sistema, ativo, padrao) VALUES (?, ?, ?, 'MENSAL', ?::jsonb, true, true, true)",
+                    tenantId, LayoutsDeFabrica.NOME_MENSAL, LayoutsDeFabrica.DESCRICAO_MENSAL, LayoutsDeFabrica.COLUNAS_MENSAL);
             return null;
         });
         TenantContext.clear();

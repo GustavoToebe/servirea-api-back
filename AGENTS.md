@@ -76,6 +76,8 @@ V043: comunicado e fila (`paroquia_whatsapp`, `comunicado`, `comunicado_destinat
 V044: `escala_eventos.referencia` (linha de referência da escala semanal replicada). Evento `referencia` não finaliza, não recebe presença nem alocação, não tem candidatos e não entra em compromissos.
 V045: `indisponibilidade_voluntario` (período nulo = dia inteiro, índices únicos parciais) e `resposta_indisponibilidade` ("sem restrição" no mês; sem linha = pendente).
 V048: índices compostos `(tenant_id, …)` em `escala_eventos.escala_id`, `escala_vagas.evento_id`, `escala_vagas.voluntario_id` e `inscricoes.status`. Disponibilidade já indexa `voluntario_id` (V025).
+V049: `layout_escala.descricao` e `padrao` (no máximo um padrão por paróquia e modelo, índice parcial). Layout **inativo** continua na lista de layouts mas o front não o oferece na montagem da escala; `LayoutEscalaService` guarda as regras (sistema não exclui, sempre um ativo por modelo, padrão precisa estar ativo, layout usado em escala só se inativa). `ativo`/`padrao` no DTO são `Boolean`: ausente = não mexer.
+V050: **destrutiva** (30/09/2026, decisão do usuário): apaga todas as escalas e layouts de todas as paróquias e recria "Padrão Semanal"/"Padrão Mensal" no formato do editor visual (`LayoutsDeFabrica` tem o mesmo JSON, usado no provisionamento de paróquia nova).
 
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
