@@ -177,7 +177,10 @@ Flyway. Detalhe em `HISTORICO.md`, seção "Como rodar localmente".
 **Tudo junto no PC** (Servirea + Central + os dois fronts, Postgres no Docker, comando para
 dar pull nos quatro repositórios e problemas já vistos): README do
 [`central-api-back`](https://github.com/GustavoToebe/central-api-back), seção
-"Ponta a ponta local (Windows, tudo no PC)".
+"Ponta a ponta local (Windows, tudo no PC)". O atalho do banco é
+`central-api-back/scripts/subir-local.ps1`. No profile `dev`, com o JDBC em
+`localhost`, esta API cria a paróquia `paroquia-teste` (login
+`paroquia@teste.local` / `12345678`) se ela ainda não existir. Não aponta para o Supabase.
 
 ## Onde está o código
 
@@ -205,5 +208,5 @@ Auth desligados; a V039 fecha o `public` de qualquer forma.
 3. Ajustes pedidos no uso (lista de assinatura e demais telas) e bugs.
 4. Escala do mês por WhatsApp e e-mail para os pais (via Central; só quem autorizou).
 5. Storage das fotos (`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` vazias em produção: só o envio de foto falha).
-6. Migration de limpeza de `plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e
-   `usuario.operador_saas` (já fora do código).
+6. Feito na V051: `plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e
+   `usuario.operador_saas`. O que permanece está em `SCHEMA.md`.

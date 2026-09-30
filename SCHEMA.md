@@ -1,0 +1,43 @@
+# Banco do Servire
+
+Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
+
+Flyway: `src/main/resources/db/migration`, V001–V051. Migration já aplicada não se edita.
+
+## O que saiu na V051
+
+Financeiro e painel que moravam neste projeto antes da Central. Sem entidade e sem SQL no código:
+
+| Tabela ou coluna | Origem |
+| --- | --- |
+| `plano`, `preco_plano`, `assinatura`, `cobranca` | V029 |
+| `backoffice_log` | V027 |
+| `usuario.operador_saas` | V027 |
+
+Enums apagados junto: `plano_periodicidade`, `forma_pagamento`, `assinatura_status`, `cobranca_status`.
+
+`tenant.ultimo_pagamento_em` ficou. `Tenant` ainda mapeia a coluna.
+
+`responsaveis` (V004) já tinha sido apagada na V030. O vínculo hoje é `pessoa_relacao`.
+
+## Tabelas que o código usa
+
+Globais (sem `@TenantId`): `usuario`, `tenant`, `diocese`, `perfil`, `perfil_permissao`, `usuario_tenant`, `refresh_token`, `password_reset_token`, `tenant_email`, `tenant_telefone`, `direitos_locais`, `integracao_operacao`, `integracao_nonce`, `suporte_codigo`, `tenant_sequencial`.
+
+`tenant_sequencial` não tem entidade. O gatilho da V038 grava o número curto.
+
+Da paróquia (`@TenantId`): `pessoa`, `pessoa_email`, `pessoa_telefone`, `pessoa_relacao`, `voluntarios`, `disponibilidade_voluntario`, `indisponibilidade_voluntario`, `resposta_indisponibilidade`, `inscricoes`, `inscricao_email`, `inscricao_telefone`, `inscricao_responsaveis`, `inscricao_responsavel_email`, `inscricao_responsavel_telefone`, `escalas`, `escala_eventos`, `escala_vagas`, `layout_escala`, `layout_envio`, `paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`, `audit_log`.
+
+View `vw_voluntario_compromissos` (V010) existe. A lista de compromissos é montada via JPA, não via essa view.
+
+## O que não apagar
+
+- Contato e endereço em `tenant` (V027): a ficha da paróquia usa.
+- `tenant.vigencia_ate`: a Central e o Kill Switch dependem do status do tenant. `tipo_email` existiu na V028 e saiu na V030 (o e-mail da paróquia foi para `tenant_email`).
+- `tenant.ultimo_pagamento_em`: a entidade `Tenant` ainda mapeia a coluna.
+- `flyway_schema_history`: controle do Flyway.
+
+O banco da Central está no `SCHEMA.md` do `central-api-back`. Os nomes `plano` e `cobranca` existem lá com outro desenho: plano de um produto, cobrança de uma contratação.
+
+## Esquema completo
+`schema.sql` (nesta pasta) é o esquema inteiro, com colunas, chaves, índices, gatilhos e enums, gerado das migrations V001–V051 num Postgres limpo. Serve para saber o estado do banco sem abrir o Supabase. **Migration nova: rodar `scripts/gerar-schema.ps1` e commitar o `schema.sql` junto.** Nunca editar o arquivo à mão.

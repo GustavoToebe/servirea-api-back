@@ -78,6 +78,7 @@ V045: `indisponibilidade_voluntario` (período nulo = dia inteiro, índices úni
 V048: índices compostos `(tenant_id, …)` em `escala_eventos.escala_id`, `escala_vagas.evento_id`, `escala_vagas.voluntario_id` e `inscricoes.status`. Disponibilidade já indexa `voluntario_id` (V025).
 V049: `layout_escala.descricao` e `padrao` (no máximo um padrão por paróquia e modelo, índice parcial). Layout **inativo** continua na lista de layouts mas o front não o oferece na montagem da escala; `LayoutEscalaService` guarda as regras (sistema não exclui, sempre um ativo por modelo, padrão precisa estar ativo, layout usado em escala só se inativa). `ativo`/`padrao` no DTO são `Boolean`: ausente = não mexer.
 V050: **destrutiva** (30/09/2026, decisão do usuário): apaga todas as escalas e layouts de todas as paróquias e recria "Padrão Semanal"/"Padrão Mensal" no formato do editor visual (`LayoutsDeFabrica` tem o mesmo JSON, usado no provisionamento de paróquia nova).
+V051: remove o financeiro antigo que ficou no Servire (`plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e `usuario.operador_saas`). O mapa do que o código usa está em `SCHEMA.md`. `tenant.ultimo_pagamento_em` permanece. **Migration nova: regerar `schema.sql` com `scripts/gerar-schema.ps1` e commitar junto** (o mapa do banco vive em `SCHEMA.md` + `schema.sql`).
 
 
 ## Deploy em produção

@@ -107,6 +107,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // De 45 para 47 em 29/09/2026: V047 (layout escala).
         // De 47 para 48 em 29/09/2026: V048 (índices de filtro).
         // De 48 para 50 em 30/09/2026: V049 (descrição e padrão do layout) e V050 (recria escalas e layouts).
+        // De 50 para 51 em 30/09/2026: V051 (remove o financeiro antigo: plano, assinatura, cobranca, backoffice_log).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -115,10 +116,22 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(50);
-        assertThat(sucesso).isEqualTo(50);
+        assertThat(total).isEqualTo(51);
+        assertThat(sucesso).isEqualTo(51);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("recria escalas e layouts");
+        assertThat(descricoes.getLast()).isEqualTo("remove financeiro do servire");
+
+        Integer sobras = jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name IN ('plano','preco_plano','assinatura','cobranca','backoffice_log')
+                """, Integer.class);
+        Integer operadorSaas = jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'usuario' AND column_name = 'operador_saas'
+                """, Integer.class);
+        assertThat(sobras).isZero();
+        assertThat(operadorSaas).isZero();
     }
 
     @Test
