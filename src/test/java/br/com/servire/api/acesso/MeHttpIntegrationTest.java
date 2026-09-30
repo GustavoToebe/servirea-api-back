@@ -23,6 +23,7 @@ import java.util.function.Function;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -124,6 +125,45 @@ class MeHttpIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(get("/perfis").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/tenant").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    /** Bug de produção em 30/09/2026: o /me da sessão de suporte dava 404 e o menu ficava só com Início e Ajustes. */
+    @Test
+    void sessaoDeSuporteRecebeTodasAsPermissoesEAIdentidadeDoOperador() throws Exception {
+        String sufixo = UUID.randomUUID().toString();
+        Tenant tenant = tenantRepository.saveAndFlush(new Tenant(
+                "SUP-" + sufixo.substring(0, 8), "sup-" + sufixo, "Paróquia suporte", Tenant.Status.ATIVO));
+        String token = jwtService.gerarTokenSuporte(UUID.randomUUID(), tenant.getId(),
+                "Maria Operadora", "maria@central.teste", "cliente pediu ajuda");
+
+        mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nome").value("Maria Operadora"))
+                .andExpect(jsonPath("$.email").value("maria@central.teste"))
+                .andExpect(jsonPath("$.perfil").value("Suporte"))
+                .andExpect(jsonPath("$.permissoes", hasItem("PERFIL")))
+                .andExpect(jsonPath("$.permissoes", hasItem("USUARIO")))
+                .andExpect(jsonPath("$.permissoes", hasItem("PAROQUIA")))
+                .andExpect(jsonPath("$.permissoes", hasItem("AUDITORIA")))
+                .andExpect(jsonPath("$.permissoes", hasItem("PESSOA")))
+                .andExpect(jsonPath("$.permissoes", hasItem("ESCALA")));
+
+        mockMvc.perform(get("/perfis").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void sessaoDeSuporteNaoAlteraOPerfil() throws Exception {
+        String sufixo = UUID.randomUUID().toString();
+        Tenant tenant = tenantRepository.saveAndFlush(new Tenant(
+                "SUQ-" + sufixo.substring(0, 8), "suq-" + sufixo, "Paróquia suporte 2", Tenant.Status.ATIVO));
+        String token = jwtService.gerarTokenSuporte(UUID.randomUUID(), tenant.getId(),
+                "Maria Operadora", "maria@central.teste", "teste");
+
+        mockMvc.perform(put("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nome\":\"Outro Nome\"}"))
                 .andExpect(status().isForbidden());
     }
 
