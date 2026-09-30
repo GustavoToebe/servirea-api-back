@@ -187,8 +187,8 @@ Documents/servire/
   servire-api-front/    ← Angular (outro git)
 ```
 
-GitHub: [servire-api-back](https://github.com/GustavoToebe/servire-api-back),
-[servire-api-front](https://github.com/GustavoToebe/servire-api-front).
+GitHub: [servirea-api-back](https://github.com/GustavoToebe/servirea-api-back),
+[servirea-api-front](https://github.com/GustavoToebe/servirea-api-front).
 
 Stack: Java 21 · Spring Boot 4.1.1 · Hibernate 7.4 · PostgreSQL 17 (Supabase) ·
 Flyway V001–V037 · JJWT 0.13 · Testcontainers 2.x.

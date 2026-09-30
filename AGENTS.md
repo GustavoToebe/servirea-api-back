@@ -88,6 +88,9 @@ repositórios, compila os fronts e recria os containers; migration nova roda na 
 alias no `~/.ssh/config`): `ssh -i ~/.ssh/id_ed25519_servirea root@184.107.176.76`. Em 30/09/2026 o usuário autorizou o Claude a
 rodar o deploy a partir deste PC e dispensou o backup daquela vez (V050, que apaga escalas e layouts). Cada deploy novo continua
 dependendo de o usuário pedir; migration destrutiva pede confirmação do backup de novo.
+**Repositórios renomeados em 30/09/2026:** no GitHub são `servirea-api-back` e `servirea-api-front` (o nome antigo redireciona). Na VPS as
+pastas continuam `/opt/ecossistema/servire-api-back` e `servire-api-front`, e o `origin` de lá ainda usa o nome antigo, que funciona pelo
+redirecionamento; o `atualizar.sh` e o `docker-compose.yml` dependem desses nomes de pasta.
 
 ## Multi-tenancy (P0 — regras que não podem ser quebradas)
 - Entidades de domínio têm `@TenantId UUID tenantId` (Hibernate filtra e preenche sozinho).
