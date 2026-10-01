@@ -35,7 +35,10 @@ public record PessoaResponse(
         String cuidados,
         VoluntarioPerfilResponse voluntario) {
 
-    public static PessoaResponse de(Pessoa p) {
+    /** Mapeamento interno completo. Na borda HTTP, usar deAutorizada. */
+    public static PessoaResponse de(Pessoa p) { return de(p,true); }
+    public static PessoaResponse deAutorizada(Pessoa p) { return de(p,br.com.servire.api.acesso.PermissaoCuidados.ler()); }
+    private static PessoaResponse de(Pessoa p,boolean cuidadosPermitidos) {
         List<RelacaoResponse> responsaveis = p.isVoluntario()
                 ? p.getResponsaveis().stream().map(RelacaoResponse::doVoluntario).toList()
                 : List.of();
@@ -67,10 +70,10 @@ public record PessoaResponse(
                 p.getComplemento(),
                 p.getBairro(),
                 p.getObservacoes(),
-                p.getCondicoes() != null ? java.util.Arrays.asList(p.getCondicoes()) : List.of(),
-                p.getNivelSuporteTea(),
-                p.getCondicaoOutra(),
-                p.getCuidados(),
+                cuidadosPermitidos && p.getCondicoes() != null ? java.util.Arrays.asList(p.getCondicoes()) : List.of(),
+                cuidadosPermitidos ? p.getNivelSuporteTea() : null,
+                cuidadosPermitidos ? p.getCondicaoOutra() : null,
+                cuidadosPermitidos ? p.getCuidados() : null,
                 VoluntarioPerfilResponse.de(p.getVoluntario()));
     }
 }

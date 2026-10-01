@@ -224,3 +224,9 @@ redirecionamento; o `atualizar.sh` e o `docker-compose.yml` dependem desses nome
 - Paginação no servidor com EntityGraph de conta/categoria; totais agregados em JPQL. Valores BigDecimal, duas casas; saldos calculados apenas das baixas.
 - Mutação de lançamento exige lock e versão; não retirar a conferência ao estornar/cancelar. Conta travada ao criar lançamento/editar saldo inicial; FKs compostas preservam tenant.
 - FINANCEIRO é consulta; CRIAR/ALTERAR/BAIXAR/CONFIGURAR são ações distintas. Não inserir permissões em perfis específicos existentes; acesso total mantém a regra do catálogo completo.
+
+## Segurança e fila na branch de melhorias
+
+- Cuidados exigem PESSOA_CUIDADOS_LER/ALTERAR; controllers usam DTO deAutorizada. Nunca retornar DTO completo confiável em endpoint público. Ver docs/seguranca-cuidados-credenciais.md.
+- WhatsApp: token cifrado, chaves só em env, nunca plaintext em DTO/log. V055; manter chaves antigas conforme retenção de backups.
+- Fila V056: HTTP fora de transação, reserva durável com posse/expiração, lock janela → comunicado → destinatário. Workers separados por canal; docs/fila-comunicados.md.

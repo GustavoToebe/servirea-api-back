@@ -89,7 +89,7 @@ public class ResendEmailSender implements EmailSender {
             // falha): aqui ENVIAR é a própria função deste método, então a
             // falha precisa propagar — nunca ficar sabendo, ao ver a tela
             // de "e-mail enviado", que na verdade nenhum e-mail saiu.
-            log.error("Falha ao enviar e-mail via Resend para {}", destinatario, e);
+            log.error("Falha ao enviar e-mail via Resend: {}", e.getClass().getSimpleName());
             throw new EmailException("Não foi possível enviar o e-mail de redefinição de senha no momento.", e);
         }
     }
@@ -128,13 +128,18 @@ public class ResendEmailSender implements EmailSender {
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientException e) {
-            log.error("Falha ao enviar e-mail via Resend para {}", destinatario, e);
+            log.error("Falha ao enviar e-mail via Resend: {}", e.getClass().getSimpleName());
             throw new EmailException("Não foi possível enviar o e-mail no momento.", e);
         }
     }
 
     @Override
     public void enviarComunicado(String para, String assunto, String html, List<Anexo> anexos, String responderPara) {
+        enviarComunicadoIdempotente(para, assunto, html, anexos, responderPara, null);
+    }
+
+    @Override
+    public void enviarComunicadoIdempotente(String para, String assunto, String html, List<Anexo> anexos, String responderPara, String chave) {
         requireConfigurado();
         Map<String, Object> corpo = new LinkedHashMap<>();
         corpo.put("from", properties.from());
@@ -153,12 +158,13 @@ public class ResendEmailSender implements EmailSender {
             restClient.post()
                     .uri(properties.apiUrl())
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.apiKey())
+                    .headers(headers -> { if (chave != null) headers.set("Idempotency-Key", chave); })
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(corpo)
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientException e) {
-            log.error("Falha ao enviar comunicado via Resend", e);
+            log.error("Falha ao enviar comunicado via Resend: {}", e.getClass().getSimpleName());
             throw new EmailException("Não foi possível enviar o e-mail no momento.", e);
         }
     }

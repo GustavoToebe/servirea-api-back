@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V054). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V056). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict IMspefmRB2hHQW06eZKa9e4qQV7WpZwaN0JRlWBQfHrrNkecf3KbTJzyVAwFx0C
+\restrict aSa5ZdQYSnHMNaA0aZcg96jevDZeCqhWNirKGobvJ6gpbECQbqbwdNsD3xEnwr4
 
 
 
@@ -305,6 +305,10 @@ CREATE TABLE public.comunicado_destinatario (
     tentativas integer DEFAULT 0 NOT NULL,
     erro character varying(500),
     enviado_em timestamp with time zone,
+    proxima_tentativa timestamp with time zone DEFAULT '1970-01-01 00:00:00+00'::timestamp with time zone NOT NULL,
+    reservado_por uuid,
+    reserva_ate timestamp with time zone,
+    CONSTRAINT ck_comunicado_destinatario_reserva CHECK (((reservado_por IS NULL) = (reserva_ate IS NULL))),
     CONSTRAINT comunicado_destinatario_status_check CHECK (((status)::text = ANY ((ARRAY['PENDENTE'::character varying, 'ENVIADO'::character varying, 'FALHA'::character varying])::text[])))
 );
 
@@ -526,6 +530,19 @@ CREATE TABLE public.evento_inscricao (
     confirmacao_email_destinatario_id uuid,
     lembrete_email_destinatario_id uuid,
     lembrete_email_enviado_em timestamp with time zone
+);
+
+
+--
+-- Name: fila_envio_janela; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fila_envio_janela (
+    id character varying(100) NOT NULL,
+    proximo_permitido timestamp with time zone DEFAULT '1970-01-01 00:00:00+00'::timestamp with time zone NOT NULL,
+    reservado_por uuid,
+    reserva_ate timestamp with time zone,
+    CONSTRAINT ck_janela_reserva CHECK (((reservado_por IS NULL) = (reserva_ate IS NULL)))
 );
 
 
@@ -818,7 +835,7 @@ CREATE TABLE public.layout_escala (
 CREATE TABLE public.paroquia_whatsapp (
     tenant_id uuid NOT NULL,
     instancia character varying(120) NOT NULL,
-    token character varying(300) NOT NULL,
+    token text NOT NULL,
     ativo boolean DEFAULT false NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -1438,6 +1455,14 @@ ALTER TABLE ONLY public.evento
 
 ALTER TABLE ONLY public.evento
     ADD CONSTRAINT evento_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: fila_envio_janela fila_envio_janela_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fila_envio_janela
+    ADD CONSTRAINT fila_envio_janela_pkey PRIMARY KEY (id);
 
 
 --
@@ -2237,6 +2262,13 @@ CREATE INDEX idx_voluntarios_tenant_id ON public.voluntarios USING btree (tenant
 --
 
 CREATE INDEX idx_voluntarios_tipo ON public.voluntarios USING btree (tipo);
+
+
+--
+-- Name: ix_destinatario_pronto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_destinatario_pronto ON public.comunicado_destinatario USING btree (tenant_id, proxima_tentativa, id) WHERE ((status)::text = 'PENDENTE'::text);
 
 
 --
@@ -3223,6 +3255,12 @@ ALTER TABLE public.evento_foto ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.evento_inscricao ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: fila_envio_janela; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.fila_envio_janela ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: financeiro_categoria; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3417,5 +3455,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict IMspefmRB2hHQW06eZKa9e4qQV7WpZwaN0JRlWBQfHrrNkecf3KbTJzyVAwFx0C
+\unrestrict aSa5ZdQYSnHMNaA0aZcg96jevDZeCqhWNirKGobvJ6gpbECQbqbwdNsD3xEnwr4
 

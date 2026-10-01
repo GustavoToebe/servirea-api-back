@@ -23,7 +23,7 @@ public class ParoquiaWhatsapp {
     @Column(nullable = false, length = 120)
     private String instancia;
 
-    @Column(nullable = false, length = 300)
+    @Column(nullable = false, columnDefinition = "text")
     private String token;
 
     @Column(nullable = false)

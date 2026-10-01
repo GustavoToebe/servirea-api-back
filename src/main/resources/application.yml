@@ -111,6 +111,10 @@ servire:
   # "evolution" (Evolution Go). Sem segredo global: o token é da instância de
   # cada paróquia (tela Paróquia). Intervalo aleatório entre mensagens para
   # reduzir o risco de bloqueio do número (15 a 40 s; 200 mensagens levam ~1h30).
+  segredos:
+    chaves: ${CREDENCIAIS_CHAVES:}
+    chave-ativa: ${CREDENCIAIS_CHAVE_ATIVA:v1}
+
   whatsapp:
     provider: ${WHATSAPP_PROVIDER:log}
     evolution:

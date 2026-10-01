@@ -144,4 +144,16 @@ class ResendEmailSenderTest {
                 java.util.List.of(new Anexo("aviso.pdf", "application/pdf", "%PDF-1".getBytes())), "secretaria@paroquia.test");
         server.verify();
     }
+    @Test
+    void recuperacaoDaFilaReutilizaChaveDeIdempotencia() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        for (int n=0;n<2;n++) server.expect(requestTo(API_URL))
+            .andExpect(header("Idempotency-Key", "comunicado/mensagem-1"))
+            .andExpect(jsonPath("$.to").value("fila@teste.com"))
+            .andRespond(withSuccess("{}",MediaType.APPLICATION_JSON));
+        var sender=new ResendEmailSender(builder,new ResendProperties("teste","teste@teste.com",API_URL));
+        for (int n=0;n<2;n++) sender.enviarComunicadoIdempotente("fila@teste.com","Aviso","<p>Aviso</p>",java.util.List.of(),null,"comunicado/mensagem-1");
+        server.verify();
+    }
 }

@@ -200,6 +200,7 @@ public class InscricaoService {
                 request.complemento(), request.bairro(), request.horarioEstudo(), request.observacoes(),
                 request.autorizaWhatsapp(), request.funcoesHabilitadas());
                 
+        if (br.com.servire.api.acesso.PermissaoCuidados.alterarSePermitido(request.condicoes(), request.nivelSuporteTea(), request.condicaoOutra(), request.cuidados())) {
         br.com.servire.api.pessoa.CondicaoEspecial[] condicoes = request.condicoes() == null ? new br.com.servire.api.pessoa.CondicaoEspecial[0] : request.condicoes().toArray(new br.com.servire.api.pessoa.CondicaoEspecial[0]);
         Integer[] nivelRef = { request.nivelSuporteTea() };
         String[] outraRef = { request.condicaoOutra() };
@@ -208,6 +209,7 @@ public class InscricaoService {
         inscricao.setNivelSuporteTea(nivelRef[0]);
         inscricao.setCondicaoOutra(outraRef[0]);
         inscricao.setCuidados(opcional(request.cuidados()));
+        }
         substituirContatos(inscricao, request.emails(), request.telefones());
         substituirResponsaveis(inscricao, request.responsaveis());
         auditLogService.registrar("ATUALIZACAO", "INSCRICAO", inscricao.getId(),

@@ -44,6 +44,11 @@ class FilaDeEnvioIntegrationTest extends AbstractIntegrationTest {
     @Autowired private PessoaService pessoaService;
     @Autowired private TenantRepository tenantRepository;
 
+    @org.junit.jupiter.api.BeforeEach
+    void prepararIdempotencia() {
+        org.mockito.Mockito.doCallRealMethod().when(emailSender).enviarComunicadoIdempotente(anyString(),anyString(),anyString(),anyList(),org.mockito.ArgumentMatchers.nullable(String.class),anyString());
+    }
+
     @AfterEach
     void limpar() {
         TenantContext.clear();
@@ -132,5 +137,51 @@ class FilaDeEnvioIntegrationTest extends AbstractIntegrationTest {
         verify(emailSender, never()).enviarComunicado(eq(email), anyString(), anyString(), anyList(), any());
         TenantContext.set(tenantId);
         assertThat(detalhe(c).comunicado().status()).isEqualTo(StatusComunicado.NA_FILA);
+    }
+
+    @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Test
+    void doisWorkersNaoEnviamAMesmaMensagemEHttpFicaForaDaTransacao() throws Exception {
+        String email="conc-"+UUID.randomUUID()+"@t.com"; Criado c=comunicado(Tenant.Status.ATIVO,email);
+        UUID tenantId=TenantContext.get(); TenantContext.clear();
+        var iniciou=new java.util.concurrent.CountDownLatch(1); var liberar=new java.util.concurrent.CountDownLatch(1);
+        org.mockito.Mockito.doAnswer(inv -> {
+            assertThat(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+            iniciou.countDown(); assertThat(liberar.await(10,java.util.concurrent.TimeUnit.SECONDS)).isTrue(); return null;
+        }).when(emailSender).enviarComunicado(eq(email),anyString(),anyString(),anyList(),any());
+        try (var executor=java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var primeiro=executor.submit(fila::processarAgora);
+            assertThat(iniciou.await(10,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            try { executor.submit(fila::processarAgora).get(5,java.util.concurrent.TimeUnit.SECONDS); }
+            finally { liberar.countDown(); }
+            primeiro.get(10,java.util.concurrent.TimeUnit.SECONDS);
+        }
+        verify(emailSender,org.mockito.Mockito.times(1)).enviarComunicado(eq(email),anyString(),anyString(),anyList(),any());
+        TenantContext.set(tenantId); assertThat(detalhe(c).comunicado().enviados()).isEqualTo(1);
+    }
+    @Test
+    void reservaExpiradaRetomaMasReservaAtivaNaoReenvia() {
+        String email="crash-"+UUID.randomUUID()+"@t.com"; Criado c=comunicado(Tenant.Status.ATIVO,email);
+        UUID tenantId=TenantContext.get();
+        jdbc.update("update comunicado_destinatario set reservado_por=?,reserva_ate=? where comunicado_id=?",UUID.randomUUID(),java.sql.Timestamp.from(java.time.Instant.now().plusSeconds(120)),c.id());
+        TenantContext.clear();fila.processarAgora(); verify(emailSender,never()).enviarComunicado(eq(email),anyString(),anyString(),anyList(),any());
+        jdbc.update("update comunicado_destinatario set reserva_ate=? where comunicado_id=?",java.sql.Timestamp.from(java.time.Instant.now().minusSeconds(1)),c.id());
+        fila.processarAgora();
+        verify(emailSender,org.mockito.Mockito.times(1)).enviarComunicado(eq(email),anyString(),anyString(),anyList(),any());
+        TenantContext.set(tenantId);assertThat(detalhe(c).comunicado().status()).isEqualTo(StatusComunicado.CONCLUIDO);
+    }
+    @Test
+    void conclusaoAntigaNaoAlteraNovaPosse() {
+        String email="posse-"+UUID.randomUUID()+"@t.com"; Criado c=comunicado(Tenant.Status.ATIVO,email);
+        UUID tenantId=TenantContext.get(); UUID dono=UUID.randomUUID();TenantContext.clear();
+        org.mockito.Mockito.doAnswer(inv -> {
+            jdbc.update("update comunicado_destinatario set reservado_por=? where comunicado_id=?",dono,c.id());return null;
+        }).when(emailSender).enviarComunicado(eq(email),anyString(),anyString(),anyList(),any());
+        fila.processarAgora();
+        assertThat(jdbc.queryForObject("select reservado_por from comunicado_destinatario where comunicado_id=?",UUID.class,c.id())).isEqualTo(dono);
+        TenantContext.set(tenantId);assertThat(detalhe(c).comunicado().enviados()).isZero();
+        // Limpa o crash simulado para não deixar o provedor global reservado em outro teste.
+        jdbc.update("update fila_envio_janela set reservado_por=null,reserva_ate=null where id='EMAIL'");
+        jdbc.update("update comunicado_destinatario set status='FALHA',reservado_por=null,reserva_ate=null where comunicado_id=?",c.id());
     }
 }

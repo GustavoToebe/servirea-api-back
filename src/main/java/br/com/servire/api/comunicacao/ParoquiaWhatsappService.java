@@ -22,12 +22,14 @@ public class ParoquiaWhatsappService {
     private final ParoquiaWhatsappRepository repository;
     private final WhatsappSender whatsappSender;
     private final AuditLogService auditLogService;
+    private final br.com.servire.api.security.CifraCredencial cifra;
 
     public ParoquiaWhatsappService(ParoquiaWhatsappRepository repository, WhatsappSender whatsappSender,
-                                   AuditLogService auditLogService) {
+                                   AuditLogService auditLogService, br.com.servire.api.security.CifraCredencial cifra) {
         this.repository = repository;
         this.whatsappSender = whatsappSender;
         this.auditLogService = auditLogService;
+        this.cifra = cifra;
     }
 
     @Transactional(readOnly = true)
@@ -38,8 +40,8 @@ public class ParoquiaWhatsappService {
 
     /** Configuração ativa da paróquia atual, para o envio. */
     @Transactional(readOnly = true)
-    public Optional<ParoquiaWhatsapp> ativa() {
-        return atual().filter(ParoquiaWhatsapp::isAtivo);
+    public Optional<ConfiguracaoEnvio> ativa() {
+        return atual().filter(ParoquiaWhatsapp::isAtivo).map(c -> new ConfiguracaoEnvio(c.getInstancia(), cifra.abrir(c.getTenantId(), c.getToken())));
     }
 
     @Transactional
@@ -52,14 +54,14 @@ public class ParoquiaWhatsappService {
             if (req.token() == null || req.token().isBlank()) {
                 throw new BadRequestException("Informe o token da instância.");
             }
-            repository.save(new ParoquiaWhatsapp(tenantId, instancia, req.token().trim(), req.ativo()));
+            repository.save(new ParoquiaWhatsapp(tenantId, instancia, cifra.cifrar(tenantId, req.token().trim()), req.ativo()));
             campos.addAll(List.of("instancia", "token", "ativo"));
         } else {
             ParoquiaWhatsapp c = existente.get();
             if (!c.getInstancia().equals(instancia)) campos.add("instancia");
             if (req.token() != null && !req.token().isBlank()) campos.add("token");
             if (c.isAtivo() != req.ativo()) campos.add("ativo");
-            c.atualizar(instancia, req.token() == null ? null : req.token().trim(), req.ativo());
+            c.atualizar(instancia, req.token() == null || req.token().isBlank() ? null : cifra.cifrar(tenantId, req.token().trim()), req.ativo());
         }
         auditLogService.registrar("ALTERAR", "paroquia_whatsapp", tenantId, campos);
         return buscar();
@@ -69,7 +71,17 @@ public class ParoquiaWhatsappService {
     @Transactional(readOnly = true)
     public void testar(String telefone) {
         ParoquiaWhatsapp c = atual().orElseThrow(() -> new BadRequestException("Configure o WhatsApp da paróquia antes de testar."));
-        whatsappSender.enviarTexto(c.getInstancia(), c.getToken(), telefone, TEXTO_TESTE);
+        whatsappSender.enviarTexto(c.getInstancia(), cifra.abrir(c.getTenantId(), c.getToken()), telefone, TEXTO_TESTE);
+    }
+
+    /** Snapshot de envio, nunca serializado nem usado como entidade persistente. */
+    public static final class ConfiguracaoEnvio {
+        private final String instancia;
+        private final String token;
+        ConfiguracaoEnvio(String instancia, String token) { this.instancia=instancia; this.token=token; }
+        public String getInstancia() { return instancia; }
+        public String getToken() { return token; }
+        @Override public String toString() { return "ConfiguracaoEnvio[credencial protegida]"; }
     }
 
     private Optional<ParoquiaWhatsapp> atual() {

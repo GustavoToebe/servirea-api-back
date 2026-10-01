@@ -55,6 +55,10 @@ servire:
   # onboarding@resend.dev, seção 122 item 16). Domínio servirea.com.br
   # "Verified" no Resend e envio real confirmado em 23/09/2026 (SPF, DKIM
   # e DMARC em PASS no Gmail — ver "Próximos passos" no README.md).
+  segredos:
+    chaves: ${CREDENCIAIS_CHAVES}
+    chave-ativa: ${CREDENCIAIS_CHAVE_ATIVA}
+
   email:
     provider: ${EMAIL_PROVIDER:resend}
     resend:

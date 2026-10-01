@@ -84,6 +84,7 @@ public final class PermissoesDaSessao {
         Set<String> codigos = new LinkedHashSet<>(LEITURA);
         if (role == UsuarioTenant.Role.COORDENADOR) {
             for (String codigo : CatalogoPermissao.codigos()) {
+                if (codigo.startsWith("PESSOA_CUIDADOS_")) continue;
                 String modulo = CatalogoPermissao.moduloDe(codigo);
                 if (modulo != null && LEITURA.contains(modulo)) {
                     codigos.add(codigo);

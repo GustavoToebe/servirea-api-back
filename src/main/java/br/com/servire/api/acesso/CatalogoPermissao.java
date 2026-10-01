@@ -37,6 +37,8 @@ public final class CatalogoPermissao {
                             new Acao("PESSOA_CRIAR", "Criar"),
                             new Acao("PESSOA_ALTERAR", "Alterar"),
                             new Acao("PESSOA_EXCLUIR", "Excluir"),
+                            new Acao("PESSOA_CUIDADOS_LER", "Consultar cuidado e acolhimento"),
+                            new Acao("PESSOA_CUIDADOS_ALTERAR", "Alterar cuidado e acolhimento"),
                             new Acao("PESSOA_ATIVAR_INATIVAR", "Ativar/Inativar"))))),
             new Secao("Escalas", List.of(
                     new Modulo("ESCALA", "Escala", List.of(

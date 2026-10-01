@@ -264,6 +264,7 @@ public class PessoaService {
         pessoa.setBairro(opcional(request.bairro()));
         pessoa.setObservacoes(opcional(request.observacoes()));
         
+        if (!br.com.servire.api.acesso.PermissaoCuidados.alterarSePermitido(request.condicoes(), request.nivelSuporteTea(), request.condicaoOutra(), request.cuidados())) return;
         CondicaoEspecial[] condicoes = request.condicoes() == null ? new CondicaoEspecial[0] : request.condicoes().toArray(new CondicaoEspecial[0]);
         Integer[] nivelRef = { request.nivelSuporteTea() };
         String[] outraRef = { request.condicaoOutra() };

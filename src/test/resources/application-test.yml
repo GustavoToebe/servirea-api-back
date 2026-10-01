@@ -41,6 +41,9 @@ servire:
   email:
     provider: log
   # WhatsApp dos comunicados: fixo em "log" e sem espera entre mensagens.
+  segredos:
+    chaves: v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    chave-ativa: v1
   whatsapp:
     provider: log
     intervalo-min-ms: 0
@@ -48,6 +51,7 @@ servire:
   comunicado:
     fila-ativa: false
     pausa-email-ms: 0
+    retentativa-ms: 0
   # Integração com a Central: chave de teste = segredo dos vetores do
   # contrato (docs da Central, seção 2.5), em Base64. Sem central-url, o
   # job de sincronização não faz nada.

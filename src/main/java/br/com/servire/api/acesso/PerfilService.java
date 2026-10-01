@@ -136,6 +136,7 @@ public class PerfilService {
             if (modulo != null) {
                 codigos.add(modulo);
             }
+            if (codigo.equals("PESSOA_CUIDADOS_ALTERAR")) codigos.add("PESSOA_CUIDADOS_LER");
             codigos.add(codigo);
         }
         return new ArrayList<>(codigos);

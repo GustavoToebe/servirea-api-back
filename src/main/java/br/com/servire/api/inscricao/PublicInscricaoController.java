@@ -39,6 +39,6 @@ public class PublicInscricaoController {
                                                      @RequestPart(value = "foto", required = false) MultipartFile foto,
                                                      HttpServletRequest request) {
         Inscricao criada = inscricaoService.criarPublica(tenantSlug, dados, foto, ClientIp.de(request));
-        return ResponseEntity.ok(InscricaoResponse.de(criada));
+        return ResponseEntity.ok(InscricaoResponse.deAutorizada(criada));
     }
 }

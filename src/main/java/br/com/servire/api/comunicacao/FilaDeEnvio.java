@@ -3,173 +3,161 @@ package br.com.servire.api.comunicacao;
 import br.com.servire.api.auth.Anexo;
 import br.com.servire.api.auth.EmailSender;
 import br.com.servire.api.integracao.AcessoParoquia;
-import br.com.servire.api.tenant.Tenant;
-import br.com.servire.api.tenant.TenantContext;
-import br.com.servire.api.tenant.TenantRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import br.com.servire.api.tenant.*;
+import br.com.servire.api.pessoa.PessoaRepository;
+import jakarta.annotation.PreDestroy;
+import org.slf4j.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
-
-/**
- * Processa a fila dos comunicados a cada 15 s (PLANO-005). Por paróquia liberada: {@code TenantContext.set}
- * e só depois as transações ({@code TransactionTemplate}), a mesma armadilha do {@code InscricaoService.criarPublica}.
- * O envio em si roda fora de transação; cada resultado é gravado numa transação curta. Três falhas = FALHA.
- * Uma paróquia com erro não para as outras.
- */
+/** Reservas duráveis, ritmo no banco e workers limitados. HTTP nunca ocupa transação. */
 @Component
 public class FilaDeEnvio {
-
-    private static final Logger log = LoggerFactory.getLogger(FilaDeEnvio.class);
-    static final int LOTE = 30;
-    private static final List<StatusComunicado> ABERTOS = List.of(StatusComunicado.NA_FILA, StatusComunicado.ENVIANDO);
-
+    private static final Logger log=LoggerFactory.getLogger(FilaDeEnvio.class);
+    static final int LOTE=30;
+    private static final List<StatusComunicado> ABERTOS=List.of(StatusComunicado.NA_FILA,StatusComunicado.ENVIANDO);
     private final TenantRepository tenants;
-    private final AcessoParoquia acessoParoquia;
+    private final AcessoParoquia acesso;
     private final ComunicadoRepository comunicados;
     private final ComunicadoDestinatarioRepository destinatarios;
     private final ComunicadoAnexoRepository anexos;
-    private final ParoquiaWhatsappService whatsappConfig;
-    private final EmailSender emailSender;
-    private final WhatsappSender whatsappSender;
+    private final ParoquiaWhatsappService whatsapp;
+    private final EmailSender email;
+    private final WhatsappSender zap;
     private final WhatsappProperties properties;
+    private final JanelaEnvioRepository janelas;
+    private final PessoaRepository pessoas;
     private final TransactionTemplate tx;
     private final boolean ativa;
-    private final long pausaEmailMs;
+    private volatile boolean pronta;
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    void pronta() { pronta=true; }
+    private final long pausaEmailMs,retentativaMs;
+    private final AtomicInteger cursor=new AtomicInteger();
+    private final Set<String> emCurso=ConcurrentHashMap.newKeySet();
+    private final Semaphore vagasEmail=new Semaphore(2), vagasWhatsapp=new Semaphore(6);
+    private final AtomicInteger pagina=new AtomicInteger();
+    private final ExecutorService workersWhatsapp=new ThreadPoolExecutor(3,3,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(3),
+        Thread.ofVirtual().name("fila-comunicados-",0).factory(),new ThreadPoolExecutor.AbortPolicy());
 
-    public FilaDeEnvio(TenantRepository tenants, AcessoParoquia acessoParoquia, ComunicadoRepository comunicados,
-                       ComunicadoDestinatarioRepository destinatarios, ComunicadoAnexoRepository anexos,
-                       ParoquiaWhatsappService whatsappConfig, EmailSender emailSender, WhatsappSender whatsappSender,
-                       WhatsappProperties properties, PlatformTransactionManager transactionManager,
-                       @Value("${servire.comunicado.fila-ativa:true}") boolean ativa,
-                       @Value("${servire.comunicado.pausa-email-ms:600}") long pausaEmailMs) {
-        this.tenants = tenants;
-        this.acessoParoquia = acessoParoquia;
-        this.comunicados = comunicados;
-        this.destinatarios = destinatarios;
-        this.anexos = anexos;
-        this.whatsappConfig = whatsappConfig;
-        this.emailSender = emailSender;
-        this.whatsappSender = whatsappSender;
-        this.properties = properties;
-        this.tx = new TransactionTemplate(transactionManager);
-        this.ativa = ativa;
-        this.pausaEmailMs = pausaEmailMs;
+    private final ExecutorService workersEmail=new ThreadPoolExecutor(1,1,0L,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(1),
+        Thread.ofVirtual().name("fila-email-",0).factory(),new ThreadPoolExecutor.AbortPolicy());
+
+    public FilaDeEnvio(TenantRepository tenants,AcessoParoquia acesso,ComunicadoRepository comunicados,
+        ComunicadoDestinatarioRepository destinatarios,ComunicadoAnexoRepository anexos,ParoquiaWhatsappService whatsapp,
+        EmailSender email,WhatsappSender zap,WhatsappProperties properties,JanelaEnvioRepository janelas,PessoaRepository pessoas,
+        PlatformTransactionManager tm,@Value("${servire.comunicado.fila-ativa:true}") boolean ativa,
+        @Value("${servire.comunicado.pausa-email-ms:600}") long pausaEmailMs,
+        @Value("${servire.comunicado.retentativa-ms:60000}") long retentativaMs) {
+        this.tenants=tenants; this.acesso=acesso; this.comunicados=comunicados; this.destinatarios=destinatarios;
+        this.anexos=anexos; this.whatsapp=whatsapp; this.email=email; this.zap=zap; this.properties=properties;
+        this.janelas=janelas; this.pessoas=pessoas; this.tx=new TransactionTemplate(tm); this.ativa=ativa;
+        this.pausaEmailMs=Math.max(0,pausaEmailMs); this.retentativaMs=Math.max(0,retentativaMs);
     }
-
-    @Scheduled(fixedDelay = 15_000, initialDelay = 15_000)
+    @Scheduled(fixedDelay=500,initialDelay=15000)
     void agendado() {
-        if (ativa) processarAgora();
+        if (!ativa || !pronta) return;
+        var lote=new ArrayList<>(tenants.loteDaFila(PageRequest.of(pagina.getAndIncrement(),100)));
+        if (!lote.isEmpty()) Collections.rotate(lote,-Math.floorMod(cursor.getAndIncrement(),lote.size()));
+        if (lote.size()<100) pagina.set(0);
+        for (var tenant : lote) for (TipoEnvio canal : TipoEnvio.values()) {
+            String chave=canal+":"+tenant.getId();
+            Semaphore vagas=canal==TipoEnvio.EMAIL ? vagasEmail : vagasWhatsapp;
+            ExecutorService workers=canal==TipoEnvio.EMAIL ? workersEmail : workersWhatsapp;
+            if (emCurso.contains(chave) || !vagas.tryAcquire()) continue;
+            if (!emCurso.add(chave)) { vagas.release(); continue; }
+            try { workers.submit(() -> { try { rodada(tenant,List.of(canal)); } finally { emCurso.remove(chave); vagas.release(); } }); }
+            catch (RejectedExecutionException ex) { emCurso.remove(chave); vagas.release(); }
+        }
     }
 
-    /** Uma rodada da fila em todas as paróquias liberadas. Público para os testes. */
+    /** Rodada síncrona para testes/operação local; produção despacha sem aguardar provedor lento. */
     public void processarAgora() {
-        for (Tenant tenant : tenants.findAll()) {
-            try {
-                if (!acessoParoquia.liberada(tenant)) continue;
-                TenantContext.set(tenant.getId());
-                try {
-                    processarParoquia(tenant);
-                } finally {
-                    TenantContext.clear();
-                }
-            } catch (RuntimeException e) {
-                log.error("Fila de comunicados falhou na paróquia {}", tenant.getId(), e);
-            }
+        for (int r=0;r<LOTE;r++) {
+            int tratados=0;
+            for (Tenant tenant : ordem()) tratados+=rodada(tenant,List.of(TipoEnvio.values()));
+            if (tratados==0) break;
         }
     }
-
-    /** O que o envio precisa, lido antes de sair da transação. */
-    private record Item(UUID id, UUID comunicadoId, TipoEnvio canal, String destino, String assunto, String conteudo) {
+    private List<Tenant> ordem() {
+        var lista=new ArrayList<>(tenants.findAll());
+        if (!lista.isEmpty()) Collections.rotate(lista,-Math.floorMod(cursor.getAndIncrement(),lista.size()));
+        return lista;
     }
-
-    private void processarParoquia(Tenant tenant) {
-        List<Item> lote = tx.execute(s -> {
-            List<ComunicadoDestinatario> ds = destinatarios.proximosDaFila(ABERTOS, PageRequest.of(0, LOTE));
-            Map<UUID, Comunicado> porId = new HashMap<>();
-            for (ComunicadoDestinatario d : ds) {
-                porId.computeIfAbsent(d.getComunicadoId(), id -> comunicados.findById(id).orElseThrow()).marcarEnviando();
-            }
-            return ds.stream().map(d -> new Item(d.getId(), d.getComunicadoId(), porId.get(d.getComunicadoId()).getCanal(),
-                    d.getDestino(), d.getAssunto(), d.getConteudo())).toList();
-        });
-        if (lote == null || lote.isEmpty()) return;
-
-        Set<UUID> tocados = new LinkedHashSet<>();
-        Map<UUID, List<Anexo>> anexosPorComunicado = new HashMap<>();
-        String responderPara = tx.execute(s -> tenants.findById(tenant.getId()).flatMap(ComunicadoService::emailPrincipal).orElse(null));
-        Optional<ParoquiaWhatsapp> zap = lote.stream().anyMatch(i -> i.canal() == TipoEnvio.WHATSAPP)
-                ? whatsappConfig.ativa() : Optional.empty();
-
-        boolean primeiro = true;
-        for (Item item : lote) {
-            if (!primeiro) pausar(item.canal());
-            primeiro = false;
-            tocados.add(item.comunicadoId());
-            String erro = null;
-            try {
-                if (item.canal() == TipoEnvio.EMAIL) {
-                    List<Anexo> lista = anexosPorComunicado.computeIfAbsent(item.comunicadoId(), this::anexosDe);
-                    emailSender.enviarComunicado(item.destino(), item.assunto(), item.conteudo(), lista, responderPara);
-                } else {
-                    ParoquiaWhatsapp c = zap.orElseThrow(() -> new IllegalStateException("WhatsApp da paróquia desativado."));
-                    whatsappSender.enviarTexto(c.getInstancia(), c.getToken(), item.destino(), item.conteudo());
-                }
-            } catch (RuntimeException e) {
-                erro = e instanceof IllegalStateException ? e.getMessage() : "Falha no envio (" + e.getClass().getSimpleName() + ").";
-                log.warn("Envio de comunicado falhou na paróquia {}: {}", tenant.getId(), e.getClass().getSimpleName());
-            }
-            String erroFinal = erro;
-            tx.executeWithoutResult(s -> destinatarios.findById(item.id()).ifPresent(d -> {
-                if (erroFinal == null) d.marcarEnviado();
-                else d.registrarFalha(erroFinal);
-            }));
-        }
-        tx.executeWithoutResult(s -> tocados.forEach(this::atualizarContagem));
-    }
-
-    private List<Anexo> anexosDe(UUID comunicadoId) {
-        return tx.execute(s -> anexos.findByComunicadoIdOrderByNome(comunicadoId).stream()
-                .filter(a -> a.getConteudo() != null)
-                .map(a -> new Anexo(a.getNome(), a.getTipo(), a.getConteudo())).toList());
-    }
-
-    private void atualizarContagem(UUID comunicadoId) {
-        comunicados.findById(comunicadoId).ifPresent(c -> {
-            c.contar((int) destinatarios.countByComunicadoIdAndStatus(comunicadoId, StatusEnvio.ENVIADO),
-                    (int) destinatarios.countByComunicadoIdAndStatus(comunicadoId, StatusEnvio.FALHA));
-            if (destinatarios.countByComunicadoIdAndStatus(comunicadoId, StatusEnvio.PENDENTE) == 0) {
-                c.concluir();
-                anexos.findByComunicadoIdOrderByNome(comunicadoId).forEach(ComunicadoAnexo::apagarConteudo);
-            }
-        });
-    }
-
-    private void pausar(TipoEnvio canal) {
-        // E-mail: respeita o limite de envios por segundo do Resend.
-        long ms = canal == TipoEnvio.EMAIL ? pausaEmailMs : aleatorio(properties.intervaloMinMs(), properties.intervaloMaxMs());
-        if (ms <= 0) return;
+    private int rodada(Tenant tenant,List<TipoEnvio> canais) {
+        if (!acesso.liberada(tenant)) return 0;
+        TenantContext.set(tenant.getId());
+        int n=0;
         try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+            for (TipoEnvio canal : canais) {
+                Envio envio=tx.execute(status -> reservar(tenant,canal));
+                if (envio==null) continue;
+                n++; String erro=null;
+                try {
+                    if (canal==TipoEnvio.EMAIL) email.enviarComunicadoIdempotente(envio.destino(),envio.assunto(),envio.conteudo(),envio.anexos(),envio.responderPara(),"comunicado/"+envio.id());
+                    else {
+                        var config=whatsapp.ativa().orElseThrow(() -> new IllegalStateException("WhatsApp desativado."));
+                        zap.enviarTexto(config.getInstancia(),config.getToken(),envio.destino(),envio.conteudo());
+                    }
+                } catch (RuntimeException ex) { erro="Falha no envio ("+ex.getClass().getSimpleName()+")."; }
+                String falha=erro; tx.executeWithoutResult(status -> concluir(envio,falha));
+            }
+        } catch (RuntimeException ex) { log.error("Falha na fila da paróquia {}: {}",tenant.getId(),ex.getClass().getSimpleName()); }
+        finally { TenantContext.clear(); }
+        return n;
     }
-
-    private static long aleatorio(long min, long max) {
-        return max <= min ? min : ThreadLocalRandom.current().nextLong(min, max + 1);
+    private Envio reservar(Tenant tenant,TipoEnvio canal) {
+        Instant agora=Instant.now(); String janela=canal==TipoEnvio.EMAIL ? "EMAIL" : "WHATSAPP:"+tenant.getId();
+        var ids=destinatarios.candidatos(StatusEnvio.PENDENTE,ABERTOS,canal,agora,PageRequest.of(0,1));
+        if (ids.isEmpty()) return null;
+        var j=janelas.buscarParaAlterar(janela).orElse(null);
+        if (j==null) { janelas.saveAndFlush(new JanelaEnvio(janela)); j=janelas.buscarParaAlterar(janela).orElseThrow(); }
+        if (!j.disponivel(agora)) return null;
+        UUID id=ids.getFirst(); UUID comunicadoId=destinatarios.comunicadoDoDestinatario(id).orElseThrow();
+        var c=comunicados.buscarParaAlterar(comunicadoId).orElseThrow();
+        var d=destinatarios.buscarParaAlterar(id).orElseThrow();
+        if (!d.pronto(agora) || !ABERTOS.contains(c.getStatus())) return null;
+        if (canal==TipoEnvio.WHATSAPP && d.getPessoaId()!=null) {
+            var pessoa=pessoas.findById(d.getPessoaId()).orElse(null);
+            if (pessoa==null || pessoa.getVoluntario()==null || !pessoa.getVoluntario().isAutorizaWhatsapp()) {
+                d.falhaDefinitiva("Autorização de WhatsApp revogada ou indisponível."); atualizar(c); return null;
+            }
+        }
+        UUID dono=UUID.randomUUID(); Instant ate=agora.plusSeconds(120);
+        long intervalo=canal==TipoEnvio.EMAIL ? pausaEmailMs : intervaloZap();
+        j.reservar(dono,ate,agora.plusMillis(intervalo)); d.reservar(dono,ate); c.marcarEnviando();
+        var arquivos=canal==TipoEnvio.EMAIL ? anexos.findByComunicadoIdOrderByNome(c.getId()).stream().filter(a -> a.getConteudo()!=null)
+            .map(a -> new Anexo(a.getNome(),a.getTipo(),a.getConteudo())).toList() : List.<Anexo>of();
+        String responder=tenants.findById(tenant.getId()).flatMap(ComunicadoService::emailPrincipal).orElse(null);
+        return new Envio(d.getId(),c.getId(),dono,janela,d.getDestino(),d.getAssunto(),d.getConteudo(),arquivos,responder);
+    }
+    private void concluir(Envio envio,String erro) {
+        var janela=janelas.buscarParaAlterar(envio.janela()).orElseThrow();
+        var c=comunicados.buscarParaAlterar(envio.comunicadoId()).orElseThrow();
+        var d=destinatarios.buscarParaAlterar(envio.id()).orElse(null);
+        if (d==null || !d.pertenceA(envio.dono(),Instant.now())) return;
+        d.liberar(); janela.liberar(envio.dono());
+        if (d.getStatus()!=StatusEnvio.PENDENTE) return;
+        if (erro==null) d.marcarEnviado();
+        else { d.registrarFalha(erro); d.reagendar(Instant.now().plusMillis(retentativaMs * (d.getTentativas()==1 ? 1 : 5))); }
+        destinatarios.flush(); atualizar(c);
+    }
+    private void atualizar(Comunicado c) {
+        destinatarios.flush(); UUID id=c.getId();
+        c.contar((int)destinatarios.countByComunicadoIdAndStatus(id,StatusEnvio.ENVIADO),(int)destinatarios.countByComunicadoIdAndStatus(id,StatusEnvio.FALHA));
+        if (destinatarios.countByComunicadoIdAndStatus(id,StatusEnvio.PENDENTE)==0) { c.concluir(); anexos.findByComunicadoIdOrderByNome(id).forEach(ComunicadoAnexo::apagarConteudo); }
+    }
+    private long intervaloZap() { long min=Math.max(0,properties.intervaloMinMs()),max=Math.max(min,properties.intervaloMaxMs()); return max==min ? min : ThreadLocalRandom.current().nextLong(min,max+1); }
+    @PreDestroy void encerrar() { workersEmail.shutdownNow(); workersWhatsapp.shutdownNow(); }
+    private record Envio(UUID id,UUID comunicadoId,UUID dono,String janela,String destino,String assunto,String conteudo,List<Anexo> anexos,String responderPara) {
+        @Override public String toString() { return "Envio[id="+id+"]"; }
     }
 }

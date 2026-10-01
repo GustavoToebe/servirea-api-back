@@ -59,6 +59,15 @@ public class ComunicadoDestinatario {
     @Column(name = "enviado_em")
     private Instant enviadoEm;
 
+    @Column(name="proxima_tentativa",nullable=false) private Instant proximaTentativa=Instant.EPOCH;
+    @Column(name="reservado_por") private UUID reservadoPor;
+    @Column(name="reserva_ate") private Instant reservaAte;
+    boolean pronto(Instant agora) { return status==StatusEnvio.PENDENTE && !proximaTentativa.isAfter(agora) && (reservaAte==null || !reservaAte.isAfter(agora)); }
+    void reservar(UUID dono,Instant ate) { reservadoPor=dono; reservaAte=ate; }
+    boolean pertenceA(UUID dono,Instant agora) { return dono.equals(reservadoPor) && reservaAte!=null && reservaAte.isAfter(agora); }
+    void liberar() { reservadoPor=null; reservaAte=null; }
+    void reagendar(Instant quando) { proximaTentativa=quando; }
+    void falhaDefinitiva(String motivo) { status=StatusEnvio.FALHA; erro=motivo; }
     protected ComunicadoDestinatario() {
     }
 
@@ -98,6 +107,7 @@ public class ComunicadoDestinatario {
     void voltarParaFila() {
         status = StatusEnvio.PENDENTE;
         tentativas = 0;
+        proximaTentativa=Instant.EPOCH;
         erro = null;
     }
 }

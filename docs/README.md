@@ -13,3 +13,6 @@
 - [Limites de integração](integracao-limites.md): payload, nonce e erros do filtro HMAC.
 
 - [financeiro.md](financeiro.md): operação, permissões, cálculos e limites do financeiro paroquial.
+
+- [Cuidados e credenciais](seguranca-cuidados-credenciais.md): permissões, cifra e rotação.
+- [Fila de comunicados](fila-comunicados.md): reservas, concorrência e limite da garantia de entrega.

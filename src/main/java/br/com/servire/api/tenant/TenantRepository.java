@@ -13,6 +13,9 @@ import java.util.UUID;
  */
 public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecificationExecutor<Tenant> {
 
+    @org.springframework.data.jpa.repository.Query("select t from Tenant t order by t.id")
+    java.util.List<Tenant> loteDaFila(org.springframework.data.domain.Pageable pagina);
+
     @Override
     @EntityGraph(attributePaths = {"emails", "telefones"})
     Optional<Tenant> findById(UUID id);

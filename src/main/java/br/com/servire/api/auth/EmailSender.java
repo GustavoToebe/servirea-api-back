@@ -22,4 +22,8 @@ public interface EmailSender {
      * opcionais e {@code responderPara} (e-mail da paróquia) quando houver.
      */
     void enviarComunicado(String para, String assunto, String html, java.util.List<Anexo> anexos, String responderPara);
+    /** Chave persistente da mensagem, reaproveitada em recuperações da fila. */
+    default void enviarComunicadoIdempotente(String para, String assunto, String html, java.util.List<Anexo> anexos, String responderPara, String chave) {
+        enviarComunicado(para, assunto, html, anexos, responderPara);
+    }
 }

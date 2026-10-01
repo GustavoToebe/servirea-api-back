@@ -47,7 +47,7 @@ public class EvolutionGoWhatsappSender implements WhatsappSender {
                     .retrieve()
                     .toBodilessEntity();
         } catch (RestClientException e) {
-            log.error("Falha ao enviar WhatsApp pela instância {} para {}", instancia, LoggingWhatsappSender.mascarar(telefone), e);
+            log.warn("Falha no provedor WhatsApp: {}", e.getClass().getSimpleName());
             throw new WhatsappException("Não foi possível enviar a mensagem pelo WhatsApp.", e);
         }
     }

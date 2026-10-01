@@ -53,7 +53,10 @@ public record InscricaoResponse(
         String cuidados,
         Instant consentimentoCuidadosEm) {
 
-    public static InscricaoResponse de(Inscricao i) {
+    /** Mapeamento interno completo. Na borda HTTP, usar deAutorizada. */
+    public static InscricaoResponse de(Inscricao i) { return de(i,true); }
+    public static InscricaoResponse deAutorizada(Inscricao i) { return de(i,br.com.servire.api.acesso.PermissaoCuidados.ler()); }
+    private static InscricaoResponse de(Inscricao i,boolean cuidadosPermitidos) {
         return new InscricaoResponse(
                 i.getId(),
                 i.getSequencial(),
@@ -92,10 +95,10 @@ public record InscricaoResponse(
                 i.getDataRejeicao(),
                 i.getRejeitadoPor(),
                 i.getMotivoRejeicao(),
-                i.getCondicoes() != null ? java.util.Arrays.asList(i.getCondicoes()) : List.of(),
-                i.getNivelSuporteTea(),
-                i.getCondicaoOutra(),
-                i.getCuidados(),
-                i.getConsentimentoCuidadosEm());
+                cuidadosPermitidos && i.getCondicoes() != null ? java.util.Arrays.asList(i.getCondicoes()) : List.of(),
+                cuidadosPermitidos ? i.getNivelSuporteTea() : null,
+                cuidadosPermitidos ? i.getCondicaoOutra() : null,
+                cuidadosPermitidos ? i.getCuidados() : null,
+                cuidadosPermitidos ? i.getConsentimentoCuidadosEm() : null);
     }
 }

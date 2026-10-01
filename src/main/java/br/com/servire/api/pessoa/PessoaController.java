@@ -48,13 +48,13 @@ public class PessoaController {
     @GetMapping
     public List<PessoaResponse> listar(@RequestParam(required = false) PessoaPapel papel,
                                        @RequestParam(required = false) String nome) {
-        return pessoaService.buscar(papel, nome).stream().map(PessoaResponse::de).toList();
+        return pessoaService.buscar(papel, nome).stream().map(PessoaResponse::deAutorizada).toList();
     }
 
     @PreAuthorize("hasAuthority('PERM_PESSOA')")
     @GetMapping("/{id}")
     public PessoaResponse buscarPorId(@PathVariable UUID id) {
-        return PessoaResponse.de(pessoaService.buscarPorId(id));
+        return PessoaResponse.deAutorizada(pessoaService.buscarPorId(id));
     }
 
     @PreAuthorize("hasAuthority('PERM_PESSOA')")
@@ -66,7 +66,7 @@ public class PessoaController {
     @PreAuthorize("hasAuthority('PERM_PESSOA_CRIAR')")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PessoaResponse> criar(@RequestBody @Valid PessoaRequest request) {
-        return ResponseEntity.ok(PessoaResponse.de(pessoaService.criar(request)));
+        return ResponseEntity.ok(PessoaResponse.deAutorizada(pessoaService.criar(request)));
     }
 
     /** Ficha ({@code dados}, JSON) e foto opcional juntas: se a foto falhar, nada é gravado. */
@@ -74,13 +74,13 @@ public class PessoaController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PessoaResponse> criarComFoto(@RequestPart("dados") @Valid PessoaRequest request,
                                                        @RequestPart(value = "foto", required = false) MultipartFile foto) {
-        return ResponseEntity.ok(PessoaResponse.de(cadastroComFoto.criar(request, foto)));
+        return ResponseEntity.ok(PessoaResponse.deAutorizada(cadastroComFoto.criar(request, foto)));
     }
 
     @PreAuthorize("hasAuthority('PERM_PESSOA_ALTERAR')")
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public PessoaResponse atualizar(@PathVariable UUID id, @RequestBody @Valid PessoaRequest request) {
-        return PessoaResponse.de(pessoaService.atualizar(id, request));
+        return PessoaResponse.deAutorizada(pessoaService.atualizar(id, request));
     }
 
     @PreAuthorize("hasAuthority('PERM_PESSOA_ALTERAR')")
@@ -88,6 +88,6 @@ public class PessoaController {
     public PessoaResponse atualizarComFoto(@PathVariable UUID id,
                                            @RequestPart("dados") @Valid PessoaRequest request,
                                            @RequestPart(value = "foto", required = false) MultipartFile foto) {
-        return PessoaResponse.de(cadastroComFoto.atualizar(id, request, foto));
+        return PessoaResponse.deAutorizada(cadastroComFoto.atualizar(id, request, foto));
     }
 }

@@ -46,13 +46,13 @@ public class InscricaoController {
     @PreAuthorize("hasAuthority('PERM_INSCRICAO')")
     @GetMapping
     public List<InscricaoResponse> listar(@RequestParam(required = false) StatusInscricao status) {
-        return inscricaoService.buscar(status).stream().map(InscricaoResponse::de).toList();
+        return inscricaoService.buscar(status).stream().map(InscricaoResponse::deAutorizada).toList();
     }
 
     @PreAuthorize("hasAuthority('PERM_INSCRICAO')")
     @GetMapping("/{id}")
     public InscricaoResponse buscarPorId(@PathVariable UUID id) {
-        return InscricaoResponse.de(inscricaoService.buscarPorId(id));
+        return InscricaoResponse.deAutorizada(inscricaoService.buscarPorId(id));
     }
 
     @PreAuthorize("hasAuthority('PERM_INSCRICAO')")
@@ -73,19 +73,19 @@ public class InscricaoController {
     @PreAuthorize("hasAuthority('PERM_INSCRICAO_ALTERAR')")
     @PutMapping("/{id}")
     public InscricaoResponse atualizar(@PathVariable UUID id, @RequestBody @Valid InscricaoAtualizarRequest request) {
-        return InscricaoResponse.de(inscricaoService.atualizarPendente(id, request));
+        return InscricaoResponse.deAutorizada(inscricaoService.atualizarPendente(id, request));
     }
 
     @PreAuthorize("hasAuthority('PERM_INSCRICAO_APROVAR')")
     @PostMapping("/{id}/aprovar")
     public InscricaoResponse aprovar(@PathVariable UUID id, @AuthenticationPrincipal AuthenticatedUser usuario) {
-        return InscricaoResponse.de(inscricaoService.aprovar(id, usuario.usuarioId()));
+        return InscricaoResponse.deAutorizada(inscricaoService.aprovar(id, usuario.usuarioId()));
     }
 
     @PreAuthorize("hasAuthority('PERM_INSCRICAO_REJEITAR')")
     @PostMapping("/{id}/rejeitar")
     public InscricaoResponse rejeitar(@PathVariable UUID id, @RequestBody @Valid InscricaoRejeitarRequest request,
                                        @AuthenticationPrincipal AuthenticatedUser usuario) {
-        return InscricaoResponse.de(inscricaoService.rejeitar(id, request.motivo(), usuario.usuarioId()));
+        return InscricaoResponse.deAutorizada(inscricaoService.rejeitar(id, request.motivo(), usuario.usuarioId()));
     }
 }

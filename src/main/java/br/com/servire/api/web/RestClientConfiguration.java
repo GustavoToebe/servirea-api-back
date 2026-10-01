@@ -33,6 +33,9 @@ public class RestClientConfiguration {
 
     @Bean
     public RestClient.Builder restClientBuilder() {
-        return RestClient.builder();
+        var cliente=java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build();
+        var fabrica=new org.springframework.http.client.JdkClientHttpRequestFactory(cliente);
+        fabrica.setReadTimeout(java.time.Duration.ofSeconds(20));
+        return RestClient.builder().requestFactory(fabrica);
     }
 }
