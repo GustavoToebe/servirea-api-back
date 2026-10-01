@@ -16,3 +16,9 @@
 
 - [Cuidados e credenciais](seguranca-cuidados-credenciais.md): permissões, cifra e rotação.
 - [Fila de comunicados](fila-comunicados.md): reservas, concorrência e limite da garantia de entrega.
+
+## Entrada rápida
+
+- [estado-projeto.json](estado-projeto.json): componente, comandos e migration local quando houver. Não confirma publicação.
+- Histórico explica decisões antigas; contrato e código atuais definem o comportamento vigente.
+- [Mapa do backend](desenvolvimento/mapa-backend.md), [armadilhas Java](desenvolvimento/armadilhas-java.md) e [testes](desenvolvimento/testes.md).

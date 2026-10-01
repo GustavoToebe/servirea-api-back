@@ -1,0 +1,19 @@
+{
+  "produto": "Servirea",
+  "componente": "backend",
+  "repositorio": "servirea-api-back",
+  "fontes": {
+    "instrucoes": "AGENTS.md",
+    "indice": "docs/README.md",
+    "execucao": "README.md"
+  },
+  "publicacao": "Verificar release implantada; este arquivo descreve somente o checkout local.",
+  "comandos": [
+    "mvn clean verify",
+    "python scripts/verificar-docs.py"
+  ],
+  "migrations": {
+    "ultima": "V056__reservas_fila_comunicados.sql",
+    "quantidade": 56
+  }
+}
