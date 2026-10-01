@@ -1,23 +1,32 @@
 package br.com.servire.api.minhaconta;
 
 import br.com.servire.api.integracao.HmacAssinatura;
+import br.com.servire.api.integracao.IntegracaoException;
 import br.com.servire.api.integracao.IntegracaoProperties;
 import br.com.servire.api.tenant.TenantContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.client.RestClientException;
 
 import java.time.Instant;
 import java.util.Base64;
 import java.util.UUID;
 
+/**
+ * "Minha conta" da paróquia: os dados comerciais ficam na Central, o Servirea só repassa.
+ * A instância é a própria paróquia (idExterno = tenant do JWT). Falha da Central vira 502 com
+ * mensagem para a pessoa; integração sem chave vira 503.
+ */
 @Service
 public class MinhaContaService {
+
+    private static final Logger log = LoggerFactory.getLogger(MinhaContaService.class);
+    static final String MENSAGEM_INDISPONIVEL = "Não foi possível consultar sua conta agora. Tente de novo em instantes.";
 
     private final IntegracaoProperties properties;
     private final RestClient.Builder httpBuilder;
@@ -28,10 +37,9 @@ public class MinhaContaService {
     }
 
     public String obterDadosMinhaConta() {
-        if (properties.centralUrl() == null || properties.centralUrl().isBlank()
-                || properties.chaveSaidaId() == null || properties.chaveSaidaId().isBlank()
-                || properties.chaveSaidaSegredo() == null || properties.chaveSaidaSegredo().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Integração com a Central não está configurada.");
+        if (vazio(properties.centralUrl()) || vazio(properties.chaveSaidaId()) || vazio(properties.chaveSaidaSegredo())) {
+            throw new IntegracaoException(HttpStatus.SERVICE_UNAVAILABLE, "INTEGRACAO_NAO_CONFIGURADA",
+                    "A consulta da conta ainda não está disponível. Fale com o suporte.");
         }
 
         UUID tenantId = TenantContext.get();
@@ -59,9 +67,16 @@ public class MinhaContaService {
                     .retrieve()
                     .body(String.class);
         } catch (HttpClientErrorException.NotFound e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Instância não provisionada.");
-        } catch (HttpServerErrorException | ResourceAccessException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Não foi possível consultar sua conta agora. Tente de novo em instantes.");
+            throw new IntegracaoException(HttpStatus.NOT_FOUND, "CONTA_NAO_ENCONTRADA",
+                    "Sua paróquia ainda não tem uma contratação ativa na Central.");
+        } catch (RestClientException e) {
+            // 5xx, fora do ar ou assinatura recusada (401/403): para a pessoa é a mesma coisa.
+            log.warn("Minha conta: a Central não respondeu como esperado ({})", e.getMessage());
+            throw new IntegracaoException(HttpStatus.BAD_GATEWAY, "CENTRAL_INDISPONIVEL", MENSAGEM_INDISPONIVEL);
         }
+    }
+
+    private static boolean vazio(String valor) {
+        return valor == null || valor.isBlank();
     }
 }
