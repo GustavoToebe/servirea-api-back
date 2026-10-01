@@ -88,6 +88,36 @@ class EventoHttpIntegrationTest extends AbstractIntegrationTest {
         TenantContext.clear();
     }
 
+    @Autowired private EventoRepository eventos;
+    @Autowired private EventoFotoRepository fotos;
+    @Autowired private EventoInscricaoRepository inscricoes;
+
+    @Test void paginaOrdenaAntesDoLimiteIsolaTenantEAssinaFotoForaDaTransacao() throws Exception {
+        var agora=agoraBrasilia();
+        var proximo=eventos.saveAndFlush(new Evento("Mais próximo",agora.plusDays(1)));
+        fotos.saveAndFlush(new EventoFoto(proximo.getId(),"foto/capa.jpg",true));
+        inscricoes.saveAndFlush(new EventoInscricao(proximo.getId(),pessoa("Inscrito",false,null),false));
+        for(int n=2;n<=35;n++)eventos.saveAndFlush(new Evento("Próximo "+n,agora.plusDays(n)));
+        var passado=new Evento("Passado",agora.minusDays(1));passado.setSituacao(Evento.Situacao.PUBLICADO);eventos.saveAndFlush(passado);
+        var cancelado=new Evento("Cancelado",agora.plusDays(60));cancelado.setSituacao(Evento.Situacao.CANCELADO);eventos.saveAndFlush(cancelado);
+        UUID outra=novaParoquia();TenantContext.set(outra);eventos.saveAndFlush(new Evento("Outra paróquia",agora));TenantContext.set(paroquia);
+        when(storage.gerarUrlAssinada(anyString())).thenAnswer(inv -> {
+            assertThat(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+            return "https://storage.test/"+inv.getArgument(0);
+        });
+        mvc.perform(get("/eventos/pagina").with(authentication(usuario("PERM_EVENTO"))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(37)).andExpect(jsonPath("$.itens.length()").value(30))
+            .andExpect(jsonPath("$.itens[0].titulo").value("Mais próximo")).andExpect(jsonPath("$.itens[0].inscritos").value(1))
+            .andExpect(jsonPath("$.itens[0].capaUrl").value("https://storage.test/foto/capa.jpg"));
+        mvc.perform(get("/eventos/pagina").param("pagina","1").with(authentication(usuario("PERM_EVENTO"))))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.itens.length()").value(7))
+            .andExpect(jsonPath("$.itens[5].titulo").value("Cancelado")).andExpect(jsonPath("$.itens[6].titulo").value("Passado"));
+    }
+    @Test void paginaExigePermissaoELimitaTamanho() throws Exception {
+        mvc.perform(get("/eventos/pagina").with(authentication(usuario("PERM_PESSOA")))).andExpect(status().isForbidden());
+        mvc.perform(get("/eventos/pagina").param("tamanho","101").with(authentication(usuario("PERM_EVENTO")))).andExpect(status().isBadRequest());
+    }
+
     // ---- apoio
 
     private UUID novaParoquia() {

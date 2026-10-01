@@ -163,6 +163,14 @@ public class InscricaoService {
      * {@code :status IS NULL OR ...} é a armadilha do Hibernate 7) e coleções
      * inicializadas aqui para o {@code InscricaoResponse.de} no controller.
      */
+
+    @Transactional(readOnly = true)
+    public br.com.servire.api.web.PaginaLista<br.com.servire.api.inscricao.dto.InscricaoResponse> pagina(StatusInscricao status,int pagina,int tamanho) {
+        Specification<Inscricao> spec=(root,q,cb) -> status==null ? cb.conjunction() : cb.equal(root.get("status"),status);
+        var resultado=inscricaoRepository.findAll(spec,br.com.servire.api.web.PaginaLista.pedido(pagina,tamanho,Sort.by(Sort.Direction.DESC,"createdAt","id")));
+        return br.com.servire.api.web.PaginaLista.de(resultado.map(i -> br.com.servire.api.inscricao.dto.InscricaoResponse.deAutorizada(buscarPorId(i.getId()))));
+    }
+
     @Transactional(readOnly = true)
     public List<Inscricao> buscar(StatusInscricao status) {
         Specification<Inscricao> filtro = (root, query, cb) ->

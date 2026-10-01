@@ -49,6 +49,14 @@ public class InscricaoController {
         return inscricaoService.buscar(status).stream().map(InscricaoResponse::deAutorizada).toList();
     }
 
+
+    @PreAuthorize("hasAuthority('PERM_INSCRICAO')")
+    @GetMapping("/pagina")
+    public br.com.servire.api.web.PaginaLista<InscricaoResponse> pagina(@RequestParam(required=false) StatusInscricao status,
+        @RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="30") int tamanho) {
+        return inscricaoService.pagina(status,pagina,tamanho);
+    }
+
     @PreAuthorize("hasAuthority('PERM_INSCRICAO')")
     @GetMapping("/{id}")
     public InscricaoResponse buscarPorId(@PathVariable UUID id) {

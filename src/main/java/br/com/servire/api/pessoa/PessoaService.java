@@ -59,6 +59,44 @@ public class PessoaService {
         return pessoas;
     }
 
+
+    public record Resumo(long pessoas,long ativos,long inativos,long pendentes) {}
+    public record Opcao(UUID id,Long sequencial,String nomeCompleto,boolean voluntario,boolean responsavel) {}
+
+    /** Só a página inicializa a ficha, com dados de cuidados sujeitos às permissões da sessão. */
+    @Transactional(readOnly = true)
+    public br.com.servire.api.web.PaginaLista<br.com.servire.api.pessoa.dto.PessoaResponse> pagina(
+        PessoaPapel papel,String nome,br.com.servire.api.voluntario.TipoVoluntario tipo,Boolean ativo,int pagina,int tamanho) {
+        Specification<Pessoa> spec=filtro(papel,nome);
+        if (tipo!=null) spec=spec.and((root,q,cb) -> cb.equal(root.get("voluntario").get("tipo"),tipo));
+        if (ativo!=null) spec=spec.and((root,q,cb) -> cb.equal(root.get("voluntario").get("ativo"),ativo));
+        var resultado=pessoaRepository.findAll(spec,br.com.servire.api.web.PaginaLista.pedido(pagina,tamanho,Sort.by("nomeCompleto","id")));
+        return br.com.servire.api.web.PaginaLista.de(resultado.map(p -> br.com.servire.api.pessoa.dto.PessoaResponse.deAutorizada(inicializarFicha(p))));
+    }
+    /** Contagens agregadas, sem carregar pessoas/inscrições nem incluir informação de saúde. */
+    @Transactional(readOnly = true)
+    public Resumo resumo() {
+        Object[] linha=entityManager.createQuery("""
+            select count(p),coalesce(sum(case when v.ativo=true then 1 else 0 end),0),
+                coalesce(sum(case when v.ativo=false then 1 else 0 end),0)
+            from Pessoa p left join p.voluntario v
+            """,Object[].class).getSingleResult();
+        var auth=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean inscricoes=auth==null || auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("PERM_INSCRICAO"));
+        long pendentes=inscricoes ? entityManager.createQuery("select count(i) from Inscricao i where i.status=:status",Long.class)
+            .setParameter("status",br.com.servire.api.inscricao.StatusInscricao.PENDENTE).getSingleResult() : 0;
+        return new Resumo(((Number)linha[0]).longValue(),((Number)linha[1]).longValue(),((Number)linha[2]).longValue(),pendentes);
+    }
+    /** Seletor enxuto, ordenado e limitado: não retorna contatos, endereço nem cuidados. */
+    @Transactional(readOnly = true)
+    public List<Opcao> opcoes(PessoaPapel papel,String nome,int limite) {
+        br.com.servire.api.web.PaginaLista.pedido(0,limite,Sort.unsorted());
+        var cb=entityManager.getCriteriaBuilder();var q=cb.createQuery(Opcao.class);var root=q.from(Pessoa.class);
+        q.select(cb.construct(Opcao.class,root.get("id"),root.get("sequencial"),root.get("nomeCompleto"),root.get("eVoluntario"),root.get("eResponsavel")))
+            .where(filtro(papel,nome).toPredicate(root,q,cb)).orderBy(cb.asc(root.get("nomeCompleto")),cb.asc(root.get("id")));
+        return entityManager.createQuery(q).setMaxResults(limite).getResultList();
+    }
+
     private static Specification<Pessoa> filtro(PessoaPapel papel, String nome) {
         return (root, query, cb) -> {
             List<Predicate> predicados = new ArrayList<>();
@@ -69,7 +107,7 @@ public class PessoaService {
             }
             if (nome != null && !nome.isBlank()) {
                 String texto = nome.trim();
-                Predicate porNome = cb.like(cb.lower(root.get("nomeCompleto")), "%" + texto.toLowerCase() + "%");
+                Predicate porNome = cb.like(cb.lower(root.get("nomeCompleto")), "%" + texto.toLowerCase(java.util.Locale.ROOT) + "%");
                 // Número curto da pessoa (V038) também encontra.
                 predicados.add(texto.matches("\\d{1,18}")
                         ? cb.or(porNome, cb.equal(root.get("sequencial"), Long.valueOf(texto)))

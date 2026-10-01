@@ -27,9 +27,19 @@ import java.util.UUID;
 public class EventoController {
 
     private final EventoService service;
+    private final EventoListaService lista;
 
-    public EventoController(EventoService service) {
+    public EventoController(EventoService service, EventoListaService lista) {
+        this.lista = lista;
         this.service = service;
+    }
+
+    @PreAuthorize("hasAuthority('PERM_EVENTO')")
+    @GetMapping("/pagina")
+    public br.com.servire.api.web.PaginaLista<EventoResumo> pagina(
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue="0") int pagina,
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue="30") int tamanho) {
+        return lista.pagina(pagina,tamanho);
     }
 
     @PreAuthorize("hasAuthority('PERM_EVENTO')")

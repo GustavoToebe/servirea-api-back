@@ -51,6 +51,22 @@ public class PessoaController {
         return pessoaService.buscar(papel, nome).stream().map(PessoaResponse::deAutorizada).toList();
     }
 
+
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
+    @GetMapping("/pagina")
+    public br.com.servire.api.web.PaginaLista<PessoaResponse> pagina(@RequestParam(required=false) PessoaPapel papel,
+        @RequestParam(required=false) String nome,@RequestParam(required=false) br.com.servire.api.voluntario.TipoVoluntario tipo,
+        @RequestParam(required=false) Boolean ativo,@RequestParam(defaultValue="0") int pagina,@RequestParam(defaultValue="30") int tamanho) {
+        return pessoaService.pagina(papel,nome,tipo,ativo,pagina,tamanho);
+    }
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
+    @GetMapping("/resumo")
+    public PessoaService.Resumo resumo() { return pessoaService.resumo(); }
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
+    @GetMapping("/opcoes")
+    public List<PessoaService.Opcao> opcoes(@RequestParam(required=false) PessoaPapel papel,@RequestParam(required=false) String nome,
+        @RequestParam(defaultValue="30") int limite) { return pessoaService.opcoes(papel,nome,limite); }
+
     @PreAuthorize("hasAuthority('PERM_PESSOA')")
     @GetMapping("/{id}")
     public PessoaResponse buscarPorId(@PathVariable UUID id) {
