@@ -13,6 +13,10 @@ import java.util.UUID;
  */
 public interface TenantRepository extends JpaRepository<Tenant, UUID>, JpaSpecificationExecutor<Tenant> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select t from Tenant t where t.id = :id")
+    Optional<Tenant> bloquearParaCotas(UUID id);
+
     @org.springframework.data.jpa.repository.Query("select t from Tenant t order by t.id")
     java.util.List<Tenant> loteDaFila(org.springframework.data.domain.Pageable pagina);
 

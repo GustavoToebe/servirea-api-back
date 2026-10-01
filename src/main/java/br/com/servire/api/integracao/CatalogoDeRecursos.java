@@ -8,9 +8,8 @@ import java.util.List;
  * ao cadastrar recursos, para o código nunca divergir do que o app lê em
  * {@code limites}/{@code funcionalidades} (26/09/2026).
  *
- * <p>{@code aplicado} diz se o app já faz valer o recurso. Hoje nenhum é
- * aplicado ("limites modelados agora e aplicados depois"): ao passar a
- * aplicar um, trocar para {@code true} aqui no mesmo commit.
+     * <p>{@code aplicado} diz se o app já faz valer o recurso; só marcar quando
+     * todos os fluxos de crescimento correspondentes estiverem protegidos.
  */
 public final class CatalogoDeRecursos {
 
@@ -23,8 +22,9 @@ public final class CatalogoDeRecursos {
     }
 
     public static final List<RecursoDoApp> RECURSOS = List.of(
-            new RecursoDoApp("voluntarios", "Voluntários", Tipo.LIMITE, "pessoa", false),
-            new RecursoDoApp("usuarios", "Usuários", Tipo.LIMITE, "usuário", false),
+            new RecursoDoApp("pessoas", "Pessoas cadastradas", Tipo.LIMITE, "pessoa", true),
+            new RecursoDoApp("voluntarios", "Voluntários cadastrados", Tipo.LIMITE, "pessoa", true),
+            new RecursoDoApp("usuarios", "Usuários com acesso ativo ou convite", Tipo.LIMITE, "usuário", true),
             new RecursoDoApp("armazenamento_mb", "Armazenamento", Tipo.LIMITE, "MB", false),
             new RecursoDoApp("ESCALAS", "Escalas", Tipo.FUNCIONALIDADE, null, false),
             new RecursoDoApp("INSCRICAO_PUBLICA", "Inscrição pública", Tipo.FUNCIONALIDADE, null, false));

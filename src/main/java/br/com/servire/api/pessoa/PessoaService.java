@@ -43,13 +43,15 @@ public class PessoaService {
 
     private final PessoaRepository pessoaRepository;
     private final AuditLogService auditLogService;
+    private final br.com.servire.api.minhaconta.CotasService cotas;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public PessoaService(PessoaRepository pessoaRepository, AuditLogService auditLogService) {
+    public PessoaService(PessoaRepository pessoaRepository, AuditLogService auditLogService, br.com.servire.api.minhaconta.CotasService cotas) {
         this.pessoaRepository = pessoaRepository;
         this.auditLogService = auditLogService;
+        this.cotas = cotas;
     }
 
     @Transactional(readOnly = true)
@@ -149,6 +151,7 @@ public class PessoaService {
 
     @Transactional
     public Pessoa criar(PessoaRequest request) {
+        var reserva = cotas.reservar();
         Set<PessoaPapel> papeis = papeisDe(request);
         validarRequest(request, papeis);
         Pessoa pessoa = new Pessoa(papeis, request.nomeCompleto().trim());
@@ -159,12 +162,14 @@ public class PessoaService {
         }
         substituirRelacoes(pessoa, request);
         pessoa = pessoaRepository.save(pessoa);
+        cotas.validar(reserva);
         auditLogService.registrar("CRIACAO", "PESSOA", pessoa.getId(), null);
         return buscarPorId(pessoa.getId());
     }
 
     @Transactional
     public Pessoa atualizar(UUID id, PessoaRequest request) {
+        var reserva = cotas.reservar();
         Pessoa pessoa = carregar(id);
         Set<PessoaPapel> novos = papeisDe(request);
         if (pessoa.isVoluntario() && !novos.contains(PessoaPapel.VOLUNTARIO)) {
@@ -189,6 +194,7 @@ public class PessoaService {
         }
         substituirRelacoes(pessoa, request);
         pessoaRepository.save(pessoa);
+        cotas.validar(reserva);
         auditLogService.registrar("ATUALIZACAO", "PESSOA", id, alterados);
         return buscarPorId(id);
     }

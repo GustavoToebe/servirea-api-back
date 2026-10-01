@@ -34,6 +34,7 @@ public class UsuarioParoquiaService {
     private final PasswordResetTokenService passwordResetTokenService;
     private final EmailSender emailSender;
     private final String frontendBaseUrl;
+    private final br.com.servire.api.minhaconta.CotasService cotas;
 
     public UsuarioParoquiaService(UsuarioRepository usuarioRepository,
                                   UsuarioTenantRepository usuarioTenantRepository,
@@ -41,7 +42,7 @@ public class UsuarioParoquiaService {
                                   TenantRepository tenantRepository,
                                   PasswordResetTokenService passwordResetTokenService,
                                   EmailSender emailSender,
-                                  @Value("${servire.frontend.base-url}") String frontendBaseUrl) {
+                                  @Value("${servire.frontend.base-url}") String frontendBaseUrl, br.com.servire.api.minhaconta.CotasService cotas) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
         this.perfilRepository = perfilRepository;
@@ -49,6 +50,7 @@ public class UsuarioParoquiaService {
         this.passwordResetTokenService = passwordResetTokenService;
         this.emailSender = emailSender;
         this.frontendBaseUrl = frontendBaseUrl;
+        this.cotas = cotas;
     }
 
     @Transactional(readOnly = true)
@@ -65,6 +67,7 @@ public class UsuarioParoquiaService {
 
     @Transactional
     public UsuarioParoquiaResponse criar(UsuarioParoquiaRequest request) {
+        var reserva = cotas.reservar();
         UUID tenantId = TenantContext.get();
         Perfil perfil = perfilRepository.findByIdAndTenantId(request.perfilId(), tenantId)
                 .orElseThrow(() -> new BadRequestException("Perfil não encontrado nesta paróquia."));
@@ -81,6 +84,7 @@ public class UsuarioParoquiaService {
             usuario.setSenhaHash(null);
             usuarioRepository.saveAndFlush(usuario);
             vincular(usuario, tenantId, perfil, request.ativo());
+            cotas.validar(reserva);
             String token = passwordResetTokenService.gerarConvite(usuario);
             String link = frontendBaseUrl + "/reset-password?token=" + token;
             depoisDoCommit(() -> emailSender.enviarConvite(email, link));
@@ -90,6 +94,7 @@ public class UsuarioParoquiaService {
             throw new ConflictException("Este e-mail já acessa esta paróquia.");
         }
         vincular(existente, tenantId, perfil, request.ativo());
+        cotas.validar(reserva);
         String nomeParoquia = tenantRepository.findById(tenantId).map(Tenant::getNome).orElse("paróquia");
         depoisDoCommit(() -> emailSender.enviarAvisoAcesso(email, nomeParoquia));
         return resposta(vinculo(existente.getId()));
@@ -97,6 +102,7 @@ public class UsuarioParoquiaService {
 
     @Transactional
     public UsuarioParoquiaResponse atualizar(UUID usuarioId, UsuarioParoquiaRequest request) {
+        var reserva = cotas.reservar();
         UsuarioTenant vinculo = vinculo(usuarioId);
         Perfil novo = perfilRepository.findByIdAndTenantId(request.perfilId(), vinculo.getTenant().getId())
                 .orElseThrow(() -> new BadRequestException("Perfil não encontrado nesta paróquia."));
@@ -125,6 +131,7 @@ public class UsuarioParoquiaService {
             usuario.setTelefone(Formatos.telefone(request.telefone()));
             usuario.setTipoTelefone(request.tipoTelefone());
         }
+        cotas.validar(reserva);
         return resposta(vinculo);
     }
 

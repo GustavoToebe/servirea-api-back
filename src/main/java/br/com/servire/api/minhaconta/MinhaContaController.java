@@ -12,10 +12,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class MinhaContaController {
 
     private final MinhaContaService minhaContaService;
+    private final CotasService cotas;
 
-    public MinhaContaController(MinhaContaService minhaContaService) {
+    public MinhaContaController(MinhaContaService minhaContaService, CotasService cotas) {
         this.minhaContaService = minhaContaService;
+        this.cotas = cotas;
     }
+
+    @GetMapping("/consumo")
+    @PreAuthorize("hasAuthority('PERM_PAROQUIA')")
+    public CotasService.Consumo consumo() {return cotas.consumo();}
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public String obterDados() {

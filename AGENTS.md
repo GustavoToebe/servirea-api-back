@@ -86,3 +86,5 @@ Docker precisa estar ativo nos testes. Dev local usa `application-dev-local.yml`
 ## Documentação
 
 Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar o que foi alterado, comandos realmente executados, resultado e pendência concreta; não marcar teste planejado como aprovado nem implementação local como publicada. Validar links e estado com `python scripts/verificar-docs.py`; PRs e mudanças documentais rodam essa checagem na CI.
+
+- Cotas locais: docs/cotas-plano.md. Reservar paróquia antes do domínio e validar após flush em toda criação/promoção de pessoa, aprovação e ativação de vínculo. Armazenamento/envios ainda pendentes.

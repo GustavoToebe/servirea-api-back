@@ -142,6 +142,8 @@ public class IntegracaoInstanciaService {
 
     @Transactional
     public Map<String, Object> aplicarDireitos(UUID tenantId, DireitosInstancia snapshot) {
+        tenants.bloquearParaCotas(tenantId).orElseThrow(() -> new IntegracaoException(HttpStatus.NOT_FOUND,
+                "INSTANCIA_NAO_ENCONTRADA", "Instância não encontrada."));
         DireitosLocais locais = direitos.findById(tenantId)
                 .orElseThrow(() -> new IntegracaoException(HttpStatus.NOT_FOUND, "INSTANCIA_NAO_ENCONTRADA",
                         "Instância não encontrada."));

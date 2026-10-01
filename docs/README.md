@@ -26,3 +26,5 @@
 - [Listas paginadas](listas-paginadas.md): contratos, ordenação, seleção por página e compatibilidade.
 
 - [Limites de login](login-limites.md): tentativas, saturação e limites por instância.
+
+- [Cotas do plano](cotas-plano.md): comportamento, contratos e limitações.

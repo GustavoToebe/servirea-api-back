@@ -67,6 +67,7 @@ public class InscricaoService {
     private final InscricaoRateLimiter rateLimiter;
     private final AuditLogService auditLogService;
     private final TransactionTemplate transactionTemplate;
+    private final br.com.servire.api.minhaconta.CotasService cotas;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -78,7 +79,7 @@ public class InscricaoService {
                              TurnstileService turnstileService,
                              InscricaoRateLimiter rateLimiter,
                              AuditLogService auditLogService,
-                             PlatformTransactionManager transactionManager) {
+                             PlatformTransactionManager transactionManager, br.com.servire.api.minhaconta.CotasService cotas) {
         this.inscricaoRepository = inscricaoRepository;
         this.pessoaRepository = pessoaRepository;
         this.tenantRepository = tenantRepository;
@@ -87,6 +88,7 @@ public class InscricaoService {
         this.rateLimiter = rateLimiter;
         this.auditLogService = auditLogService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.cotas = cotas;
     }
 
     /**
@@ -232,6 +234,7 @@ public class InscricaoService {
      */
     @Transactional
     public Inscricao aprovar(UUID id, UUID usuarioIdAprovador) {
+        var reserva = cotas.reservar();
         Inscricao inscricao = buscarPorId(id);
         exigirPendente(inscricao);
 
@@ -299,6 +302,7 @@ public class InscricaoService {
         inscricao.setVoluntarioId(voluntarioPessoa.getId());
         inscricao.setDataAprovacao(Instant.now());
         inscricao.setAprovadoPor(usuarioIdAprovador);
+        cotas.validar(reserva);
         auditLogService.registrar("APROVACAO", "INSCRICAO", inscricao.getId(), List.of("status"));
         return inscricao;
     }

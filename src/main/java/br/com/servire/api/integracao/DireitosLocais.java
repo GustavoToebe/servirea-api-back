@@ -130,6 +130,8 @@ public class DireitosLocais {
         this.limites = limites;
     }
 
+    public String getLimites() {return limites;}
+
     public void setFuncionalidades(String[] funcionalidades) {
         this.funcionalidades = funcionalidades == null ? new String[0] : funcionalidades;
     }
