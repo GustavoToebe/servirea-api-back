@@ -1,11 +1,11 @@
-# Regera o schema.sql a partir do Postgres local (ecossistema-db, porta 5433).
+﻿# Regera o schema.sql a partir do Postgres local (ecossistema-db, porta 5433).
 # Pré-requisito: o container no ar e a API em profile dev já ter subido uma vez com as migrations novas (Flyway).
 # Uso, na pasta deste repositório: .\scripts\gerar-schema.ps1
 $ErrorActionPreference = "Stop"
 $banco = "servirea_dev"
 $destino = Join-Path $PSScriptRoot "..\schema.sql"
 $cabecalho = @(
-    "-- Esquema do banco, gerado das migrations (V001-V051). NÃO editar à mão.",
+    "-- Esquema do banco, gerado das migrations (V001-V052). NÃO editar à mão.",
     "-- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).",
     "-- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.",
     ""

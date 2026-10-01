@@ -60,6 +60,12 @@ public final class CatalogoPermissao {
                             new Acao("LAYOUT_EXCLUIR", "Excluir"))),
                     new Modulo("COMUNICADO", "Comunicados", List.of(
                             new Acao("COMUNICADO_ENVIAR", "Enviar"))))),
+            new Secao("Eventos", List.of(
+                    new Modulo("EVENTO", "Eventos", List.of(
+                            new Acao("EVENTO_CRIAR", "Criar"),
+                            new Acao("EVENTO_ALTERAR", "Alterar (dados e fotos)"),
+                            new Acao("EVENTO_INSCREVER", "Inscrever e remover pessoas"),
+                            new Acao("EVENTO_CANCELAR", "Cancelar"))))),
             new Secao("Relatórios", List.of(
                     new Modulo("AUDITORIA", "Auditoria", List.of())))
     );
