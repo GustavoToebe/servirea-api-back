@@ -14,8 +14,8 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record WhatsappProperties(
         @DefaultValue("log") String provider,
         @DefaultValue Evolution evolution,
-        @DefaultValue("4000") long intervaloMinMs,
-        @DefaultValue("9000") long intervaloMaxMs) {
+        @DefaultValue("15000") long intervaloMinMs,
+        @DefaultValue("40000") long intervaloMaxMs) {
 
     public record Evolution(String url, @DefaultValue("/send/text") String caminhoTexto) {
     }

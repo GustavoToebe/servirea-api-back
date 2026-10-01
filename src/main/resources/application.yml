@@ -110,14 +110,14 @@ servire:
   # WhatsApp dos comunicados (PLANO-005): "log" (padrão, nunca envia) ou
   # "evolution" (Evolution Go). Sem segredo global: o token é da instância de
   # cada paróquia (tela Paróquia). Intervalo aleatório entre mensagens para
-  # reduzir o risco de bloqueio do número.
+  # reduzir o risco de bloqueio do número (15 a 40 s; 200 mensagens levam ~1h30).
   whatsapp:
     provider: ${WHATSAPP_PROVIDER:log}
     evolution:
       url: ${EVOLUTION_URL:}
       caminho-texto: ${EVOLUTION_CAMINHO_TEXTO:/send/text}
-    intervalo-min-ms: 4000
-    intervalo-max-ms: 9000
+    intervalo-min-ms: ${WHATSAPP_INTERVALO_MIN_MS:15000}
+    intervalo-max-ms: ${WHATSAPP_INTERVALO_MAX_MS:40000}
 
 server:
   port: ${PORT:8080}
