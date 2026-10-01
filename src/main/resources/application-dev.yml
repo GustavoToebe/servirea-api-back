@@ -13,7 +13,7 @@ spring:
   config:
     import: optional:file:./application-dev-local.yml
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/servire_dev}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/servirea_dev}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:}
 

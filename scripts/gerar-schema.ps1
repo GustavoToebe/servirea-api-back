@@ -2,7 +2,7 @@
 # Pré-requisito: o container no ar e a API em profile dev já ter subido uma vez com as migrations novas (Flyway).
 # Uso, na pasta deste repositório: .\scripts\gerar-schema.ps1
 $ErrorActionPreference = "Stop"
-$banco = "servire_dev"
+$banco = "servirea_dev"
 $destino = Join-Path $PSScriptRoot "..\schema.sql"
 $cabecalho = @(
     "-- Esquema do banco, gerado das migrations (V001-V051). NÃO editar à mão.",
