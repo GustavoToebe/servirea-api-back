@@ -12,6 +12,16 @@ import java.util.UUID;
 
 public interface PessoaRepository extends JpaRepository<Pessoa, UUID>, JpaSpecificationExecutor<Pessoa> {
 
+    /** Quem faz aniversário no mês (1–12), por dia e nome. O filtro da paróquia vem do {@code @TenantId}. */
+    @Query("""
+            SELECT new br.com.servire.api.pessoa.dto.AniversarianteResponse(
+                p.id, p.nomeCompleto, extract(day from p.dataNascimento))
+            FROM Pessoa p
+            WHERE p.dataNascimento IS NOT NULL AND extract(month from p.dataNascimento) = :mes
+            ORDER BY extract(day from p.dataNascimento), p.nomeCompleto
+            """)
+    List<br.com.servire.api.pessoa.dto.AniversarianteResponse> aniversariantesDoMes(@Param("mes") int mes);
+
     /**
      * Só o perfil 1:1 no grafo. As quatro coleções são {@code List} (bags):
      * pôr mais de uma no {@code @EntityGraph} não carregava as relações de

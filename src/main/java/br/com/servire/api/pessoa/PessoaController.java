@@ -27,11 +27,21 @@ public class PessoaController {
     private final PessoaService pessoaService;
     private final CadastroComFotoService cadastroComFoto;
     private final Duplicidades duplicidades;
+    private final Aniversariantes aniversariantes;
 
-    public PessoaController(PessoaService pessoaService, CadastroComFotoService cadastroComFoto, Duplicidades duplicidades) {
+    public PessoaController(PessoaService pessoaService, CadastroComFotoService cadastroComFoto, Duplicidades duplicidades,
+                            Aniversariantes aniversariantes) {
         this.pessoaService = pessoaService;
         this.cadastroComFoto = cadastroComFoto;
         this.duplicidades = duplicidades;
+        this.aniversariantes = aniversariantes;
+    }
+
+    /** Cartão do Início. {@code mes} 1–12; sem ele, o mês corrente no fuso de Brasília. */
+    @PreAuthorize("hasAuthority('PERM_PESSOA')")
+    @GetMapping("/aniversariantes")
+    public List<br.com.servire.api.pessoa.dto.AniversarianteResponse> aniversariantes(@RequestParam(required = false) Integer mes) {
+        return aniversariantes.doMes(mes);
     }
 
     @PreAuthorize("hasAuthority('PERM_PESSOA')")
