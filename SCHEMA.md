@@ -2,7 +2,11 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V053. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V054. Migration já aplicada não se edita.
+
+## O que entrou na V054
+
+Financeiro paroquial simples: contas, categorias e movimentos. Chaves compostas por tenant, versão e situação do movimento, índices de vencimento/baixa, RLS e revogação do acesso direto Supabase. Uso e cálculos em `docs/financeiro.md`.
 
 ## O que entrou na V053
 
@@ -34,7 +38,7 @@ Globais (sem `@TenantId`): `usuario`, `tenant`, `diocese`, `perfil`, `perfil_per
 
 `tenant_sequencial` não tem entidade. O gatilho da V038 grava o número curto.
 
-Da paróquia (`@TenantId`): `pessoa`, `pessoa_email`, `pessoa_telefone`, `pessoa_relacao`, `voluntarios`, `disponibilidade_voluntario`, `indisponibilidade_voluntario`, `resposta_indisponibilidade`, `inscricoes`, `inscricao_email`, `inscricao_telefone`, `inscricao_responsaveis`, `inscricao_responsavel_email`, `inscricao_responsavel_telefone`, `escalas`, `escala_eventos`, `escala_vagas`, `layout_escala`, `layout_envio`, `paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`, `evento`, `evento_foto`, `evento_inscricao`, `audit_log`.
+Da paróquia (`@TenantId`): `pessoa`, `pessoa_email`, `pessoa_telefone`, `pessoa_relacao`, `voluntarios`, `disponibilidade_voluntario`, `indisponibilidade_voluntario`, `resposta_indisponibilidade`, `inscricoes`, `inscricao_email`, `inscricao_telefone`, `inscricao_responsaveis`, `inscricao_responsavel_email`, `inscricao_responsavel_telefone`, `escalas`, `escala_eventos`, `escala_vagas`, `layout_escala`, `layout_envio`, `paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`, `evento`, `evento_foto`, `evento_inscricao`, `audit_log`, `financeiro_conta`, `financeiro_categoria`, `financeiro_movimento`.
 
 View `vw_voluntario_compromissos` (V010) existe. A lista de compromissos é montada via JPA, não via essa view.
 
@@ -48,4 +52,5 @@ View `vw_voluntario_compromissos` (V010) existe. A lista de compromissos é mont
 O banco da Central está no `SCHEMA.md` do `central-api-back`. Os nomes `plano` e `cobranca` existem lá com outro desenho: plano de um produto, cobrança de uma contratação.
 
 ## Esquema completo
-`schema.sql` (nesta pasta) é o esquema inteiro, com colunas, chaves, índices, gatilhos e enums, gerado das migrations V001–V052 num Postgres limpo. Serve para saber o estado do banco sem abrir o Supabase. **Migration nova: rodar `scripts/gerar-schema.ps1` e commitar o `schema.sql` junto.** Nunca editar o arquivo à mão.
+`schema.sql` (nesta pasta) é o esquema inteiro, com colunas, chaves, índices, gatilhos e enums, gerado das migrations V001–V054 num Postgres limpo. Serve para saber o estado do banco sem abrir o Supabase. **Migration nova: rodar `scripts/gerar-schema.ps1` e commitar o `schema.sql` junto.** Nunca editar o arquivo à mão.
+V054 introduz o financeiro **paroquial**: contas com saldo inicial, categorias e lançamentos versionados com baixa/estorno. Não recria planos e cobranças comerciais removidos na V051; esses pertencem à Central.

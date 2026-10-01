@@ -1,12 +1,13 @@
--- Esquema do banco, gerado das migrations (V001-V053). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V054). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
--- ATENÇÃO: as mudanças da V053 foram escritas à mão em 01/10/2026 (sem Postgres local). Regerar pelo script e apagar esta linha.
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict gIzxoONWfZPk0GU4abuheBKaaGlbMhblc0gmzxbQWIHjUoVXGiYIyZkOmH7B3yQ
+\restrict IMspefmRB2hHQW06eZKa9e4qQV7WpZwaN0JRlWBQfHrrNkecf3KbTJzyVAwFx0C
+
+
 
 --
 -- Name: public; Type: SCHEMA; Schema: -; Owner: -
@@ -14,11 +15,13 @@
 
 CREATE SCHEMA public;
 
+
 --
 -- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: -
 --
 
 COMMENT ON SCHEMA public IS 'standard public schema';
+
 
 --
 -- Name: condicao_especial; Type: TYPE; Schema: public; Owner: -
@@ -34,6 +37,7 @@ CREATE TYPE public.condicao_especial AS ENUM (
     'OUTRA'
 );
 
+
 --
 -- Name: funcao_escala; Type: TYPE; Schema: public; Owner: -
 --
@@ -48,6 +52,7 @@ CREATE TYPE public.funcao_escala AS ENUM (
     'OUTRO'
 );
 
+
 --
 -- Name: periodo_dia; Type: TYPE; Schema: public; Owner: -
 --
@@ -57,6 +62,7 @@ CREATE TYPE public.periodo_dia AS ENUM (
     'TARDE',
     'NOITE'
 );
+
 
 --
 -- Name: presenca_vaga; Type: TYPE; Schema: public; Owner: -
@@ -68,6 +74,7 @@ CREATE TYPE public.presenca_vaga AS ENUM (
     'FALTOU'
 );
 
+
 --
 -- Name: status_escala; Type: TYPE; Schema: public; Owner: -
 --
@@ -78,6 +85,7 @@ CREATE TYPE public.status_escala AS ENUM (
     'CANCELADA'
 );
 
+
 --
 -- Name: status_inscricao; Type: TYPE; Schema: public; Owner: -
 --
@@ -87,6 +95,7 @@ CREATE TYPE public.status_inscricao AS ENUM (
     'APROVADA',
     'REJEITADA'
 );
+
 
 --
 -- Name: tenant_status; Type: TYPE; Schema: public; Owner: -
@@ -99,6 +108,7 @@ CREATE TYPE public.tenant_status AS ENUM (
     'CANCELADO'
 );
 
+
 --
 -- Name: tipo_escala; Type: TYPE; Schema: public; Owner: -
 --
@@ -107,6 +117,7 @@ CREATE TYPE public.tipo_escala AS ENUM (
     'SEMANAL',
     'MENSAL'
 );
+
 
 --
 -- Name: tipo_voluntario; Type: TYPE; Schema: public; Owner: -
@@ -119,6 +130,7 @@ CREATE TYPE public.tipo_voluntario AS ENUM (
     'MESC'
 );
 
+
 --
 -- Name: usuario_tenant_role; Type: TYPE; Schema: public; Owner: -
 --
@@ -129,6 +141,7 @@ CREATE TYPE public.usuario_tenant_role AS ENUM (
     'VISUALIZADOR'
 );
 
+
 --
 -- Name: usuario_tenant_status; Type: TYPE; Schema: public; Owner: -
 --
@@ -137,6 +150,7 @@ CREATE TYPE public.usuario_tenant_status AS ENUM (
     'ATIVO',
     'INATIVO'
 );
+
 
 --
 -- Name: aprovar_inscricao(uuid); Type: FUNCTION; Schema: public; Owner: -
@@ -149,6 +163,7 @@ CREATE FUNCTION public.aprovar_inscricao(p_inscricao_id uuid) RETURNS uuid
     SELECT private.aprovar_inscricao_impl(p_inscricao_id);
 $$;
 
+
 --
 -- Name: criar_inscricao_publica(jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -159,6 +174,7 @@ CREATE FUNCTION public.criar_inscricao_publica(p_dados jsonb, p_responsaveis jso
     AS $$
     SELECT private.criar_inscricao_impl(p_dados, p_responsaveis);
 $$;
+
 
 --
 -- Name: proximo_sequencial(); Type: FUNCTION; Schema: public; Owner: -
@@ -178,6 +194,7 @@ BEGIN
 END
 $$;
 
+
 --
 -- Name: rejeitar_inscricao(uuid, text); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -188,6 +205,7 @@ CREATE FUNCTION public.rejeitar_inscricao(p_inscricao_id uuid, p_motivo text DEF
     AS $$
     SELECT private.rejeitar_inscricao_impl(p_inscricao_id, p_motivo);
 $$;
+
 
 --
 -- Name: set_updated_at(); Type: FUNCTION; Schema: public; Owner: -
@@ -201,6 +219,9 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+
+
 
 --
 -- Name: audit_log; Type: TABLE; Schema: public; Owner: -
@@ -219,11 +240,13 @@ CREATE TABLE public.audit_log (
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+
 --
 -- Name: TABLE audit_log; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.audit_log IS 'Trilha de auditoria (seção 59) — quem fez o quê, em qual entidade, sem duplicar o conteúdo pessoal em si (só os nomes dos campos alterados).';
+
 
 --
 -- Name: comunicado; Type: TABLE; Schema: public; Owner: -
@@ -249,6 +272,7 @@ CREATE TABLE public.comunicado (
     CONSTRAINT comunicado_status_check CHECK (((status)::text = ANY ((ARRAY['NA_FILA'::character varying, 'ENVIANDO'::character varying, 'CONCLUIDO'::character varying])::text[])))
 );
 
+
 --
 -- Name: comunicado_anexo; Type: TABLE; Schema: public; Owner: -
 --
@@ -262,6 +286,7 @@ CREATE TABLE public.comunicado_anexo (
     tamanho integer NOT NULL,
     conteudo bytea
 );
+
 
 --
 -- Name: comunicado_destinatario; Type: TABLE; Schema: public; Owner: -
@@ -283,6 +308,7 @@ CREATE TABLE public.comunicado_destinatario (
     CONSTRAINT comunicado_destinatario_status_check CHECK (((status)::text = ANY ((ARRAY['PENDENTE'::character varying, 'ENVIADO'::character varying, 'FALHA'::character varying])::text[])))
 );
 
+
 --
 -- Name: diocese; Type: TABLE; Schema: public; Owner: -
 --
@@ -295,11 +321,13 @@ CREATE TABLE public.diocese (
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+
 --
 -- Name: TABLE diocese; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.diocese IS 'Diocese que agrupa paróquias. Só informativa: sem cota nem regra de acesso.';
+
 
 --
 -- Name: direitos_locais; Type: TABLE; Schema: public; Owner: -
@@ -321,11 +349,13 @@ CREATE TABLE public.direitos_locais (
     atualizado_em timestamp with time zone DEFAULT now() NOT NULL
 );
 
+
 --
 -- Name: TABLE direitos_locais; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.direitos_locais IS 'Última versão dos direitos confirmada pela Central. Login e requisição leem daqui; a Central fora do ar não derruba a paróquia até a tolerância (72h).';
+
 
 --
 -- Name: disponibilidade_voluntario; Type: TABLE; Schema: public; Owner: -
@@ -344,11 +374,13 @@ CREATE TABLE public.disponibilidade_voluntario (
     CONSTRAINT disponibilidade_voluntario_dia_xor_data CHECK (((dia_semana IS NOT NULL) <> (data IS NOT NULL)))
 );
 
+
 --
 -- Name: TABLE disponibilidade_voluntario; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.disponibilidade_voluntario IS 'Dias/horários em que um voluntário pode servir — filtro adicional planejado para o picker de candidatos (seção 49), ainda não integrado (ver README.md).';
+
 
 --
 -- Name: escala_eventos; Type: TABLE; Schema: public; Owner: -
@@ -365,11 +397,13 @@ CREATE TABLE public.escala_eventos (
     referencia boolean DEFAULT false NOT NULL
 );
 
+
 --
 -- Name: TABLE escala_eventos; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.escala_eventos IS 'Um evento (missa) dentro de uma escala. O front-end atual apaga e recria todos os eventos de uma escala a cada save (seção 46/16.8 do plano mestre) — comportamento preservado nesta reconstrução, não corrigido aqui.';
+
 
 --
 -- Name: escala_vagas; Type: TABLE; Schema: public; Owner: -
@@ -387,11 +421,13 @@ CREATE TABLE public.escala_vagas (
     CONSTRAINT escala_vagas_posicao_check CHECK ((posicao > 0))
 );
 
+
 --
 -- Name: COLUMN escala_vagas.presenca; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.escala_vagas.presenca IS 'Registro de presença do voluntário nesta vaga, feito pelo coordenador após o evento acontecer. PENDENTE é o valor inicial (evento ainda não ocorreu, ou ainda não foi conferido) — não deve ser confundido com "faltou".';
+
 
 --
 -- Name: escalas; Type: TABLE; Schema: public; Owner: -
@@ -416,6 +452,7 @@ CREATE TABLE public.escalas (
     CONSTRAINT escalas_ano_check CHECK (((ano >= 2020) AND (ano <= 2100))),
     CONSTRAINT escalas_mes_check CHECK (((mes >= 1) AND (mes <= 12)))
 );
+
 
 --
 -- Name: evento; Type: TABLE; Schema: public; Owner: -
@@ -457,6 +494,7 @@ CREATE TABLE public.evento (
     CONSTRAINT evento_vagas_check CHECK (((vagas IS NULL) OR (vagas > 0)))
 );
 
+
 --
 -- Name: evento_foto; Type: TABLE; Schema: public; Owner: -
 --
@@ -469,6 +507,7 @@ CREATE TABLE public.evento_foto (
     capa boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: evento_inscricao; Type: TABLE; Schema: public; Owner: -
@@ -489,6 +528,58 @@ CREATE TABLE public.evento_inscricao (
     lembrete_email_enviado_em timestamp with time zone
 );
 
+
+--
+-- Name: financeiro_categoria; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.financeiro_categoria (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    nome character varying(120) NOT NULL,
+    ativo boolean DEFAULT true NOT NULL
+);
+
+
+--
+-- Name: financeiro_conta; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.financeiro_conta (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    nome character varying(120) NOT NULL,
+    saldo_inicial numeric(14,2) DEFAULT 0 NOT NULL,
+    data_saldo_inicial date NOT NULL,
+    ativo boolean DEFAULT true NOT NULL
+);
+
+
+--
+-- Name: financeiro_movimento; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.financeiro_movimento (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    descricao character varying(200) NOT NULL,
+    tipo character varying(20) NOT NULL,
+    situacao character varying(20) DEFAULT 'PENDENTE'::character varying NOT NULL,
+    valor numeric(14,2) NOT NULL,
+    vencimento date NOT NULL,
+    data_pagamento date,
+    conta_id uuid NOT NULL,
+    categoria_id uuid NOT NULL,
+    observacoes character varying(1000),
+    criado_em timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT financeiro_movimento_check CHECK ((((situacao)::text = 'PAGO'::text) = (data_pagamento IS NOT NULL))),
+    CONSTRAINT financeiro_movimento_situacao_check CHECK (((situacao)::text = ANY ((ARRAY['PENDENTE'::character varying, 'PAGO'::character varying, 'CANCELADO'::character varying])::text[]))),
+    CONSTRAINT financeiro_movimento_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['RECEITA'::character varying, 'DESPESA'::character varying])::text[]))),
+    CONSTRAINT financeiro_movimento_valor_check CHECK ((valor > (0)::numeric))
+);
+
+
 --
 -- Name: flyway_schema_history; Type: TABLE; Schema: public; Owner: -
 --
@@ -506,6 +597,7 @@ CREATE TABLE public.flyway_schema_history (
     success boolean NOT NULL
 );
 
+
 --
 -- Name: indisponibilidade_voluntario; Type: TABLE; Schema: public; Owner: -
 --
@@ -520,6 +612,7 @@ CREATE TABLE public.indisponibilidade_voluntario (
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+
 --
 -- Name: inscricao_email; Type: TABLE; Schema: public; Owner: -
 --
@@ -533,6 +626,7 @@ CREATE TABLE public.inscricao_email (
     principal boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: inscricao_responsaveis; Type: TABLE; Schema: public; Owner: -
@@ -550,6 +644,7 @@ CREATE TABLE public.inscricao_responsaveis (
     parentesco_inverso text
 );
 
+
 --
 -- Name: inscricao_responsavel_email; Type: TABLE; Schema: public; Owner: -
 --
@@ -563,6 +658,7 @@ CREATE TABLE public.inscricao_responsavel_email (
     principal boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: inscricao_responsavel_telefone; Type: TABLE; Schema: public; Owner: -
@@ -578,6 +674,7 @@ CREATE TABLE public.inscricao_responsavel_telefone (
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+
 --
 -- Name: inscricao_telefone; Type: TABLE; Schema: public; Owner: -
 --
@@ -591,6 +688,7 @@ CREATE TABLE public.inscricao_telefone (
     principal boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: inscricoes; Type: TABLE; Schema: public; Owner: -
@@ -640,11 +738,13 @@ CREATE TABLE public.inscricoes (
     CONSTRAINT inscricoes_rejeitada_ck CHECK (((status <> 'REJEITADA'::public.status_inscricao) OR ((data_rejeicao IS NOT NULL) AND (rejeitado_por IS NOT NULL))))
 );
 
+
 --
 -- Name: TABLE inscricoes; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.inscricoes IS 'Cadastros pendentes vindos do formulário público /inscricao. Só pode ser criada via RPC private.criar_inscricao_impl com service_role (ver V011/V013) — nunca por INSERT direto de anon nem authenticated.';
+
 
 --
 -- Name: integracao_nonce; Type: TABLE; Schema: public; Owner: -
@@ -655,6 +755,7 @@ CREATE TABLE public.integracao_nonce (
     nonce text NOT NULL,
     recebido_em timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: integracao_operacao; Type: TABLE; Schema: public; Owner: -
@@ -668,6 +769,7 @@ CREATE TABLE public.integracao_operacao (
     resposta jsonb NOT NULL,
     criado_em timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: layout_envio; Type: TABLE; Schema: public; Owner: -
@@ -689,6 +791,7 @@ CREATE TABLE public.layout_envio (
     CONSTRAINT layout_envio_tipo_layout_check CHECK (((tipo_layout)::text = ANY ((ARRAY['TODOS'::character varying, 'RESPONSAVEL'::character varying, 'COROINHA'::character varying, 'ACOLITO'::character varying, 'COROINHA_ACOLITO'::character varying, 'MINISTRO'::character varying, 'EVENTO'::character varying])::text[])))
 );
 
+
 --
 -- Name: layout_escala; Type: TABLE; Schema: public; Owner: -
 --
@@ -707,6 +810,7 @@ CREATE TABLE public.layout_escala (
     padrao boolean DEFAULT false NOT NULL
 );
 
+
 --
 -- Name: paroquia_whatsapp; Type: TABLE; Schema: public; Owner: -
 --
@@ -718,6 +822,7 @@ CREATE TABLE public.paroquia_whatsapp (
     ativo boolean DEFAULT false NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: password_reset_token; Type: TABLE; Schema: public; Owner: -
@@ -733,17 +838,20 @@ CREATE TABLE public.password_reset_token (
     finalidade text DEFAULT 'RESET'::text NOT NULL
 );
 
+
 --
 -- Name: TABLE password_reset_token; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.password_reset_token IS 'Tokens de "esqueci minha senha" (seção 32 do plano mestre) - nunca armazenar o token puro, só o hash (token_hash). used_at marca uso único: uma vez consumido (ou expirado), o token não pode ser reaproveitado.';
 
+
 --
 -- Name: COLUMN password_reset_token.finalidade; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.password_reset_token.finalidade IS 'RESET ou CONVITE. O convite também define a senha; o usuário nunca recebe senha pronta.';
+
 
 --
 -- Name: perfil; Type: TABLE; Schema: public; Owner: -
@@ -761,11 +869,13 @@ CREATE TABLE public.perfil (
     sequencial bigint NOT NULL
 );
 
+
 --
 -- Name: TABLE perfil; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.perfil IS 'Perfil de acesso da paróquia. acesso_total libera o catálogo inteiro, inclusive permissão criada depois. sistema marca o Administrador, que não pode ser inativado.';
+
 
 --
 -- Name: perfil_permissao; Type: TABLE; Schema: public; Owner: -
@@ -776,6 +886,7 @@ CREATE TABLE public.perfil_permissao (
     perfil_id uuid NOT NULL,
     permissao text NOT NULL
 );
+
 
 --
 -- Name: pessoa; Type: TABLE; Schema: public; Owner: -
@@ -810,11 +921,13 @@ CREATE TABLE public.pessoa (
     CONSTRAINT pessoa_nivel_suporte_tea_check CHECK (((nivel_suporte_tea >= 1) AND (nivel_suporte_tea <= 3)))
 );
 
+
 --
 -- Name: TABLE pessoa; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.pessoa IS 'Identidade do cadastro. Papéis não são exclusivos: e_voluntario e e_responsavel podem coexistir.';
+
 
 --
 -- Name: COLUMN pessoa.e_voluntario; Type: COMMENT; Schema: public; Owner: -
@@ -822,11 +935,13 @@ COMMENT ON TABLE public.pessoa IS 'Identidade do cadastro. Papéis não são exc
 
 COMMENT ON COLUMN public.pessoa.e_voluntario IS 'Tem (ou terá) perfil em voluntarios. Relação com responsável é opcional.';
 
+
 --
 -- Name: COLUMN pessoa.e_responsavel; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.pessoa.e_responsavel IS 'Pode aparecer no lado responsável de pessoa_relacao.';
+
 
 --
 -- Name: pessoa_email; Type: TABLE; Schema: public; Owner: -
@@ -841,6 +956,7 @@ CREATE TABLE public.pessoa_email (
     principal boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: pessoa_relacao; Type: TABLE; Schema: public; Owner: -
@@ -858,17 +974,20 @@ CREATE TABLE public.pessoa_relacao (
     CONSTRAINT pessoa_relacao_distintos CHECK ((responsavel_id <> voluntario_id))
 );
 
+
 --
 -- Name: COLUMN pessoa_relacao.parentesco; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.pessoa_relacao.parentesco IS 'Rótulo do lado do responsável (ex.: Pai, Mãe, Tia) — o "é" da tela.';
 
+
 --
 -- Name: COLUMN pessoa_relacao.parentesco_inverso; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.pessoa_relacao.parentesco_inverso IS 'Rótulo do lado do voluntário (ex.: Filho) — o inverso do "é / de".';
+
 
 --
 -- Name: pessoa_telefone; Type: TABLE; Schema: public; Owner: -
@@ -883,6 +1002,7 @@ CREATE TABLE public.pessoa_telefone (
     principal boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: refresh_token; Type: TABLE; Schema: public; Owner: -
@@ -900,11 +1020,13 @@ CREATE TABLE public.refresh_token (
     user_agent text
 );
 
+
 --
 -- Name: TABLE refresh_token; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.refresh_token IS 'Refresh tokens com rotation (seção 36 do plano mestre) - nunca armazenar o token puro, só o hash (token_hash). Reutilização de um token já revogado (revoked_at preenchido) deve ser tratada como evento de segurança quando a Fase 5 implementar o fluxo de refresh.';
+
 
 --
 -- Name: resposta_indisponibilidade; Type: TABLE; Schema: public; Owner: -
@@ -921,6 +1043,7 @@ CREATE TABLE public.resposta_indisponibilidade (
     CONSTRAINT resposta_indisponibilidade_mes_check CHECK (((mes >= 1) AND (mes <= 12)))
 );
 
+
 --
 -- Name: suporte_codigo; Type: TABLE; Schema: public; Owner: -
 --
@@ -935,6 +1058,7 @@ CREATE TABLE public.suporte_codigo (
     expira_em timestamp with time zone NOT NULL,
     usado_em timestamp with time zone
 );
+
 
 --
 -- Name: tenant; Type: TABLE; Schema: public; Owner: -
@@ -963,11 +1087,13 @@ CREATE TABLE public.tenant (
     diocese_id uuid
 );
 
+
 --
 -- Name: TABLE tenant; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.tenant IS 'Cada linha é uma paróquia (tenant) do SaaS. Tabela global do "Master lógico" (seção 25 do plano mestre) - não possui tenant_id, ela é a raiz da hierarquia multi-tenant.';
+
 
 --
 -- Name: COLUMN tenant.slug; Type: COMMENT; Schema: public; Owner: -
@@ -975,11 +1101,13 @@ COMMENT ON TABLE public.tenant IS 'Cada linha é uma paróquia (tenant) do SaaS.
 
 COMMENT ON COLUMN public.tenant.slug IS 'Identificador público usado em URLs (ex.: /public/paroquia-sao-jose/inscricoes, seção 21 do plano mestre).';
 
+
 --
 -- Name: COLUMN tenant.status; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.tenant.status IS 'Autoridade central de acesso (Kill Switch, seção 28): ATIVO/TRIAL liberam acesso normal; BLOQUEADO/CANCELADO negam acesso totalmente (decidido em 21/09/2026 - sem modo somente leitura).';
+
 
 --
 -- Name: COLUMN tenant.ultimo_pagamento_em; Type: COMMENT; Schema: public; Owner: -
@@ -987,17 +1115,20 @@ COMMENT ON COLUMN public.tenant.status IS 'Autoridade central de acesso (Kill Sw
 
 COMMENT ON COLUMN public.tenant.ultimo_pagamento_em IS 'Última vez que o operador marcou o PIX como recebido (MVP sem gateway, seção 131.3). Não substitui a tabela cobranca da Fase 12.';
 
+
 --
 -- Name: COLUMN tenant.vigencia_ate; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.tenant.vigencia_ate IS 'Fim da vigência (trial de 7 dias na criação, seção 131.3; depois o operador ajusta / marcar pago). Usado no filtro "quando vai acabar".';
 
+
 --
 -- Name: COLUMN tenant.diocese_id; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.tenant.diocese_id IS 'Diocese da paróquia. Nulo = sem vínculo; a cota diocesana não se aplica.';
+
 
 --
 -- Name: tenant_email; Type: TABLE; Schema: public; Owner: -
@@ -1012,6 +1143,7 @@ CREATE TABLE public.tenant_email (
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
+
 --
 -- Name: tenant_sequencial; Type: TABLE; Schema: public; Owner: -
 --
@@ -1021,6 +1153,7 @@ CREATE TABLE public.tenant_sequencial (
     tabela character varying(40) NOT NULL,
     ultimo bigint NOT NULL
 );
+
 
 --
 -- Name: tenant_telefone; Type: TABLE; Schema: public; Owner: -
@@ -1034,6 +1167,7 @@ CREATE TABLE public.tenant_telefone (
     principal boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
 
 --
 -- Name: usuario; Type: TABLE; Schema: public; Owner: -
@@ -1051,17 +1185,20 @@ CREATE TABLE public.usuario (
     tipo_telefone text
 );
 
+
 --
 -- Name: TABLE usuario; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.usuario IS 'Usuário global do SaaS (Master lógico, seção 25) - pode estar vinculado a mais de uma paróquia via usuario_tenant (seção 29).';
 
+
 --
 -- Name: COLUMN usuario.senha_hash; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.usuario.senha_hash IS 'Hash Argon2 ou BCrypt (seção 32 do plano mestre) - nunca senha reversível. Nullable por enquanto: a Fase 5 (autenticação própria) é quem efetivamente popula/usa esta coluna; até lá a tabela existe só como parte do modelo.';
+
 
 --
 -- Name: usuario_tenant; Type: TABLE; Schema: public; Owner: -
@@ -1078,11 +1215,13 @@ CREATE TABLE public.usuario_tenant (
     sequencial bigint NOT NULL
 );
 
+
 --
 -- Name: TABLE usuario_tenant; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.usuario_tenant IS 'Vínculo N:N usuário<->paróquia (seção 29 do plano mestre). A chave primária composta já garante o UNIQUE (usuario_id, tenant_id) pedido na seção 29. Um usuário sem linha status=ATIVO aqui para um tenant não deve conseguir acessar aquele tenant (Kill Switch, seção 28).';
+
 
 --
 -- Name: voluntarios; Type: TABLE; Schema: public; Owner: -
@@ -1108,11 +1247,13 @@ CREATE TABLE public.voluntarios (
     CONSTRAINT voluntarios_mandato_ordem CHECK (((mandato_fim IS NULL) OR (mandato_inicio IS NULL) OR (mandato_fim >= mandato_inicio)))
 );
 
+
 --
 -- Name: TABLE voluntarios; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON TABLE public.voluntarios IS 'Coroinhas/acólitos ativos e inativos. Dados de menores de idade — tratar como sensível (LGPD, seção 58 do plano mestre).';
+
 
 --
 -- Name: COLUMN voluntarios.mandato_inicio; Type: COMMENT; Schema: public; Owner: -
@@ -1120,11 +1261,13 @@ COMMENT ON TABLE public.voluntarios IS 'Coroinhas/acólitos ativos e inativos. D
 
 COMMENT ON COLUMN public.voluntarios.mandato_inicio IS 'Data de investidura do mandato. Opcional; usada sobretudo no MESC.';
 
+
 --
 -- Name: COLUMN voluntarios.mandato_fim; Type: COMMENT; Schema: public; Owner: -
 --
 
 COMMENT ON COLUMN public.voluntarios.mandato_fim IS 'Vencimento do mandato diocesano. Nulo = sem prazo cadastrado.';
+
 
 --
 -- Name: vw_voluntario_compromissos; Type: VIEW; Schema: public; Owner: -
@@ -1144,12 +1287,14 @@ CREATE VIEW public.vw_voluntario_compromissos WITH (security_invoker='true') AS
      JOIN public.escalas s ON ((s.id = e.escala_id)))
   WHERE (v.voluntario_id IS NOT NULL);
 
+
 --
 -- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.audit_log
     ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: comunicado_anexo comunicado_anexo_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1158,12 +1303,14 @@ ALTER TABLE ONLY public.audit_log
 ALTER TABLE ONLY public.comunicado_anexo
     ADD CONSTRAINT comunicado_anexo_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: comunicado_destinatario comunicado_destinatario_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.comunicado_destinatario
     ADD CONSTRAINT comunicado_destinatario_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: comunicado comunicado_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1172,12 +1319,14 @@ ALTER TABLE ONLY public.comunicado_destinatario
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT comunicado_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: comunicado comunicado_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT comunicado_tenant_id_id_key UNIQUE (tenant_id, id);
+
 
 --
 -- Name: diocese diocese_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1186,12 +1335,14 @@ ALTER TABLE ONLY public.comunicado
 ALTER TABLE ONLY public.diocese
     ADD CONSTRAINT diocese_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: direitos_locais direitos_locais_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.direitos_locais
     ADD CONSTRAINT direitos_locais_pkey PRIMARY KEY (tenant_id);
+
 
 --
 -- Name: disponibilidade_voluntario disponibilidade_voluntario_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1200,12 +1351,14 @@ ALTER TABLE ONLY public.direitos_locais
 ALTER TABLE ONLY public.disponibilidade_voluntario
     ADD CONSTRAINT disponibilidade_voluntario_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: escala_eventos escala_eventos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.escala_eventos
     ADD CONSTRAINT escala_eventos_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: escala_eventos escala_eventos_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1214,12 +1367,14 @@ ALTER TABLE ONLY public.escala_eventos
 ALTER TABLE ONLY public.escala_eventos
     ADD CONSTRAINT escala_eventos_tenant_id_id_key UNIQUE (tenant_id, id);
 
+
 --
 -- Name: escala_vagas escala_vagas_evento_id_funcao_posicao_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.escala_vagas
     ADD CONSTRAINT escala_vagas_evento_id_funcao_posicao_key UNIQUE (evento_id, funcao, posicao);
+
 
 --
 -- Name: escala_vagas escala_vagas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1228,12 +1383,14 @@ ALTER TABLE ONLY public.escala_vagas
 ALTER TABLE ONLY public.escala_vagas
     ADD CONSTRAINT escala_vagas_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: escalas escalas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.escalas
     ADD CONSTRAINT escalas_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: escalas escalas_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1242,12 +1399,14 @@ ALTER TABLE ONLY public.escalas
 ALTER TABLE ONLY public.escalas
     ADD CONSTRAINT escalas_tenant_id_id_key UNIQUE (tenant_id, id);
 
+
 --
 -- Name: evento_foto evento_foto_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evento_foto
     ADD CONSTRAINT evento_foto_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: evento_inscricao evento_inscricao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1256,12 +1415,14 @@ ALTER TABLE ONLY public.evento_foto
 ALTER TABLE ONLY public.evento_inscricao
     ADD CONSTRAINT evento_inscricao_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: evento_inscricao evento_inscricao_unica; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evento_inscricao
     ADD CONSTRAINT evento_inscricao_unica UNIQUE (evento_id, pessoa_id);
+
 
 --
 -- Name: evento evento_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1270,12 +1431,54 @@ ALTER TABLE ONLY public.evento_inscricao
 ALTER TABLE ONLY public.evento
     ADD CONSTRAINT evento_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: evento evento_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evento
     ADD CONSTRAINT evento_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: financeiro_categoria financeiro_categoria_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_categoria
+    ADD CONSTRAINT financeiro_categoria_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: financeiro_categoria financeiro_categoria_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_categoria
+    ADD CONSTRAINT financeiro_categoria_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: financeiro_conta financeiro_conta_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_conta
+    ADD CONSTRAINT financeiro_conta_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: financeiro_conta financeiro_conta_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_conta
+    ADD CONSTRAINT financeiro_conta_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: financeiro_movimento financeiro_movimento_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_movimento
+    ADD CONSTRAINT financeiro_movimento_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: flyway_schema_history flyway_schema_history_pk; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1284,12 +1487,14 @@ ALTER TABLE ONLY public.evento
 ALTER TABLE ONLY public.flyway_schema_history
     ADD CONSTRAINT flyway_schema_history_pk PRIMARY KEY (installed_rank);
 
+
 --
 -- Name: indisponibilidade_voluntario indisponibilidade_voluntario_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.indisponibilidade_voluntario
     ADD CONSTRAINT indisponibilidade_voluntario_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: indisponibilidade_voluntario indisponibilidade_voluntario_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1298,12 +1503,14 @@ ALTER TABLE ONLY public.indisponibilidade_voluntario
 ALTER TABLE ONLY public.indisponibilidade_voluntario
     ADD CONSTRAINT indisponibilidade_voluntario_tenant_id_id_key UNIQUE (tenant_id, id);
 
+
 --
 -- Name: inscricao_email inscricao_email_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricao_email
     ADD CONSTRAINT inscricao_email_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: inscricao_responsaveis inscricao_responsaveis_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1312,12 +1519,14 @@ ALTER TABLE ONLY public.inscricao_email
 ALTER TABLE ONLY public.inscricao_responsaveis
     ADD CONSTRAINT inscricao_responsaveis_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: inscricao_responsavel_email inscricao_responsavel_email_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricao_responsavel_email
     ADD CONSTRAINT inscricao_responsavel_email_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: inscricao_responsavel_telefone inscricao_responsavel_telefone_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1326,12 +1535,14 @@ ALTER TABLE ONLY public.inscricao_responsavel_email
 ALTER TABLE ONLY public.inscricao_responsavel_telefone
     ADD CONSTRAINT inscricao_responsavel_telefone_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: inscricao_telefone inscricao_telefone_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricao_telefone
     ADD CONSTRAINT inscricao_telefone_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: inscricoes inscricoes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1340,12 +1551,14 @@ ALTER TABLE ONLY public.inscricao_telefone
 ALTER TABLE ONLY public.inscricoes
     ADD CONSTRAINT inscricoes_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: inscricoes inscricoes_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricoes
     ADD CONSTRAINT inscricoes_tenant_id_id_key UNIQUE (tenant_id, id);
+
 
 --
 -- Name: inscricoes inscricoes_voluntario_id_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1354,12 +1567,14 @@ ALTER TABLE ONLY public.inscricoes
 ALTER TABLE ONLY public.inscricoes
     ADD CONSTRAINT inscricoes_voluntario_id_key UNIQUE (voluntario_id);
 
+
 --
 -- Name: integracao_nonce integracao_nonce_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.integracao_nonce
     ADD CONSTRAINT integracao_nonce_pkey PRIMARY KEY (chave_id, nonce);
+
 
 --
 -- Name: integracao_operacao integracao_operacao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1368,12 +1583,14 @@ ALTER TABLE ONLY public.integracao_nonce
 ALTER TABLE ONLY public.integracao_operacao
     ADD CONSTRAINT integracao_operacao_pkey PRIMARY KEY (idempotency_key);
 
+
 --
 -- Name: layout_envio layout_envio_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.layout_envio
     ADD CONSTRAINT layout_envio_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: layout_envio layout_envio_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1382,12 +1599,14 @@ ALTER TABLE ONLY public.layout_envio
 ALTER TABLE ONLY public.layout_envio
     ADD CONSTRAINT layout_envio_tenant_id_id_key UNIQUE (tenant_id, id);
 
+
 --
 -- Name: layout_escala layout_escala_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.layout_escala
     ADD CONSTRAINT layout_escala_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: layout_escala layout_escala_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1396,12 +1615,14 @@ ALTER TABLE ONLY public.layout_escala
 ALTER TABLE ONLY public.layout_escala
     ADD CONSTRAINT layout_escala_tenant_id_id_key UNIQUE (tenant_id, id);
 
+
 --
 -- Name: paroquia_whatsapp paroquia_whatsapp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.paroquia_whatsapp
     ADD CONSTRAINT paroquia_whatsapp_pkey PRIMARY KEY (tenant_id);
+
 
 --
 -- Name: password_reset_token password_reset_token_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1410,12 +1631,14 @@ ALTER TABLE ONLY public.paroquia_whatsapp
 ALTER TABLE ONLY public.password_reset_token
     ADD CONSTRAINT password_reset_token_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: password_reset_token password_reset_token_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.password_reset_token
     ADD CONSTRAINT password_reset_token_token_hash_key UNIQUE (token_hash);
+
 
 --
 -- Name: perfil perfil_nome_por_paroquia; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1424,12 +1647,14 @@ ALTER TABLE ONLY public.password_reset_token
 ALTER TABLE ONLY public.perfil
     ADD CONSTRAINT perfil_nome_por_paroquia UNIQUE (tenant_id, nome);
 
+
 --
 -- Name: perfil_permissao perfil_permissao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.perfil_permissao
     ADD CONSTRAINT perfil_permissao_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: perfil_permissao perfil_permissao_unica; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1438,12 +1663,14 @@ ALTER TABLE ONLY public.perfil_permissao
 ALTER TABLE ONLY public.perfil_permissao
     ADD CONSTRAINT perfil_permissao_unica UNIQUE (perfil_id, permissao);
 
+
 --
 -- Name: perfil perfil_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.perfil
     ADD CONSTRAINT perfil_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: pessoa_email pessoa_email_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1452,12 +1679,14 @@ ALTER TABLE ONLY public.perfil
 ALTER TABLE ONLY public.pessoa_email
     ADD CONSTRAINT pessoa_email_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: pessoa pessoa_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pessoa
     ADD CONSTRAINT pessoa_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: pessoa_relacao pessoa_relacao_par_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1466,12 +1695,14 @@ ALTER TABLE ONLY public.pessoa
 ALTER TABLE ONLY public.pessoa_relacao
     ADD CONSTRAINT pessoa_relacao_par_key UNIQUE (responsavel_id, voluntario_id);
 
+
 --
 -- Name: pessoa_relacao pessoa_relacao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pessoa_relacao
     ADD CONSTRAINT pessoa_relacao_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: pessoa_telefone pessoa_telefone_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1480,12 +1711,14 @@ ALTER TABLE ONLY public.pessoa_relacao
 ALTER TABLE ONLY public.pessoa_telefone
     ADD CONSTRAINT pessoa_telefone_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: pessoa pessoa_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pessoa
     ADD CONSTRAINT pessoa_tenant_id_id_key UNIQUE (tenant_id, id);
+
 
 --
 -- Name: refresh_token refresh_token_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1494,12 +1727,14 @@ ALTER TABLE ONLY public.pessoa
 ALTER TABLE ONLY public.refresh_token
     ADD CONSTRAINT refresh_token_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: refresh_token refresh_token_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.refresh_token
     ADD CONSTRAINT refresh_token_token_hash_key UNIQUE (token_hash);
+
 
 --
 -- Name: resposta_indisponibilidade resposta_indisponibilidade_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1508,12 +1743,14 @@ ALTER TABLE ONLY public.refresh_token
 ALTER TABLE ONLY public.resposta_indisponibilidade
     ADD CONSTRAINT resposta_indisponibilidade_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: suporte_codigo suporte_codigo_hash_codigo_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.suporte_codigo
     ADD CONSTRAINT suporte_codigo_hash_codigo_key UNIQUE (hash_codigo);
+
 
 --
 -- Name: suporte_codigo suporte_codigo_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1522,12 +1759,14 @@ ALTER TABLE ONLY public.suporte_codigo
 ALTER TABLE ONLY public.suporte_codigo
     ADD CONSTRAINT suporte_codigo_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: tenant tenant_codigo_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tenant
     ADD CONSTRAINT tenant_codigo_key UNIQUE (codigo);
+
 
 --
 -- Name: tenant_email tenant_email_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1536,12 +1775,14 @@ ALTER TABLE ONLY public.tenant
 ALTER TABLE ONLY public.tenant_email
     ADD CONSTRAINT tenant_email_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: tenant tenant_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tenant
     ADD CONSTRAINT tenant_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: tenant_sequencial tenant_sequencial_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1550,12 +1791,14 @@ ALTER TABLE ONLY public.tenant
 ALTER TABLE ONLY public.tenant_sequencial
     ADD CONSTRAINT tenant_sequencial_pkey PRIMARY KEY (tenant_id, tabela);
 
+
 --
 -- Name: tenant tenant_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tenant
     ADD CONSTRAINT tenant_slug_key UNIQUE (slug);
+
 
 --
 -- Name: tenant_telefone tenant_telefone_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1564,12 +1807,14 @@ ALTER TABLE ONLY public.tenant
 ALTER TABLE ONLY public.tenant_telefone
     ADD CONSTRAINT tenant_telefone_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: escalas uq_escalas_sequencial; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.escalas
     ADD CONSTRAINT uq_escalas_sequencial UNIQUE (tenant_id, sequencial);
+
 
 --
 -- Name: inscricoes uq_inscricoes_sequencial; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1578,12 +1823,14 @@ ALTER TABLE ONLY public.escalas
 ALTER TABLE ONLY public.inscricoes
     ADD CONSTRAINT uq_inscricoes_sequencial UNIQUE (tenant_id, sequencial);
 
+
 --
 -- Name: perfil uq_perfil_sequencial; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.perfil
     ADD CONSTRAINT uq_perfil_sequencial UNIQUE (tenant_id, sequencial);
+
 
 --
 -- Name: pessoa uq_pessoa_sequencial; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1592,12 +1839,14 @@ ALTER TABLE ONLY public.perfil
 ALTER TABLE ONLY public.pessoa
     ADD CONSTRAINT uq_pessoa_sequencial UNIQUE (tenant_id, sequencial);
 
+
 --
 -- Name: usuario_tenant uq_usuario_tenant_sequencial; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.usuario_tenant
     ADD CONSTRAINT uq_usuario_tenant_sequencial UNIQUE (tenant_id, sequencial);
+
 
 --
 -- Name: usuario usuario_email_key; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1606,12 +1855,14 @@ ALTER TABLE ONLY public.usuario_tenant
 ALTER TABLE ONLY public.usuario
     ADD CONSTRAINT usuario_email_key UNIQUE (email);
 
+
 --
 -- Name: usuario usuario_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.usuario
     ADD CONSTRAINT usuario_pkey PRIMARY KEY (id);
+
 
 --
 -- Name: usuario_tenant usuario_tenant_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1620,12 +1871,14 @@ ALTER TABLE ONLY public.usuario
 ALTER TABLE ONLY public.usuario_tenant
     ADD CONSTRAINT usuario_tenant_pkey PRIMARY KEY (usuario_id, tenant_id);
 
+
 --
 -- Name: resposta_indisponibilidade ux_resposta_voluntario_mes; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.resposta_indisponibilidade
     ADD CONSTRAINT ux_resposta_voluntario_mes UNIQUE (tenant_id, voluntario_id, ano, mes);
+
 
 --
 -- Name: voluntarios voluntarios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
@@ -1634,6 +1887,7 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 ALTER TABLE ONLY public.voluntarios
     ADD CONSTRAINT voluntarios_pkey PRIMARY KEY (id);
 
+
 --
 -- Name: voluntarios voluntarios_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -1641,11 +1895,13 @@ ALTER TABLE ONLY public.voluntarios
 ALTER TABLE ONLY public.voluntarios
     ADD CONSTRAINT voluntarios_tenant_id_id_key UNIQUE (tenant_id, id);
 
+
 --
 -- Name: diocese_nome_lower_key; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX diocese_nome_lower_key ON public.diocese USING btree (lower(nome));
+
 
 --
 -- Name: flyway_schema_history_s_idx; Type: INDEX; Schema: public; Owner: -
@@ -1653,11 +1909,13 @@ CREATE UNIQUE INDEX diocese_nome_lower_key ON public.diocese USING btree (lower(
 
 CREATE INDEX flyway_schema_history_s_idx ON public.flyway_schema_history USING btree (success);
 
+
 --
 -- Name: idx_anexo_comunicado; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_anexo_comunicado ON public.comunicado_anexo USING btree (comunicado_id);
+
 
 --
 -- Name: idx_audit_log_tenant_created_at; Type: INDEX; Schema: public; Owner: -
@@ -1665,11 +1923,13 @@ CREATE INDEX idx_anexo_comunicado ON public.comunicado_anexo USING btree (comuni
 
 CREATE INDEX idx_audit_log_tenant_created_at ON public.audit_log USING btree (tenant_id, created_at DESC);
 
+
 --
 -- Name: idx_audit_log_tenant_entidade; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_audit_log_tenant_entidade ON public.audit_log USING btree (tenant_id, entidade, entidade_id);
+
 
 --
 -- Name: idx_comunicado_tenant_created; Type: INDEX; Schema: public; Owner: -
@@ -1677,11 +1937,13 @@ CREATE INDEX idx_audit_log_tenant_entidade ON public.audit_log USING btree (tena
 
 CREATE INDEX idx_comunicado_tenant_created ON public.comunicado USING btree (tenant_id, created_at DESC);
 
+
 --
 -- Name: idx_destinatario_comunicado; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_destinatario_comunicado ON public.comunicado_destinatario USING btree (comunicado_id);
+
 
 --
 -- Name: idx_destinatario_tenant_status; Type: INDEX; Schema: public; Owner: -
@@ -1689,11 +1951,13 @@ CREATE INDEX idx_destinatario_comunicado ON public.comunicado_destinatario USING
 
 CREATE INDEX idx_destinatario_tenant_status ON public.comunicado_destinatario USING btree (tenant_id, status);
 
+
 --
 -- Name: idx_disponibilidade_voluntario_tenant; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_disponibilidade_voluntario_tenant ON public.disponibilidade_voluntario USING btree (tenant_id);
+
 
 --
 -- Name: idx_escala_eventos_tenant_escala; Type: INDEX; Schema: public; Owner: -
@@ -1701,11 +1965,13 @@ CREATE INDEX idx_disponibilidade_voluntario_tenant ON public.disponibilidade_vol
 
 CREATE INDEX idx_escala_eventos_tenant_escala ON public.escala_eventos USING btree (tenant_id, escala_id);
 
+
 --
 -- Name: idx_escala_eventos_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_escala_eventos_tenant_id ON public.escala_eventos USING btree (tenant_id);
+
 
 --
 -- Name: idx_escala_vagas_tenant_evento; Type: INDEX; Schema: public; Owner: -
@@ -1713,11 +1979,13 @@ CREATE INDEX idx_escala_eventos_tenant_id ON public.escala_eventos USING btree (
 
 CREATE INDEX idx_escala_vagas_tenant_evento ON public.escala_vagas USING btree (tenant_id, evento_id);
 
+
 --
 -- Name: idx_escala_vagas_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_escala_vagas_tenant_id ON public.escala_vagas USING btree (tenant_id);
+
 
 --
 -- Name: idx_escala_vagas_tenant_voluntario; Type: INDEX; Schema: public; Owner: -
@@ -1725,11 +1993,13 @@ CREATE INDEX idx_escala_vagas_tenant_id ON public.escala_vagas USING btree (tena
 
 CREATE INDEX idx_escala_vagas_tenant_voluntario ON public.escala_vagas USING btree (tenant_id, voluntario_id);
 
+
 --
 -- Name: idx_escalas_ano_mes; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_escalas_ano_mes ON public.escalas USING btree (ano, mes);
+
 
 --
 -- Name: idx_escalas_status; Type: INDEX; Schema: public; Owner: -
@@ -1737,11 +2007,13 @@ CREATE INDEX idx_escalas_ano_mes ON public.escalas USING btree (ano, mes);
 
 CREATE INDEX idx_escalas_status ON public.escalas USING btree (status);
 
+
 --
 -- Name: idx_escalas_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_escalas_tenant_id ON public.escalas USING btree (tenant_id);
+
 
 --
 -- Name: idx_evento_foto_evento; Type: INDEX; Schema: public; Owner: -
@@ -1749,11 +2021,13 @@ CREATE INDEX idx_escalas_tenant_id ON public.escalas USING btree (tenant_id);
 
 CREATE INDEX idx_evento_foto_evento ON public.evento_foto USING btree (evento_id);
 
+
 --
 -- Name: idx_evento_inscricao_evento; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_evento_inscricao_evento ON public.evento_inscricao USING btree (evento_id);
+
 
 --
 -- Name: idx_evento_tenant_inicio; Type: INDEX; Schema: public; Owner: -
@@ -1761,11 +2035,13 @@ CREATE INDEX idx_evento_inscricao_evento ON public.evento_inscricao USING btree 
 
 CREATE INDEX idx_evento_tenant_inicio ON public.evento USING btree (tenant_id, inicio);
 
+
 --
 -- Name: idx_indisponibilidade_tenant_data; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_indisponibilidade_tenant_data ON public.indisponibilidade_voluntario USING btree (tenant_id, data);
+
 
 --
 -- Name: idx_inscricao_responsaveis_tenant_id; Type: INDEX; Schema: public; Owner: -
@@ -1773,11 +2049,13 @@ CREATE INDEX idx_indisponibilidade_tenant_data ON public.indisponibilidade_volun
 
 CREATE INDEX idx_inscricao_responsaveis_tenant_id ON public.inscricao_responsaveis USING btree (tenant_id);
 
+
 --
 -- Name: idx_inscricoes_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_inscricoes_tenant_id ON public.inscricoes USING btree (tenant_id);
+
 
 --
 -- Name: idx_inscricoes_tenant_status; Type: INDEX; Schema: public; Owner: -
@@ -1785,11 +2063,13 @@ CREATE INDEX idx_inscricoes_tenant_id ON public.inscricoes USING btree (tenant_i
 
 CREATE INDEX idx_inscricoes_tenant_status ON public.inscricoes USING btree (tenant_id, status);
 
+
 --
 -- Name: idx_integracao_nonce_recebido; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_integracao_nonce_recebido ON public.integracao_nonce USING btree (recebido_em);
+
 
 --
 -- Name: idx_layout_envio_tenant_nome; Type: INDEX; Schema: public; Owner: -
@@ -1797,11 +2077,13 @@ CREATE INDEX idx_integracao_nonce_recebido ON public.integracao_nonce USING btre
 
 CREATE UNIQUE INDEX idx_layout_envio_tenant_nome ON public.layout_envio USING btree (tenant_id, lower((nome)::text));
 
+
 --
 -- Name: idx_password_reset_token_expires_at; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_password_reset_token_expires_at ON public.password_reset_token USING btree (expires_at);
+
 
 --
 -- Name: idx_password_reset_token_usuario_id; Type: INDEX; Schema: public; Owner: -
@@ -1809,11 +2091,13 @@ CREATE INDEX idx_password_reset_token_expires_at ON public.password_reset_token 
 
 CREATE INDEX idx_password_reset_token_usuario_id ON public.password_reset_token USING btree (usuario_id);
 
+
 --
 -- Name: idx_perfil_tenant; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_perfil_tenant ON public.perfil USING btree (tenant_id);
+
 
 --
 -- Name: idx_pessoa_email_lookup; Type: INDEX; Schema: public; Owner: -
@@ -1821,11 +2105,13 @@ CREATE INDEX idx_perfil_tenant ON public.perfil USING btree (tenant_id);
 
 CREATE INDEX idx_pessoa_email_lookup ON public.pessoa_email USING btree (tenant_id, lower(email)) WHERE (principal = true);
 
+
 --
 -- Name: idx_pessoa_email_tenant; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_pessoa_email_tenant ON public.pessoa_email USING btree (tenant_id);
+
 
 --
 -- Name: idx_pessoa_nome_fts; Type: INDEX; Schema: public; Owner: -
@@ -1833,11 +2119,13 @@ CREATE INDEX idx_pessoa_email_tenant ON public.pessoa_email USING btree (tenant_
 
 CREATE INDEX idx_pessoa_nome_fts ON public.pessoa USING gin (to_tsvector('portuguese'::regconfig, nome_completo));
 
+
 --
 -- Name: idx_pessoa_relacao_responsavel; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_pessoa_relacao_responsavel ON public.pessoa_relacao USING btree (responsavel_id);
+
 
 --
 -- Name: idx_pessoa_relacao_tenant; Type: INDEX; Schema: public; Owner: -
@@ -1845,11 +2133,13 @@ CREATE INDEX idx_pessoa_relacao_responsavel ON public.pessoa_relacao USING btree
 
 CREATE INDEX idx_pessoa_relacao_tenant ON public.pessoa_relacao USING btree (tenant_id);
 
+
 --
 -- Name: idx_pessoa_relacao_voluntario; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_pessoa_relacao_voluntario ON public.pessoa_relacao USING btree (voluntario_id);
+
 
 --
 -- Name: idx_pessoa_telefone_tenant; Type: INDEX; Schema: public; Owner: -
@@ -1857,11 +2147,13 @@ CREATE INDEX idx_pessoa_relacao_voluntario ON public.pessoa_relacao USING btree 
 
 CREATE INDEX idx_pessoa_telefone_tenant ON public.pessoa_telefone USING btree (tenant_id);
 
+
 --
 -- Name: idx_pessoa_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_pessoa_tenant_id ON public.pessoa USING btree (tenant_id);
+
 
 --
 -- Name: idx_pessoa_tenant_responsavel; Type: INDEX; Schema: public; Owner: -
@@ -1869,11 +2161,13 @@ CREATE INDEX idx_pessoa_tenant_id ON public.pessoa USING btree (tenant_id);
 
 CREATE INDEX idx_pessoa_tenant_responsavel ON public.pessoa USING btree (tenant_id) WHERE e_responsavel;
 
+
 --
 -- Name: idx_pessoa_tenant_voluntario; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_pessoa_tenant_voluntario ON public.pessoa USING btree (tenant_id) WHERE e_voluntario;
+
 
 --
 -- Name: idx_refresh_token_expires_at; Type: INDEX; Schema: public; Owner: -
@@ -1881,11 +2175,13 @@ CREATE INDEX idx_pessoa_tenant_voluntario ON public.pessoa USING btree (tenant_i
 
 CREATE INDEX idx_refresh_token_expires_at ON public.refresh_token USING btree (expires_at);
 
+
 --
 -- Name: idx_refresh_token_usuario_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_refresh_token_usuario_id ON public.refresh_token USING btree (usuario_id);
+
 
 --
 -- Name: idx_tenant_diocese; Type: INDEX; Schema: public; Owner: -
@@ -1893,11 +2189,13 @@ CREATE INDEX idx_refresh_token_usuario_id ON public.refresh_token USING btree (u
 
 CREATE INDEX idx_tenant_diocese ON public.tenant USING btree (diocese_id);
 
+
 --
 -- Name: idx_tenant_email_tenant; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_tenant_email_tenant ON public.tenant_email USING btree (tenant_id);
+
 
 --
 -- Name: idx_tenant_telefone_tenant; Type: INDEX; Schema: public; Owner: -
@@ -1905,11 +2203,13 @@ CREATE INDEX idx_tenant_email_tenant ON public.tenant_email USING btree (tenant_
 
 CREATE INDEX idx_tenant_telefone_tenant ON public.tenant_telefone USING btree (tenant_id);
 
+
 --
 -- Name: idx_usuario_tenant_perfil; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_usuario_tenant_perfil ON public.usuario_tenant USING btree (perfil_id);
+
 
 --
 -- Name: idx_usuario_tenant_tenant_id; Type: INDEX; Schema: public; Owner: -
@@ -1917,11 +2217,13 @@ CREATE INDEX idx_usuario_tenant_perfil ON public.usuario_tenant USING btree (per
 
 CREATE INDEX idx_usuario_tenant_tenant_id ON public.usuario_tenant USING btree (tenant_id);
 
+
 --
 -- Name: idx_voluntarios_ativo; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_voluntarios_ativo ON public.voluntarios USING btree (ativo);
+
 
 --
 -- Name: idx_voluntarios_tenant_id; Type: INDEX; Schema: public; Owner: -
@@ -1929,11 +2231,27 @@ CREATE INDEX idx_voluntarios_ativo ON public.voluntarios USING btree (ativo);
 
 CREATE INDEX idx_voluntarios_tenant_id ON public.voluntarios USING btree (tenant_id);
 
+
 --
 -- Name: idx_voluntarios_tipo; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_voluntarios_tipo ON public.voluntarios USING btree (tipo);
+
+
+--
+-- Name: ix_financeiro_movimento_baixa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_financeiro_movimento_baixa ON public.financeiro_movimento USING btree (tenant_id, data_pagamento, conta_id) WHERE ((situacao)::text = 'PAGO'::text);
+
+
+--
+-- Name: ix_financeiro_movimento_vencimento; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_financeiro_movimento_vencimento ON public.financeiro_movimento USING btree (tenant_id, vencimento, id);
+
 
 --
 -- Name: uq_inscricao_email_principal; Type: INDEX; Schema: public; Owner: -
@@ -1941,11 +2259,13 @@ CREATE INDEX idx_voluntarios_tipo ON public.voluntarios USING btree (tipo);
 
 CREATE UNIQUE INDEX uq_inscricao_email_principal ON public.inscricao_email USING btree (inscricao_id) WHERE (principal = true);
 
+
 --
 -- Name: uq_inscricao_responsavel_email_principal; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX uq_inscricao_responsavel_email_principal ON public.inscricao_responsavel_email USING btree (inscricao_responsavel_id) WHERE (principal = true);
+
 
 --
 -- Name: uq_inscricao_responsavel_telefone_principal; Type: INDEX; Schema: public; Owner: -
@@ -1953,11 +2273,13 @@ CREATE UNIQUE INDEX uq_inscricao_responsavel_email_principal ON public.inscricao
 
 CREATE UNIQUE INDEX uq_inscricao_responsavel_telefone_principal ON public.inscricao_responsavel_telefone USING btree (inscricao_responsavel_id) WHERE (principal = true);
 
+
 --
 -- Name: uq_inscricao_telefone_principal; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX uq_inscricao_telefone_principal ON public.inscricao_telefone USING btree (inscricao_id) WHERE (principal = true);
+
 
 --
 -- Name: uq_layout_escala_nome_tenant_tipo; Type: INDEX; Schema: public; Owner: -
@@ -1965,11 +2287,13 @@ CREATE UNIQUE INDEX uq_inscricao_telefone_principal ON public.inscricao_telefone
 
 CREATE UNIQUE INDEX uq_layout_escala_nome_tenant_tipo ON public.layout_escala USING btree (tenant_id, tipo, lower((nome)::text));
 
+
 --
 -- Name: uq_layout_escala_padrao_tenant_tipo; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX uq_layout_escala_padrao_tenant_tipo ON public.layout_escala USING btree (tenant_id, tipo) WHERE padrao;
+
 
 --
 -- Name: uq_pessoa_email_principal; Type: INDEX; Schema: public; Owner: -
@@ -1977,11 +2301,13 @@ CREATE UNIQUE INDEX uq_layout_escala_padrao_tenant_tipo ON public.layout_escala 
 
 CREATE UNIQUE INDEX uq_pessoa_email_principal ON public.pessoa_email USING btree (pessoa_id) WHERE (principal = true);
 
+
 --
 -- Name: uq_pessoa_relacao_principal; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX uq_pessoa_relacao_principal ON public.pessoa_relacao USING btree (voluntario_id) WHERE (principal = true);
+
 
 --
 -- Name: uq_pessoa_telefone_principal; Type: INDEX; Schema: public; Owner: -
@@ -1989,11 +2315,13 @@ CREATE UNIQUE INDEX uq_pessoa_relacao_principal ON public.pessoa_relacao USING b
 
 CREATE UNIQUE INDEX uq_pessoa_telefone_principal ON public.pessoa_telefone USING btree (pessoa_id) WHERE (principal = true);
 
+
 --
 -- Name: uq_tenant_email_principal; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX uq_tenant_email_principal ON public.tenant_email USING btree (tenant_id) WHERE (principal = true);
+
 
 --
 -- Name: uq_tenant_telefone_principal; Type: INDEX; Schema: public; Owner: -
@@ -2001,11 +2329,13 @@ CREATE UNIQUE INDEX uq_tenant_email_principal ON public.tenant_email USING btree
 
 CREATE UNIQUE INDEX uq_tenant_telefone_principal ON public.tenant_telefone USING btree (tenant_id) WHERE (principal = true);
 
+
 --
 -- Name: uq_voluntario_por_evento; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX uq_voluntario_por_evento ON public.escala_vagas USING btree (evento_id, voluntario_id) WHERE (voluntario_id IS NOT NULL);
+
 
 --
 -- Name: ux_disponibilidade_pontual; Type: INDEX; Schema: public; Owner: -
@@ -2013,11 +2343,27 @@ CREATE UNIQUE INDEX uq_voluntario_por_evento ON public.escala_vagas USING btree 
 
 CREATE UNIQUE INDEX ux_disponibilidade_pontual ON public.disponibilidade_voluntario USING btree (voluntario_id, data, periodo) WHERE (data IS NOT NULL);
 
+
 --
 -- Name: ux_disponibilidade_recorrente; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX ux_disponibilidade_recorrente ON public.disponibilidade_voluntario USING btree (voluntario_id, dia_semana, periodo) WHERE (dia_semana IS NOT NULL);
+
+
+--
+-- Name: ux_financeiro_categoria_nome; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_financeiro_categoria_nome ON public.financeiro_categoria USING btree (tenant_id, lower((nome)::text));
+
+
+--
+-- Name: ux_financeiro_conta_nome; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_financeiro_conta_nome ON public.financeiro_conta USING btree (tenant_id, lower((nome)::text));
+
 
 --
 -- Name: ux_indisponibilidade_dia_inteiro; Type: INDEX; Schema: public; Owner: -
@@ -2025,11 +2371,13 @@ CREATE UNIQUE INDEX ux_disponibilidade_recorrente ON public.disponibilidade_volu
 
 CREATE UNIQUE INDEX ux_indisponibilidade_dia_inteiro ON public.indisponibilidade_voluntario USING btree (tenant_id, voluntario_id, data) WHERE (periodo IS NULL);
 
+
 --
 -- Name: ux_indisponibilidade_periodo; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX ux_indisponibilidade_periodo ON public.indisponibilidade_voluntario USING btree (tenant_id, voluntario_id, data, periodo) WHERE (periodo IS NOT NULL);
+
 
 --
 -- Name: ux_inscricao_responsavel_principal; Type: INDEX; Schema: public; Owner: -
@@ -2037,11 +2385,13 @@ CREATE UNIQUE INDEX ux_indisponibilidade_periodo ON public.indisponibilidade_vol
 
 CREATE UNIQUE INDEX ux_inscricao_responsavel_principal ON public.inscricao_responsaveis USING btree (inscricao_id) WHERE (principal = true);
 
+
 --
 -- Name: ux_pessoa_tenant_cpf; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX ux_pessoa_tenant_cpf ON public.pessoa USING btree (tenant_id, cpf) WHERE ((cpf IS NOT NULL) AND (cpf <> ''::text));
+
 
 --
 -- Name: diocese trg_diocese_updated_at; Type: TRIGGER; Schema: public; Owner: -
@@ -2049,11 +2399,13 @@ CREATE UNIQUE INDEX ux_pessoa_tenant_cpf ON public.pessoa USING btree (tenant_id
 
 CREATE TRIGGER trg_diocese_updated_at BEFORE UPDATE ON public.diocese FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+
 --
 -- Name: escalas trg_escalas_sequencial; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_escalas_sequencial BEFORE INSERT ON public.escalas FOR EACH ROW EXECUTE FUNCTION public.proximo_sequencial();
+
 
 --
 -- Name: escalas trg_escalas_updated_at; Type: TRIGGER; Schema: public; Owner: -
@@ -2061,11 +2413,13 @@ CREATE TRIGGER trg_escalas_sequencial BEFORE INSERT ON public.escalas FOR EACH R
 
 CREATE TRIGGER trg_escalas_updated_at BEFORE UPDATE ON public.escalas FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+
 --
 -- Name: inscricao_responsaveis trg_inscricao_responsaveis_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_inscricao_responsaveis_updated_at BEFORE UPDATE ON public.inscricao_responsaveis FOR EACH ROW EXECUTE FUNCTION private.set_updated_at();
+
 
 --
 -- Name: inscricoes trg_inscricoes_sequencial; Type: TRIGGER; Schema: public; Owner: -
@@ -2073,11 +2427,13 @@ CREATE TRIGGER trg_inscricao_responsaveis_updated_at BEFORE UPDATE ON public.ins
 
 CREATE TRIGGER trg_inscricoes_sequencial BEFORE INSERT ON public.inscricoes FOR EACH ROW EXECUTE FUNCTION public.proximo_sequencial();
 
+
 --
 -- Name: inscricoes trg_inscricoes_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_inscricoes_updated_at BEFORE UPDATE ON public.inscricoes FOR EACH ROW EXECUTE FUNCTION private.set_updated_at();
+
 
 --
 -- Name: layout_envio trg_layout_envio_updated_at; Type: TRIGGER; Schema: public; Owner: -
@@ -2085,11 +2441,13 @@ CREATE TRIGGER trg_inscricoes_updated_at BEFORE UPDATE ON public.inscricoes FOR 
 
 CREATE TRIGGER trg_layout_envio_updated_at BEFORE UPDATE ON public.layout_envio FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+
 --
 -- Name: layout_escala trg_layout_escala_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_layout_escala_updated_at BEFORE UPDATE ON public.layout_escala FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
 
 --
 -- Name: perfil trg_perfil_sequencial; Type: TRIGGER; Schema: public; Owner: -
@@ -2097,11 +2455,13 @@ CREATE TRIGGER trg_layout_escala_updated_at BEFORE UPDATE ON public.layout_escal
 
 CREATE TRIGGER trg_perfil_sequencial BEFORE INSERT ON public.perfil FOR EACH ROW EXECUTE FUNCTION public.proximo_sequencial();
 
+
 --
 -- Name: perfil trg_perfil_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_perfil_updated_at BEFORE UPDATE ON public.perfil FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
 
 --
 -- Name: pessoa trg_pessoa_sequencial; Type: TRIGGER; Schema: public; Owner: -
@@ -2109,11 +2469,13 @@ CREATE TRIGGER trg_perfil_updated_at BEFORE UPDATE ON public.perfil FOR EACH ROW
 
 CREATE TRIGGER trg_pessoa_sequencial BEFORE INSERT ON public.pessoa FOR EACH ROW EXECUTE FUNCTION public.proximo_sequencial();
 
+
 --
 -- Name: pessoa trg_pessoa_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_pessoa_updated_at BEFORE UPDATE ON public.pessoa FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
 
 --
 -- Name: tenant trg_tenant_updated_at; Type: TRIGGER; Schema: public; Owner: -
@@ -2121,11 +2483,13 @@ CREATE TRIGGER trg_pessoa_updated_at BEFORE UPDATE ON public.pessoa FOR EACH ROW
 
 CREATE TRIGGER trg_tenant_updated_at BEFORE UPDATE ON public.tenant FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+
 --
 -- Name: usuario_tenant trg_usuario_tenant_sequencial; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_usuario_tenant_sequencial BEFORE INSERT ON public.usuario_tenant FOR EACH ROW EXECUTE FUNCTION public.proximo_sequencial();
+
 
 --
 -- Name: usuario_tenant trg_usuario_tenant_updated_at; Type: TRIGGER; Schema: public; Owner: -
@@ -2133,17 +2497,20 @@ CREATE TRIGGER trg_usuario_tenant_sequencial BEFORE INSERT ON public.usuario_ten
 
 CREATE TRIGGER trg_usuario_tenant_updated_at BEFORE UPDATE ON public.usuario_tenant FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+
 --
 -- Name: usuario trg_usuario_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_usuario_updated_at BEFORE UPDATE ON public.usuario FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+
 --
 -- Name: voluntarios trg_voluntarios_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER trg_voluntarios_updated_at BEFORE UPDATE ON public.voluntarios FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
 
 --
 -- Name: audit_log audit_log_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2152,12 +2519,14 @@ CREATE TRIGGER trg_voluntarios_updated_at BEFORE UPDATE ON public.voluntarios FO
 ALTER TABLE ONLY public.audit_log
     ADD CONSTRAINT audit_log_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: audit_log audit_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.audit_log
     ADD CONSTRAINT audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.usuario(id) ON DELETE SET NULL;
+
 
 --
 -- Name: comunicado_anexo comunicado_anexo_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2166,12 +2535,14 @@ ALTER TABLE ONLY public.audit_log
 ALTER TABLE ONLY public.comunicado_anexo
     ADD CONSTRAINT comunicado_anexo_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: comunicado comunicado_criado_por_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT comunicado_criado_por_fkey FOREIGN KEY (criado_por) REFERENCES public.usuario(id) ON DELETE SET NULL;
+
 
 --
 -- Name: comunicado_destinatario comunicado_destinatario_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2180,12 +2551,14 @@ ALTER TABLE ONLY public.comunicado
 ALTER TABLE ONLY public.comunicado_destinatario
     ADD CONSTRAINT comunicado_destinatario_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: comunicado comunicado_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT comunicado_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
 
 --
 -- Name: direitos_locais direitos_locais_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2194,12 +2567,14 @@ ALTER TABLE ONLY public.comunicado
 ALTER TABLE ONLY public.direitos_locais
     ADD CONSTRAINT direitos_locais_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: disponibilidade_voluntario disponibilidade_voluntario_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.disponibilidade_voluntario
     ADD CONSTRAINT disponibilidade_voluntario_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
 
 --
 -- Name: disponibilidade_voluntario disponibilidade_voluntario_voluntario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2208,12 +2583,14 @@ ALTER TABLE ONLY public.disponibilidade_voluntario
 ALTER TABLE ONLY public.disponibilidade_voluntario
     ADD CONSTRAINT disponibilidade_voluntario_voluntario_id_fkey FOREIGN KEY (voluntario_id) REFERENCES public.voluntarios(id) ON DELETE CASCADE;
 
+
 --
 -- Name: escala_eventos escala_eventos_tenant_escala_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.escala_eventos
     ADD CONSTRAINT escala_eventos_tenant_escala_fkey FOREIGN KEY (tenant_id, escala_id) REFERENCES public.escalas(tenant_id, id) ON DELETE CASCADE;
+
 
 --
 -- Name: escala_eventos escala_eventos_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2222,12 +2599,14 @@ ALTER TABLE ONLY public.escala_eventos
 ALTER TABLE ONLY public.escala_eventos
     ADD CONSTRAINT escala_eventos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: escala_vagas escala_vagas_tenant_evento_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.escala_vagas
     ADD CONSTRAINT escala_vagas_tenant_evento_fkey FOREIGN KEY (tenant_id, evento_id) REFERENCES public.escala_eventos(tenant_id, id) ON DELETE CASCADE;
+
 
 --
 -- Name: escala_vagas escala_vagas_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2236,12 +2615,14 @@ ALTER TABLE ONLY public.escala_vagas
 ALTER TABLE ONLY public.escala_vagas
     ADD CONSTRAINT escala_vagas_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: escala_vagas escala_vagas_tenant_voluntario_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.escala_vagas
     ADD CONSTRAINT escala_vagas_tenant_voluntario_fkey FOREIGN KEY (tenant_id, voluntario_id) REFERENCES public.voluntarios(tenant_id, id) ON DELETE SET NULL (voluntario_id);
+
 
 --
 -- Name: escalas escalas_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2250,12 +2631,14 @@ ALTER TABLE ONLY public.escala_vagas
 ALTER TABLE ONLY public.escalas
     ADD CONSTRAINT escalas_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.usuario(id) ON DELETE SET NULL;
 
+
 --
 -- Name: escalas escalas_layout_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.escalas
     ADD CONSTRAINT escalas_layout_id_fkey FOREIGN KEY (layout_id) REFERENCES public.layout_escala(id);
+
 
 --
 -- Name: escalas escalas_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2264,12 +2647,14 @@ ALTER TABLE ONLY public.escalas
 ALTER TABLE ONLY public.escalas
     ADD CONSTRAINT escalas_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: evento_foto evento_foto_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evento_foto
     ADD CONSTRAINT evento_foto_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
 
 --
 -- Name: evento_inscricao evento_inscricao_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2278,12 +2663,54 @@ ALTER TABLE ONLY public.evento_foto
 ALTER TABLE ONLY public.evento_inscricao
     ADD CONSTRAINT evento_inscricao_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: evento evento_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evento
     ADD CONSTRAINT evento_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+
+--
+-- Name: financeiro_categoria financeiro_categoria_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_categoria
+    ADD CONSTRAINT financeiro_categoria_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+
+--
+-- Name: financeiro_conta financeiro_conta_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_conta
+    ADD CONSTRAINT financeiro_conta_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+
+--
+-- Name: financeiro_movimento financeiro_movimento_tenant_id_categoria_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_movimento
+    ADD CONSTRAINT financeiro_movimento_tenant_id_categoria_id_fkey FOREIGN KEY (tenant_id, categoria_id) REFERENCES public.financeiro_categoria(tenant_id, id);
+
+
+--
+-- Name: financeiro_movimento financeiro_movimento_tenant_id_conta_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_movimento
+    ADD CONSTRAINT financeiro_movimento_tenant_id_conta_id_fkey FOREIGN KEY (tenant_id, conta_id) REFERENCES public.financeiro_conta(tenant_id, id);
+
+
+--
+-- Name: financeiro_movimento financeiro_movimento_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_movimento
+    ADD CONSTRAINT financeiro_movimento_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
 
 --
 -- Name: comunicado_anexo fk_anexo_comunicado; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2292,12 +2719,14 @@ ALTER TABLE ONLY public.evento
 ALTER TABLE ONLY public.comunicado_anexo
     ADD CONSTRAINT fk_anexo_comunicado FOREIGN KEY (tenant_id, comunicado_id) REFERENCES public.comunicado(tenant_id, id) ON DELETE CASCADE;
 
+
 --
 -- Name: comunicado fk_comunicado_layout; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT fk_comunicado_layout FOREIGN KEY (tenant_id, layout_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (layout_id);
+
 
 --
 -- Name: comunicado_destinatario fk_destinatario_comunicado; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2306,12 +2735,14 @@ ALTER TABLE ONLY public.comunicado
 ALTER TABLE ONLY public.comunicado_destinatario
     ADD CONSTRAINT fk_destinatario_comunicado FOREIGN KEY (tenant_id, comunicado_id) REFERENCES public.comunicado(tenant_id, id) ON DELETE CASCADE;
 
+
 --
 -- Name: comunicado_destinatario fk_destinatario_pessoa; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.comunicado_destinatario
     ADD CONSTRAINT fk_destinatario_pessoa FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE SET NULL (pessoa_id);
+
 
 --
 -- Name: evento fk_evento_email_confirmacao; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2320,6 +2751,7 @@ ALTER TABLE ONLY public.comunicado_destinatario
 ALTER TABLE ONLY public.evento
     ADD CONSTRAINT fk_evento_email_confirmacao FOREIGN KEY (tenant_id, email_layout_confirmacao_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (email_layout_confirmacao_id);
 
+
 --
 -- Name: evento fk_evento_email_lembrete; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
@@ -2327,19 +2759,6 @@ ALTER TABLE ONLY public.evento
 ALTER TABLE ONLY public.evento
     ADD CONSTRAINT fk_evento_email_lembrete FOREIGN KEY (tenant_id, email_layout_lembrete_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (email_layout_lembrete_id);
 
---
--- Name: evento fk_evento_whatsapp_confirmacao; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.evento
-    ADD CONSTRAINT fk_evento_whatsapp_confirmacao FOREIGN KEY (tenant_id, whatsapp_layout_confirmacao_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (whatsapp_layout_confirmacao_id);
-
---
--- Name: evento fk_evento_whatsapp_lembrete; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.evento
-    ADD CONSTRAINT fk_evento_whatsapp_lembrete FOREIGN KEY (tenant_id, whatsapp_layout_lembrete_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (whatsapp_layout_lembrete_id);
 
 --
 -- Name: evento_foto fk_evento_foto_evento; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2348,12 +2767,14 @@ ALTER TABLE ONLY public.evento
 ALTER TABLE ONLY public.evento_foto
     ADD CONSTRAINT fk_evento_foto_evento FOREIGN KEY (tenant_id, evento_id) REFERENCES public.evento(tenant_id, id) ON DELETE CASCADE;
 
+
 --
 -- Name: evento_inscricao fk_evento_inscricao_evento; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evento_inscricao
     ADD CONSTRAINT fk_evento_inscricao_evento FOREIGN KEY (tenant_id, evento_id) REFERENCES public.evento(tenant_id, id) ON DELETE CASCADE;
+
 
 --
 -- Name: evento_inscricao fk_evento_inscricao_pessoa; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2362,12 +2783,30 @@ ALTER TABLE ONLY public.evento_inscricao
 ALTER TABLE ONLY public.evento_inscricao
     ADD CONSTRAINT fk_evento_inscricao_pessoa FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE CASCADE;
 
+
+--
+-- Name: evento fk_evento_whatsapp_confirmacao; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT fk_evento_whatsapp_confirmacao FOREIGN KEY (tenant_id, whatsapp_layout_confirmacao_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (whatsapp_layout_confirmacao_id);
+
+
+--
+-- Name: evento fk_evento_whatsapp_lembrete; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT fk_evento_whatsapp_lembrete FOREIGN KEY (tenant_id, whatsapp_layout_lembrete_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (whatsapp_layout_lembrete_id);
+
+
 --
 -- Name: indisponibilidade_voluntario fk_indisponibilidade_voluntario; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.indisponibilidade_voluntario
     ADD CONSTRAINT fk_indisponibilidade_voluntario FOREIGN KEY (tenant_id, voluntario_id) REFERENCES public.voluntarios(tenant_id, id) ON DELETE CASCADE;
+
 
 --
 -- Name: resposta_indisponibilidade fk_resposta_voluntario; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2376,12 +2815,14 @@ ALTER TABLE ONLY public.indisponibilidade_voluntario
 ALTER TABLE ONLY public.resposta_indisponibilidade
     ADD CONSTRAINT fk_resposta_voluntario FOREIGN KEY (tenant_id, voluntario_id) REFERENCES public.voluntarios(tenant_id, id) ON DELETE CASCADE;
 
+
 --
 -- Name: indisponibilidade_voluntario indisponibilidade_voluntario_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.indisponibilidade_voluntario
     ADD CONSTRAINT indisponibilidade_voluntario_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
 
 --
 -- Name: inscricao_email inscricao_email_inscricao_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2390,12 +2831,14 @@ ALTER TABLE ONLY public.indisponibilidade_voluntario
 ALTER TABLE ONLY public.inscricao_email
     ADD CONSTRAINT inscricao_email_inscricao_fkey FOREIGN KEY (tenant_id, inscricao_id) REFERENCES public.inscricoes(tenant_id, id) ON DELETE CASCADE;
 
+
 --
 -- Name: inscricao_email inscricao_email_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricao_email
     ADD CONSTRAINT inscricao_email_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
 
 --
 -- Name: inscricao_responsaveis inscricao_responsaveis_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2404,12 +2847,14 @@ ALTER TABLE ONLY public.inscricao_email
 ALTER TABLE ONLY public.inscricao_responsaveis
     ADD CONSTRAINT inscricao_responsaveis_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: inscricao_responsaveis inscricao_responsaveis_tenant_inscricao_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricao_responsaveis
     ADD CONSTRAINT inscricao_responsaveis_tenant_inscricao_fkey FOREIGN KEY (tenant_id, inscricao_id) REFERENCES public.inscricoes(tenant_id, id) ON DELETE CASCADE;
+
 
 --
 -- Name: inscricao_responsavel_email inscricao_responsavel_email_inscricao_responsavel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2418,12 +2863,14 @@ ALTER TABLE ONLY public.inscricao_responsaveis
 ALTER TABLE ONLY public.inscricao_responsavel_email
     ADD CONSTRAINT inscricao_responsavel_email_inscricao_responsavel_id_fkey FOREIGN KEY (inscricao_responsavel_id) REFERENCES public.inscricao_responsaveis(id) ON DELETE CASCADE;
 
+
 --
 -- Name: inscricao_responsavel_email inscricao_responsavel_email_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricao_responsavel_email
     ADD CONSTRAINT inscricao_responsavel_email_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
 
 --
 -- Name: inscricao_responsavel_telefone inscricao_responsavel_telefone_inscricao_responsavel_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2432,12 +2879,14 @@ ALTER TABLE ONLY public.inscricao_responsavel_email
 ALTER TABLE ONLY public.inscricao_responsavel_telefone
     ADD CONSTRAINT inscricao_responsavel_telefone_inscricao_responsavel_id_fkey FOREIGN KEY (inscricao_responsavel_id) REFERENCES public.inscricao_responsaveis(id) ON DELETE CASCADE;
 
+
 --
 -- Name: inscricao_responsavel_telefone inscricao_responsavel_telefone_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricao_responsavel_telefone
     ADD CONSTRAINT inscricao_responsavel_telefone_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
 
 --
 -- Name: inscricao_telefone inscricao_telefone_inscricao_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2446,12 +2895,14 @@ ALTER TABLE ONLY public.inscricao_responsavel_telefone
 ALTER TABLE ONLY public.inscricao_telefone
     ADD CONSTRAINT inscricao_telefone_inscricao_fkey FOREIGN KEY (tenant_id, inscricao_id) REFERENCES public.inscricoes(tenant_id, id) ON DELETE CASCADE;
 
+
 --
 -- Name: inscricao_telefone inscricao_telefone_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricao_telefone
     ADD CONSTRAINT inscricao_telefone_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
 
 --
 -- Name: inscricoes inscricoes_aprovado_por_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2460,12 +2911,14 @@ ALTER TABLE ONLY public.inscricao_telefone
 ALTER TABLE ONLY public.inscricoes
     ADD CONSTRAINT inscricoes_aprovado_por_fkey FOREIGN KEY (aprovado_por) REFERENCES public.usuario(id);
 
+
 --
 -- Name: inscricoes inscricoes_rejeitado_por_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricoes
     ADD CONSTRAINT inscricoes_rejeitado_por_fkey FOREIGN KEY (rejeitado_por) REFERENCES public.usuario(id);
+
 
 --
 -- Name: inscricoes inscricoes_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2474,12 +2927,14 @@ ALTER TABLE ONLY public.inscricoes
 ALTER TABLE ONLY public.inscricoes
     ADD CONSTRAINT inscricoes_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: inscricoes inscricoes_tenant_voluntario_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.inscricoes
     ADD CONSTRAINT inscricoes_tenant_voluntario_fkey FOREIGN KEY (tenant_id, voluntario_id) REFERENCES public.voluntarios(tenant_id, id) ON DELETE SET NULL (voluntario_id);
+
 
 --
 -- Name: layout_envio layout_envio_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2488,12 +2943,14 @@ ALTER TABLE ONLY public.inscricoes
 ALTER TABLE ONLY public.layout_envio
     ADD CONSTRAINT layout_envio_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: paroquia_whatsapp paroquia_whatsapp_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.paroquia_whatsapp
     ADD CONSTRAINT paroquia_whatsapp_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
 
 --
 -- Name: password_reset_token password_reset_token_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2502,12 +2959,14 @@ ALTER TABLE ONLY public.paroquia_whatsapp
 ALTER TABLE ONLY public.password_reset_token
     ADD CONSTRAINT password_reset_token_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuario(id) ON DELETE CASCADE;
 
+
 --
 -- Name: perfil_permissao perfil_permissao_perfil_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.perfil_permissao
     ADD CONSTRAINT perfil_permissao_perfil_id_fkey FOREIGN KEY (perfil_id) REFERENCES public.perfil(id) ON DELETE CASCADE;
+
 
 --
 -- Name: perfil perfil_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2516,12 +2975,14 @@ ALTER TABLE ONLY public.perfil_permissao
 ALTER TABLE ONLY public.perfil
     ADD CONSTRAINT perfil_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: pessoa_email pessoa_email_pessoa_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pessoa_email
     ADD CONSTRAINT pessoa_email_pessoa_fkey FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE CASCADE;
+
 
 --
 -- Name: pessoa_email pessoa_email_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2530,12 +2991,14 @@ ALTER TABLE ONLY public.pessoa_email
 ALTER TABLE ONLY public.pessoa_email
     ADD CONSTRAINT pessoa_email_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: pessoa_relacao pessoa_relacao_responsavel_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pessoa_relacao
     ADD CONSTRAINT pessoa_relacao_responsavel_fkey FOREIGN KEY (tenant_id, responsavel_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE CASCADE;
+
 
 --
 -- Name: pessoa_relacao pessoa_relacao_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2544,12 +3007,14 @@ ALTER TABLE ONLY public.pessoa_relacao
 ALTER TABLE ONLY public.pessoa_relacao
     ADD CONSTRAINT pessoa_relacao_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: pessoa_relacao pessoa_relacao_voluntario_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pessoa_relacao
     ADD CONSTRAINT pessoa_relacao_voluntario_fkey FOREIGN KEY (tenant_id, voluntario_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE CASCADE;
+
 
 --
 -- Name: pessoa_telefone pessoa_telefone_pessoa_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2558,12 +3023,14 @@ ALTER TABLE ONLY public.pessoa_relacao
 ALTER TABLE ONLY public.pessoa_telefone
     ADD CONSTRAINT pessoa_telefone_pessoa_fkey FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE CASCADE;
 
+
 --
 -- Name: pessoa_telefone pessoa_telefone_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.pessoa_telefone
     ADD CONSTRAINT pessoa_telefone_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
 
 --
 -- Name: pessoa pessoa_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2572,12 +3039,14 @@ ALTER TABLE ONLY public.pessoa_telefone
 ALTER TABLE ONLY public.pessoa
     ADD CONSTRAINT pessoa_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
+
 --
 -- Name: refresh_token refresh_token_replaced_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.refresh_token
     ADD CONSTRAINT refresh_token_replaced_by_fkey FOREIGN KEY (replaced_by) REFERENCES public.refresh_token(id) ON DELETE SET NULL;
+
 
 --
 -- Name: refresh_token refresh_token_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2586,12 +3055,14 @@ ALTER TABLE ONLY public.refresh_token
 ALTER TABLE ONLY public.refresh_token
     ADD CONSTRAINT refresh_token_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuario(id) ON DELETE CASCADE;
 
+
 --
 -- Name: resposta_indisponibilidade resposta_indisponibilidade_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.resposta_indisponibilidade
     ADD CONSTRAINT resposta_indisponibilidade_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
 
 --
 -- Name: suporte_codigo suporte_codigo_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2600,12 +3071,14 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 ALTER TABLE ONLY public.suporte_codigo
     ADD CONSTRAINT suporte_codigo_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: tenant tenant_diocese_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tenant
     ADD CONSTRAINT tenant_diocese_id_fkey FOREIGN KEY (diocese_id) REFERENCES public.diocese(id);
+
 
 --
 -- Name: tenant_email tenant_email_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2614,12 +3087,14 @@ ALTER TABLE ONLY public.tenant
 ALTER TABLE ONLY public.tenant_email
     ADD CONSTRAINT tenant_email_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: tenant_sequencial tenant_sequencial_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tenant_sequencial
     ADD CONSTRAINT tenant_sequencial_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
 
 --
 -- Name: tenant_telefone tenant_telefone_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2628,12 +3103,14 @@ ALTER TABLE ONLY public.tenant_sequencial
 ALTER TABLE ONLY public.tenant_telefone
     ADD CONSTRAINT tenant_telefone_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: usuario_tenant usuario_tenant_perfil_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.usuario_tenant
     ADD CONSTRAINT usuario_tenant_perfil_id_fkey FOREIGN KEY (perfil_id) REFERENCES public.perfil(id);
+
 
 --
 -- Name: usuario_tenant usuario_tenant_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2642,12 +3119,14 @@ ALTER TABLE ONLY public.usuario_tenant
 ALTER TABLE ONLY public.usuario_tenant
     ADD CONSTRAINT usuario_tenant_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
 
+
 --
 -- Name: usuario_tenant usuario_tenant_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.usuario_tenant
     ADD CONSTRAINT usuario_tenant_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuario(id) ON DELETE CASCADE;
+
 
 --
 -- Name: voluntarios voluntarios_pessoa_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2656,12 +3135,14 @@ ALTER TABLE ONLY public.usuario_tenant
 ALTER TABLE ONLY public.voluntarios
     ADD CONSTRAINT voluntarios_pessoa_fkey FOREIGN KEY (tenant_id, id) REFERENCES public.pessoa(tenant_id, id);
 
+
 --
 -- Name: voluntarios voluntarios_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.voluntarios
     ADD CONSTRAINT voluntarios_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
 
 --
 -- Name: audit_log; Type: ROW SECURITY; Schema: public; Owner: -
@@ -2740,6 +3221,24 @@ ALTER TABLE public.evento_foto ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.evento_inscricao ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: financeiro_categoria; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.financeiro_categoria ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: financeiro_conta; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.financeiro_conta ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: financeiro_movimento; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.financeiro_movimento ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: indisponibilidade_voluntario; Type: ROW SECURITY; Schema: public; Owner: -
@@ -2918,5 +3417,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict gIzxoONWfZPk0GU4abuheBKaaGlbMhblc0gmzxbQWIHjUoVXGiYIyZkOmH7B3yQ
+\unrestrict IMspefmRB2hHQW06eZKa9e4qQV7WpZwaN0JRlWBQfHrrNkecf3KbTJzyVAwFx0C
 

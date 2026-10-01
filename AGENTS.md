@@ -218,3 +218,9 @@ redirecionamento; o `atualizar.sh` e o `docker-compose.yml` dependem desses nome
 - `/integracao/**`: corpo de entrada até 1 MiB; headers baratos são conferidos antes da leitura, inclusive sem Content-Length. Contrato em `docs/integracao-limites.md`.
 - Pull requests executam CI; o job de publicação aceita apenas main e nunca publica um PR. Backends usam `mvn verify`.
 - Alterações de evento usam `EventoRepository.buscarParaAlterar` (JPQL, lock pessimista e filtro do tenant); inscrições, capacidade, cancelamento e fotos compartilham a trava. Leitura de detalhe permanece sem lock.
+
+## Financeiro paroquial
+- `financeiro/`, V054: contas, categorias e lançamentos. Separado do comercial da Central; `docs/financeiro.md` é a fonte das regras.
+- Paginação no servidor com EntityGraph de conta/categoria; totais agregados em JPQL. Valores BigDecimal, duas casas; saldos calculados apenas das baixas.
+- Mutação de lançamento exige lock e versão; não retirar a conferência ao estornar/cancelar. Conta travada ao criar lançamento/editar saldo inicial; FKs compostas preservam tenant.
+- FINANCEIRO é consulta; CRIAR/ALTERAR/BAIXAR/CONFIGURAR são ações distintas. Não inserir permissões em perfis específicos existentes; acesso total mantém a regra do catálogo completo.

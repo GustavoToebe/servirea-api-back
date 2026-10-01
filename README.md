@@ -210,3 +210,7 @@ Auth desligados; a V039 fecha o `public` de qualquer forma.
 5. Storage das fotos (`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` vazias em produção: só o envio de foto falha).
 6. Feito na V051: `plano`, `preco_plano`, `assinatura`, `cobranca`, `backoffice_log` e
    `usuario.operador_saas`. O que permanece está em `SCHEMA.md`.
+
+## Financeiro paroquial
+
+Módulo simples em `/financeiro`: contas/bancos, categorias, entradas, saídas, baixa manual, estorno e saldos. Liberação por perfil; [uso e regras](docs/financeiro.md).

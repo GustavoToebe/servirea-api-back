@@ -66,6 +66,12 @@ public final class CatalogoPermissao {
                             new Acao("EVENTO_ALTERAR", "Alterar (dados e fotos)"),
                             new Acao("EVENTO_INSCREVER", "Inscrever e remover pessoas"),
                             new Acao("EVENTO_CANCELAR", "Cancelar"))))),
+            new Secao("Financeiro", List.of(
+                    new Modulo("FINANCEIRO", "Financeiro paroquial", List.of(
+                            new Acao("FINANCEIRO_CRIAR", "Criar lançamento"),
+                            new Acao("FINANCEIRO_ALTERAR", "Editar e cancelar lançamento"),
+                            new Acao("FINANCEIRO_BAIXAR", "Baixar e estornar"),
+                            new Acao("FINANCEIRO_CONFIGURAR", "Gerenciar contas e categorias"))))),
             new Secao("Relatórios", List.of(
                     new Modulo("AUDITORIA", "Auditoria", List.of())))
     );

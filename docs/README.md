@@ -11,3 +11,5 @@
 | [../plano_mestre_servire_v2_mvp_baixo_custo.md](../plano_mestre_servire_v2_mvp_baixo_custo.md) | Plano de produto. Continua citado pelo AGENTS.md |
 
 - [Limites de integração](integracao-limites.md): payload, nonce e erros do filtro HMAC.
+
+- [financeiro.md](financeiro.md): operação, permissões, cálculos e limites do financeiro paroquial.
