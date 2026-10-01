@@ -208,7 +208,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe atualizar(UUID id, EventoRequest req) {
-        Evento e = buscar(id);
+        Evento e = buscarParaAlterar(id);
         if (e.getSituacao() == Evento.Situacao.CANCELADO) {
             throw new ConflictException("Evento cancelado não pode ser alterado.");
         }
@@ -253,7 +253,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe publicar(UUID id) {
-        Evento e = buscar(id);
+        Evento e = buscarParaAlterar(id);
         if (e.getSituacao() == Evento.Situacao.CANCELADO) throw new ConflictException("Evento cancelado não pode ser publicado.");
         if (e.jaAconteceu(agora())) throw new BadRequestException("A data do evento já passou. Ajuste a data antes de publicar.");
         e.setSituacao(Evento.Situacao.PUBLICADO);
@@ -263,7 +263,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe cancelar(UUID id, CancelarRequest req) {
-        Evento e = buscar(id);
+        Evento e = buscarParaAlterar(id);
         if (e.getSituacao() == Evento.Situacao.CANCELADO) return detalhe(e);
         boolean avisar = req != null && req.avisarInscritos() && e.getSituacao() == Evento.Situacao.PUBLICADO && !e.jaAconteceu(agora());
         e.setSituacao(Evento.Situacao.CANCELADO);
@@ -296,7 +296,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe inscrever(UUID id, UUID pessoaId) {
-        Evento e = buscar(id);
+        Evento e = buscarParaAlterar(id);
         if (e.getSituacao() != Evento.Situacao.PUBLICADO) {
             throw new ConflictException("Publique o evento antes de inscrever pessoas.");
         }
@@ -332,7 +332,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe removerInscricao(UUID id, UUID inscricaoId) {
-        Evento e = buscar(id);
+        Evento e = buscarParaAlterar(id);
         EventoInscricao i = inscricoes.findById(inscricaoId)
                 .filter(x -> x.getEventoId().equals(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Inscrição não encontrada."));
@@ -402,7 +402,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe enviarFoto(UUID id, MultipartFile arquivo) {
-        Evento e = buscar(id);
+        Evento e = buscarParaAlterar(id);
         if (arquivo == null || arquivo.isEmpty()) throw new BadRequestException("Nenhuma foto enviada.");
         if (fotos.countByEventoId(id) >= MAX_FOTOS) throw new ConflictException("No máximo " + MAX_FOTOS + " fotos por evento.");
         String caminho = "eventos/" + TenantContext.get() + "/" + id + "/" + UUID.randomUUID() + ExtensaoDeFoto.de(arquivo.getContentType());
@@ -420,7 +420,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe definirCapa(UUID id, UUID fotoId) {
-        Evento e = buscar(id);
+        Evento e = buscarParaAlterar(id);
         List<EventoFoto> lista = fotos.findByEventoIdOrderByCapaDescCreatedAtAsc(id);
         if (lista.stream().noneMatch(f -> f.getId().equals(fotoId))) throw new ResourceNotFoundException("Foto não encontrada.");
         lista.forEach(f -> f.setCapa(f.getId().equals(fotoId)));
@@ -429,7 +429,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe excluirFoto(UUID id, UUID fotoId) {
-        Evento e = buscar(id);
+        Evento e = buscarParaAlterar(id);
         EventoFoto foto = fotos.findById(fotoId).filter(f -> f.getEventoId().equals(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Foto não encontrada."));
         fotos.delete(foto);
@@ -443,6 +443,10 @@ public class EventoService {
     }
 
     // ---- Apoio
+
+    private Evento buscarParaAlterar(UUID id) {
+        return eventos.buscarParaAlterar(id).orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));
+    }
 
     private Evento buscar(UUID id) {
         return eventos.findById(id).orElseThrow(() -> new ResourceNotFoundException("Evento não encontrado."));

@@ -495,4 +495,34 @@ class EventoHttpIntegrationTest extends AbstractIntegrationTest {
         mvc.perform(get("/eventos").with(csrf()).with(authentication(usuario(TUDO))))
                 .andExpect(jsonPath("$[0].capaUrl").value(org.hamcrest.Matchers.startsWith("https://storage.test/")));
     }
+
+    @Test
+    void duasInscricoesSimultaneasDisputamAUltimaVaga() throws Exception {
+        String eventoId = criarPublicado("Última vaga", agoraBrasilia().plusDays(3), 1, 0);
+        UUID ana = pessoa("Ana concorrente", false, null).getId();
+        UUID jose = pessoa("José concorrente", false, null).getId();
+        var prontas = new java.util.concurrent.CountDownLatch(2);
+        var largada = new java.util.concurrent.CountDownLatch(1);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var tarefas = java.util.stream.Stream.of(ana, jose).map(pessoaId -> executor.submit(() -> {
+                TenantContext.set(paroquia);
+                try {
+                    prontas.countDown();
+                    if (!largada.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("Sem largada");
+                    return inscrever(eventoId, pessoaId).andReturn().getResponse().getStatus();
+                } finally {
+                    TenantContext.clear();
+                    org.springframework.security.core.context.SecurityContextHolder.clearContext();
+                }
+            })).toList();
+            boolean iniciadas = prontas.await(10, java.util.concurrent.TimeUnit.SECONDS);
+            largada.countDown();
+            assertThat(iniciadas).isTrue();
+            assertThat(List.of(tarefas.get(0).get(20, java.util.concurrent.TimeUnit.SECONDS),
+                    tarefas.get(1).get(20, java.util.concurrent.TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(200, 409);
+        }
+        mvc.perform(get("/eventos/" + eventoId).with(authentication(usuario(TUDO))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.inscritos.length()").value(1));
+    }
 }

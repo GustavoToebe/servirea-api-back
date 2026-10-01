@@ -212,3 +212,9 @@ redirecionamento; o `atualizar.sh` e o `docker-compose.yml` dependem desses nome
 - Nomes de teste em português, descritivos (`atualizarComVersaoDivergenteLancaConflictException`).
 - Voluntário em teste: `Pessoas.persistirVoluntario(pessoaRepository, "Nome")` — não existe mais
   `new Voluntario("Nome")`. Papéis podem coexistir; responsável é opcional (adulto/ministro).
+
+## Segurança e CI na branch de melhorias
+
+- `/integracao/**`: corpo de entrada até 1 MiB; headers baratos são conferidos antes da leitura, inclusive sem Content-Length. Contrato em `docs/integracao-limites.md`.
+- Pull requests executam CI; o job de publicação aceita apenas main e nunca publica um PR. Backends usam `mvn verify`.
+- Alterações de evento usam `EventoRepository.buscarParaAlterar` (JPQL, lock pessimista e filtro do tenant); inscrições, capacidade, cancelamento e fotos compartilham a trava. Leitura de detalhe permanece sem lock.
