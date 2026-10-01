@@ -45,12 +45,14 @@ public class AuthController {
     static final String REFRESH_TOKEN_COOKIE = "servire_refresh_token";
 
     private final AuthService authService;
+    private final LimiteLogin limiteLogin;
     private final SecurityProperties properties;
     private final String refreshCookiePath;
 
-    public AuthController(AuthService authService, SecurityProperties properties,
+    public AuthController(AuthService authService, SecurityProperties properties, LimiteLogin limiteLogin,
                           @Value("${servire.security.refresh-cookie-path:/auth}") String refreshCookiePath) {
         this.authService = authService;
+        this.limiteLogin = limiteLogin;
         this.properties = properties;
         this.refreshCookiePath = refreshCookiePath;
     }
@@ -59,6 +61,8 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@RequestBody @Valid LoginRequest request,
                                                 HttpServletRequest httpRequest,
                                                 HttpServletResponse httpResponse) {
+        try {limiteLogin.registrar(ip(httpRequest),request.email());}
+        catch(LimiteLoginException ex){httpResponse.setHeader("Retry-After",Long.toString(ex.segundos()));throw ex;}
         AuthService.LoginResultado resultado = authService.login(
                 request.email(), request.senha(), ip(httpRequest), userAgent(httpRequest));
 

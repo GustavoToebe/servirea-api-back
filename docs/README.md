@@ -24,3 +24,5 @@
 - [Mapa do backend](desenvolvimento/mapa-backend.md), [armadilhas Java](desenvolvimento/armadilhas-java.md) e [testes](desenvolvimento/testes.md).
 
 - [Listas paginadas](listas-paginadas.md): contratos, ordenação, seleção por página e compatibilidade.
+
+- [Limites de login](login-limites.md): tentativas, saturação e limites por instância.
