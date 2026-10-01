@@ -6,5 +6,6 @@ public enum TipoLayout {
     COROINHA,
     ACOLITO,
     COROINHA_ACOLITO,
-    MINISTRO
+    MINISTRO,
+    EVENTO
 }

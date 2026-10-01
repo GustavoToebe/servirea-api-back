@@ -77,6 +77,27 @@ public final class CatalogoDeTags {
                 comDependentes,
                 ctx -> nomesLista(ctx.dependentesNomes())));
 
+        // Tags exclusivas de Evento
+        Set<TipoLayout> apenasEvento = Set.of(TipoLayout.EVENTO);
+        tags.add(new Tag("#EVENTO.TITULO#", "Será trocado pelo título do evento", apenasEvento,
+                ctx -> ctx.eventoTitulo() != null ? ctx.eventoTitulo() : ""));
+        tags.add(new Tag("#EVENTO.DATA#", "Será trocado pela data de início (DD/MM/AAAA)", apenasEvento,
+                ctx -> ctx.eventoData() != null ? ctx.eventoData() : ""));
+        tags.add(new Tag("#EVENTO.HORA#", "Será trocado pela hora de início (HH:mm)", apenasEvento,
+                ctx -> ctx.eventoHora() != null ? ctx.eventoHora() : ""));
+        tags.add(new Tag("#EVENTO.QUANDO#", "Será trocado por \"hoje\", \"amanhã\" ou \"daqui a N dias\" (lembrete)", apenasEvento,
+                ctx -> ctx.eventoQuando() != null ? ctx.eventoQuando() : ""));
+        tags.add(new Tag("#EVENTO.LOCAL#", "Será trocado pelo nome do local", apenasEvento,
+                ctx -> ctx.eventoLocal() != null ? ctx.eventoLocal() : ""));
+        tags.add(new Tag("#EVENTO.ENDERECO#", "Será trocado pelo endereço completo", apenasEvento,
+                ctx -> ctx.eventoEndereco() != null ? ctx.eventoEndereco() : ""));
+        tags.add(new Tag("#EVENTO.MAPA#", "Será trocado pelo link do mapa", apenasEvento,
+                ctx -> ctx.eventoMapa() != null ? ctx.eventoMapa() : ""));
+        tags.add(new Tag("#EVENTO.RESPONSAVEL#", "Será trocado pelo responsável pelo evento", apenasEvento,
+                ctx -> ctx.eventoResponsavel() != null ? ctx.eventoResponsavel() : ""));
+        tags.add(new Tag("#EVENTO.TELEFONE#", "Será trocado pelo telefone do responsável", apenasEvento,
+                ctx -> ctx.eventoTelefone() != null ? ctx.eventoTelefone() : ""));
+
         TAGS = List.copyOf(tags);
     }
 

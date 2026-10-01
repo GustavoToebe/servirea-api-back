@@ -50,6 +50,15 @@ public class EventoInscricao {
     @Column(name = "lembrete_enviado_em")
     private Instant lembreteEnviadoEm;
 
+    @Column(name = "confirmacao_email_destinatario_id")
+    private UUID confirmacaoEmailDestinatarioId;
+
+    @Column(name = "lembrete_email_destinatario_id")
+    private UUID lembreteEmailDestinatarioId;
+
+    @Column(name = "lembrete_email_enviado_em")
+    private Instant lembreteEmailEnviadoEm;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -70,11 +79,21 @@ public class EventoInscricao {
     public void setConfirmacaoDestinatarioId(UUID id) { this.confirmacaoDestinatarioId = id; }
     public UUID getLembreteDestinatarioId() { return lembreteDestinatarioId; }
     public Instant getLembreteEnviadoEm() { return lembreteEnviadoEm; }
+    public UUID getConfirmacaoEmailDestinatarioId() { return confirmacaoEmailDestinatarioId; }
+    public void setConfirmacaoEmailDestinatarioId(UUID id) { this.confirmacaoEmailDestinatarioId = id; }
+    public UUID getLembreteEmailDestinatarioId() { return lembreteEmailDestinatarioId; }
+    public Instant getLembreteEmailEnviadoEm() { return lembreteEmailEnviadoEm; }
     public Instant getCreatedAt() { return createdAt; }
 
-    /** Marca o lembrete como enfileirado (nunca sai duas vezes). */
+    /** Marca o lembrete de WhatsApp como enfileirado. */
     public void lembreteEnfileirado(UUID destinatarioId, Instant quando) {
         this.lembreteDestinatarioId = destinatarioId;
         this.lembreteEnviadoEm = quando;
+    }
+
+    /** Marca o lembrete de e-mail como enfileirado. */
+    public void lembreteEmailEnfileirado(UUID destinatarioId, Instant quando) {
+        this.lembreteEmailDestinatarioId = destinatarioId;
+        this.lembreteEmailEnviadoEm = quando;
     }
 }

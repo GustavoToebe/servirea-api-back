@@ -2,7 +2,11 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V052. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V053. Migration já aplicada não se edita.
+
+## O que entrou na V053
+
+Layouts e e-mail nos eventos (01/10/2026): o tipo de layout `EVENTO` (WhatsApp e e-mail, com um layout padrão de cada por paróquia), em `evento` os interruptores `whatsapp_habilitado`/`email_habilitado` e o layout escolhido para "Ao inscrever" e para "Lembrete" em cada canal (excluir o layout só limpa a escolha), `lembrete_dias` como lista ("1,3,7"; vazio = sem lembrete) e, em `evento_inscricao`, os destinatários da confirmação e do lembrete por e-mail.
 
 ## O que entrou na V052
 

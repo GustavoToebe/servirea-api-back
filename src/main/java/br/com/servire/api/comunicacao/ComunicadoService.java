@@ -104,6 +104,9 @@ public class ComunicadoService {
     public PreVisualizacao preVisualizar(PreVisualizarRequest req) {
         Layout layout = layouts.findById(req.layoutId())
                 .orElseThrow(() -> new ResourceNotFoundException("Layout não encontrado."));
+        if (layout.getTipoLayout() == TipoLayout.EVENTO) {
+            throw new BadRequestException("Layout de evento só é usado nos eventos.");
+        }
         Pessoa pessoa = pessoas.findById(req.pessoaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pessoa não encontrada."));
         Tenant tenant = tenantAtual();
@@ -124,6 +127,9 @@ public class ComunicadoService {
     public Criado criar(CriarRequest req, List<MultipartFile> arquivos) {
         Layout layout = layouts.findById(req.layoutId())
                 .orElseThrow(() -> new ResourceNotFoundException("Layout não encontrado."));
+        if (layout.getTipoLayout() == TipoLayout.EVENTO) {
+            throw new BadRequestException("Layout de evento só é usado nos eventos.");
+        }
         if (!layout.isAtivo() || layout.getTipoEnvio() != req.canal()) {
             throw new BadRequestException("Escolha um layout ativo de " + (req.canal() == TipoEnvio.EMAIL ? "e-mail." : "WhatsApp."));
         }
@@ -258,6 +264,11 @@ public class ComunicadoService {
                 v == null || v.getMandatoFim() == null ? null : v.getMandatoFim().format(DATA),
                 responsavel == null ? null : responsavel.getNomeCompleto(),
                 dono.getDependentes().stream().map(r -> r.getVoluntario().getNomeCompleto()).toList());
+    }
+
+    /** Contexto de uma pessoa para mensagens que outros módulos montam com layout (ex.: eventos). */
+    public ContextoDeEnvio contextoDa(Tenant tenant, Pessoa pessoa) {
+        return contexto(tenant, pessoa, null);
     }
 
     private static Pessoa responsavelPrincipal(Pessoa pessoa) {

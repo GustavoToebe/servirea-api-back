@@ -13,7 +13,12 @@ import org.hibernate.annotations.TenantId;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /** Evento da paróquia. {@code inicio}/{@code termino} são o horário de Brasília, como a pessoa digitou. */
 @Entity
@@ -52,11 +57,23 @@ public class Evento {
     private String responsavelNome;
     @Column(name = "responsavel_telefone", length = 20)
     private String responsavelTelefone;
-    @Column(name = "lembrete_dias", nullable = false)
-    private int lembreteDias = 1;
-    @Column(name = "mensagem_confirmacao", nullable = false)
+    @Column(name = "lembrete_dias", length = 50, nullable = false)
+    private String lembreteDias = "1";
+    @Column(name = "whatsapp_habilitado", nullable = false)
+    private boolean whatsappHabilitado = true;
+    @Column(name = "whatsapp_layout_confirmacao_id")
+    private UUID whatsappLayoutConfirmacaoId;
+    @Column(name = "whatsapp_layout_lembrete_id")
+    private UUID whatsappLayoutLembreteId;
+    @Column(name = "email_habilitado", nullable = false)
+    private boolean emailHabilitado = false;
+    @Column(name = "email_layout_confirmacao_id")
+    private UUID emailLayoutConfirmacaoId;
+    @Column(name = "email_layout_lembrete_id")
+    private UUID emailLayoutLembreteId;
+    @Column(name = "mensagem_confirmacao")
     private String mensagemConfirmacao;
-    @Column(name = "mensagem_lembrete", nullable = false)
+    @Column(name = "mensagem_lembrete")
     private String mensagemLembrete;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -121,8 +138,44 @@ public class Evento {
     public void setResponsavelNome(String responsavelNome) { this.responsavelNome = responsavelNome; }
     public String getResponsavelTelefone() { return responsavelTelefone; }
     public void setResponsavelTelefone(String responsavelTelefone) { this.responsavelTelefone = responsavelTelefone; }
-    public int getLembreteDias() { return lembreteDias; }
-    public void setLembreteDias(int lembreteDias) { this.lembreteDias = lembreteDias; }
+    public String getLembreteDias() { return lembreteDias; }
+    public void setLembreteDias(String lembreteDias) { this.lembreteDias = lembreteDias != null ? lembreteDias : ""; }
+
+    public List<Integer> getLembreteDiasList() {
+        if (lembreteDias == null || lembreteDias.isBlank()) return List.of();
+        List<Integer> lista = new ArrayList<>();
+        for (String p : lembreteDias.split(",")) {
+            try {
+                int d = Integer.parseInt(p.trim());
+                if (d > 0 && !lista.contains(d)) lista.add(d);
+            } catch (NumberFormatException ignored) {}
+        }
+        return Collections.unmodifiableList(lista);
+    }
+
+    public void setLembreteDiasList(List<Integer> dias) {
+        if (dias == null || dias.isEmpty()) {
+            this.lembreteDias = "";
+        } else {
+            this.lembreteDias = dias.stream().filter(Objects::nonNull).filter(d -> d > 0).distinct()
+                    .map(String::valueOf).collect(Collectors.joining(","));
+        }
+    }
+
+    public boolean isWhatsappHabilitado() { return whatsappHabilitado; }
+    public void setWhatsappHabilitado(boolean whatsappHabilitado) { this.whatsappHabilitado = whatsappHabilitado; }
+    public UUID getWhatsappLayoutConfirmacaoId() { return whatsappLayoutConfirmacaoId; }
+    public void setWhatsappLayoutConfirmacaoId(UUID whatsappLayoutConfirmacaoId) { this.whatsappLayoutConfirmacaoId = whatsappLayoutConfirmacaoId; }
+    public UUID getWhatsappLayoutLembreteId() { return whatsappLayoutLembreteId; }
+    public void setWhatsappLayoutLembreteId(UUID whatsappLayoutLembreteId) { this.whatsappLayoutLembreteId = whatsappLayoutLembreteId; }
+
+    public boolean isEmailHabilitado() { return emailHabilitado; }
+    public void setEmailHabilitado(boolean emailHabilitado) { this.emailHabilitado = emailHabilitado; }
+    public UUID getEmailLayoutConfirmacaoId() { return emailLayoutConfirmacaoId; }
+    public void setEmailLayoutConfirmacaoId(UUID emailLayoutConfirmacaoId) { this.emailLayoutConfirmacaoId = emailLayoutConfirmacaoId; }
+    public UUID getEmailLayoutLembreteId() { return emailLayoutLembreteId; }
+    public void setEmailLayoutLembreteId(UUID emailLayoutLembreteId) { this.emailLayoutLembreteId = emailLayoutLembreteId; }
+
     public String getMensagemConfirmacao() { return mensagemConfirmacao; }
     public void setMensagemConfirmacao(String mensagemConfirmacao) { this.mensagemConfirmacao = mensagemConfirmacao; }
     public String getMensagemLembrete() { return mensagemLembrete; }

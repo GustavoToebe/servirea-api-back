@@ -4,7 +4,12 @@ import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.auth.UsuarioTenant;
 import br.com.servire.api.comunicacao.ComunicadoDestinatario;
 import br.com.servire.api.comunicacao.ComunicadoDestinatarioRepository;
+import br.com.servire.api.comunicacao.Layout;
+import br.com.servire.api.comunicacao.LayoutRepository;
+import br.com.servire.api.comunicacao.TipoEnvio;
+import br.com.servire.api.comunicacao.TipoLayout;
 import br.com.servire.api.pessoa.Pessoa;
+import br.com.servire.api.pessoa.PessoaEmail;
 import br.com.servire.api.pessoa.PessoaRepository;
 import br.com.servire.api.pessoa.PessoaTelefone;
 import br.com.servire.api.pessoa.Pessoas;
@@ -62,6 +67,7 @@ class EventoHttpIntegrationTest extends AbstractIntegrationTest {
     @Autowired private PessoaRepository pessoas;
     @Autowired private ComunicadoDestinatarioRepository destinatarios;
     @Autowired private LembretesDeEvento lembretes;
+    @Autowired private LayoutRepository layouts;
     @Autowired private br.com.servire.api.auth.UsuarioRepository usuarios;
     private UUID usuarioId;
     @MockitoBean private StorageService storage;
@@ -311,6 +317,159 @@ class EventoHttpIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.inscritos[0].lembrete").value("PENDENTE"));
         mvc.perform(get("/eventos/" + longe).with(csrf()).with(authentication(usuario(TUDO))))
                 .andExpect(jsonPath("$.inscritos[0].lembrete").doesNotExist());
+    }
+
+    // ---- canais (WhatsApp e e-mail) e layouts
+
+    private Pessoa pessoaComEmail(String nome, boolean autoriza, String telefone, String email) {
+        Pessoa p = Pessoas.voluntario(nome);
+        p.getVoluntario().setAutorizaWhatsapp(autoriza);
+        if (telefone != null) {
+            PessoaTelefone t = new PessoaTelefone("celular", telefone, true);
+            t.setPessoa(p);
+            p.getTelefones().add(t);
+        }
+        PessoaEmail m = new PessoaEmail("pessoal", email, true);
+        m.setPessoa(p);
+        p.getEmails().add(m);
+        return pessoas.saveAndFlush(p);
+    }
+
+    private Layout layoutDeEvento(String nome, TipoEnvio canal, String assunto, String conteudo) {
+        return layouts.saveAndFlush(new Layout(nome, TipoLayout.EVENTO, canal, assunto, conteudo, true));
+    }
+
+    /** Evento com campos extras no JSON (canais, layouts, lista de dias do lembrete). */
+    private String criarPublicadoCom(String titulo, LocalDateTime inicio, String extras) throws Exception {
+        String base = corpo(titulo, inicio, null, 1);
+        String json = base.replace("\"lembreteDias\":1}", extras + "}");
+        String id = JsonPath.read(criar(json).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), "$.id");
+        mvc.perform(post("/eventos/" + id + "/publicar").with(csrf()).with(authentication(usuario(TUDO)))).andExpect(status().isOk());
+        return id;
+    }
+
+    @Test
+    void inscricaoUsaOsLayoutsEscolhidosEMandaPorWhatsappEPorEmail() throws Exception {
+        Layout zap = layoutDeEvento("Zap evento", TipoEnvio.WHATSAPP, null,
+                "Oi #PESSOA.PRIMEIRO_NOME#, vai ao #EVENTO.TITULO#?\nMapa: #EVENTO.MAPA#\nSem local: #EVENTO.LOCAL#");
+        Layout mail = layoutDeEvento("Email evento", TipoEnvio.EMAIL, "Inscrito em #EVENTO.TITULO#",
+                "<p>Olá #PESSOA.PRIMEIRO_NOME#, #EVENTO.DATA#</p>");
+        String id = criarPublicadoCom("Retiro", agoraBrasilia().plusDays(4).withHour(19).withMinute(30),
+                "\"lembreteDias\":[1],\"whatsappHabilitado\":true,\"emailHabilitado\":true,"
+                        + "\"whatsappLayoutConfirmacaoId\":\"" + zap.getId() + "\","
+                        + "\"emailLayoutConfirmacaoId\":\"" + mail.getId() + "\"");
+        Pessoa ana = pessoaComEmail("Ana Souza", true, "(45) 99965-0660", "ana@teste.com");
+
+        inscrever(id, ana.getId()).andExpect(status().isOk())
+                .andExpect(jsonPath("$.inscritos[0].confirmacaoWhatsapp").value("PENDENTE"))
+                .andExpect(jsonPath("$.inscritos[0].confirmacaoEmail").value("PENDENTE"))
+                .andExpect(jsonPath("$.inscritos[0].email").value("ana@teste.com"));
+
+        List<ComunicadoDestinatario> fila = destinatarios.findAll().stream().filter(d -> ana.getId().equals(d.getPessoaId())).toList();
+        assertThat(fila).hasSize(2);
+        ComunicadoDestinatario whats = fila.stream().filter(d -> "(45) 99965-0660".equals(d.getDestino())).findFirst().orElseThrow();
+        ComunicadoDestinatario email = fila.stream().filter(d -> "ana@teste.com".equals(d.getDestino())).findFirst().orElseThrow();
+        assertThat(whats.getConteudo()).isEqualTo("Oi Ana, vai ao Retiro?\nMapa: https://maps.app.goo.gl/abc\nSem local: Salão paroquial");
+        assertThat(email.getAssunto()).isEqualTo("Inscrito em Retiro");
+        assertThat(email.getConteudo()).startsWith("<p>Olá Ana, ").contains(agoraBrasilia().plusDays(4).format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+    }
+
+    @Test
+    void linhaDoLayoutComTagVaziaSomeDoWhatsapp() throws Exception {
+        Layout zap = layoutDeEvento("Zap sem mapa", TipoEnvio.WHATSAPP, null, "Oi #PESSOA.PRIMEIRO_NOME#\nMapa: #EVENTO.MAPA#\nFim");
+        String json = corpo("Sem mapa", agoraBrasilia().plusDays(4), null, 1)
+                .replace("\"mapaUrl\":\"https://maps.app.goo.gl/abc\",", "")
+                .replace("\"lembreteDias\":1}", "\"whatsappLayoutConfirmacaoId\":\"" + zap.getId() + "\"}");
+        String id = JsonPath.read(criar(json).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(), "$.id");
+        mvc.perform(post("/eventos/" + id + "/publicar").with(csrf()).with(authentication(usuario(TUDO)))).andExpect(status().isOk());
+        Pessoa ana = pessoa("Ana", true, "45999995555");
+
+        inscrever(id, ana.getId()).andExpect(status().isOk());
+
+        assertThat(destinatarios.findAll().stream().filter(d -> ana.getId().equals(d.getPessoaId())).findFirst().orElseThrow().getConteudo())
+                .isEqualTo("Oi Ana\nFim");
+    }
+
+    @Test
+    void semLayoutOEmailSaiComOTextoPadraoEmHtmlEEscapado() throws Exception {
+        String id = criarPublicadoCom("Festa <b>junina</b>", agoraBrasilia().plusDays(4), "\"lembreteDias\":[1],\"emailHabilitado\":true");
+        Pessoa ana = pessoaComEmail("Ana", false, null, "ana@teste.com");
+
+        inscrever(id, ana.getId()).andExpect(status().isOk())
+                .andExpect(jsonPath("$.inscritos[0].confirmacaoEmail").value("PENDENTE"));
+
+        ComunicadoDestinatario email = destinatarios.findAll().stream().filter(d -> ana.getId().equals(d.getPessoaId())).findFirst().orElseThrow();
+        assertThat(email.getAssunto()).isEqualTo("Inscrição confirmada: Festa <b>junina</b>");
+        assertThat(email.getConteudo()).startsWith("<p>Olá Ana!<br>").contains("Festa &lt;b&gt;junina&lt;/b&gt;").doesNotContain("<b>");
+    }
+
+    @Test
+    void canalDesabilitadoNaoMandaENoPadraoOEmailVemDesligado() throws Exception {
+        String semWhats = criarPublicadoCom("Só e-mail", agoraBrasilia().plusDays(4), "\"lembreteDias\":[1],\"whatsappHabilitado\":false,\"emailHabilitado\":true");
+        String padrao = criarPublicado("Padrão", agoraBrasilia().plusDays(4), null, 1);
+        Pessoa ana = pessoaComEmail("Ana", true, "45999996666", "ana@teste.com");
+
+        inscrever(semWhats, ana.getId()).andExpect(status().isOk());
+        assertThat(destinatarios.findAll().stream().filter(d -> ana.getId().equals(d.getPessoaId())))
+                .extracting(ComunicadoDestinatario::getDestino).containsExactly("ana@teste.com");
+
+        inscrever(padrao, ana.getId()).andExpect(status().isOk());
+        assertThat(destinatarios.findAll().stream().filter(d -> ana.getId().equals(d.getPessoaId())))
+                .extracting(ComunicadoDestinatario::getDestino).containsExactlyInAnyOrder("ana@teste.com", "45999996666");
+    }
+
+    @Test
+    void recusaLayoutDeOutroTipoOuDeOutroCanal() throws Exception {
+        Layout todos = layouts.saveAndFlush(new Layout("Geral", TipoLayout.TODOS, TipoEnvio.WHATSAPP, null, "Oi", true));
+        Layout mail = layoutDeEvento("Mail", TipoEnvio.EMAIL, "Assunto", "<p>x</p>");
+        String json = corpo("Evento", agoraBrasilia().plusDays(4), null, 1);
+
+        criar(json.replace("\"lembreteDias\":1}", "\"whatsappLayoutConfirmacaoId\":\"" + todos.getId() + "\"}"))
+                .andExpect(status().isBadRequest());
+        criar(json.replace("\"lembreteDias\":1}", "\"whatsappLayoutLembreteId\":\"" + mail.getId() + "\"}"))
+                .andExpect(status().isBadRequest());
+        criar(json.replace("\"lembreteDias\":1}", "\"emailLayoutLembreteId\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isBadRequest());
+        criar(json.replace("\"lembreteDias\":1}", "\"lembreteDias\":[31]}")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void excluirUmLayoutEmUsoSoLimpaAEscolhaDoEvento() throws Exception {
+        Layout mail = layoutDeEvento("Mail em uso", TipoEnvio.EMAIL, "Assunto", "<p>x</p>");
+        String id = criarPublicadoCom("Evento", agoraBrasilia().plusDays(4),
+                "\"lembreteDias\":[1],\"emailHabilitado\":true,\"emailLayoutLembreteId\":\"" + mail.getId() + "\"");
+        mvc.perform(get("/eventos/" + id).with(authentication(usuario(TUDO))))
+                .andExpect(jsonPath("$.emailLayoutLembreteId").value(mail.getId().toString()));
+
+        layouts.deleteById(mail.getId());
+        layouts.flush();
+
+        mvc.perform(get("/eventos/" + id).with(authentication(usuario(TUDO))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.emailLayoutLembreteId").doesNotExist());
+    }
+
+    @Test
+    void lembreteEmVariosDiasSaiUmPorMarcoECanalSemRepetir() throws Exception {
+        String id = criarPublicadoCom("Em dois dias", agoraBrasilia().plusDays(2).withHour(23).withMinute(0),
+                "\"lembreteDias\":[1,3,7],\"emailHabilitado\":true");
+        String longe = criarPublicadoCom("Longe", agoraBrasilia().plusDays(10), "\"lembreteDias\":[1,3,7],\"emailHabilitado\":true");
+        Pessoa ana = pessoaComEmail("Ana", true, "45999997777", "ana@teste.com");
+        inscrever(id, ana.getId());
+        inscrever(longe, ana.getId());
+
+        lembretes.enviarAgora();
+        lembretes.enviarAgora();
+
+        TenantContext.set(paroquia);
+        List<ComunicadoDestinatario> lembretesDeAna = destinatarios.findAll().stream()
+                .filter(d -> ana.getId().equals(d.getPessoaId()) && d.getConteudo().contains("Lembrete")).toList();
+        assertThat(lembretesDeAna).extracting(ComunicadoDestinatario::getDestino).containsExactlyInAnyOrder("45999997777", "ana@teste.com");
+        mvc.perform(get("/eventos/" + id).with(authentication(usuario(TUDO))))
+                .andExpect(jsonPath("$.lembreteDias.length()").value(3))
+                .andExpect(jsonPath("$.inscritos[0].lembreteWhatsapp").value("PENDENTE"))
+                .andExpect(jsonPath("$.inscritos[0].lembreteEmail").value("PENDENTE"));
+        mvc.perform(get("/eventos/" + longe).with(authentication(usuario(TUDO))))
+                .andExpect(jsonPath("$.inscritos[0].lembreteEmail").doesNotExist());
     }
 
     // ---- fotos

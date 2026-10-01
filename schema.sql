@@ -1,5 +1,6 @@
--- Esquema do banco, gerado das migrations (V001-V052). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V053). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
+-- ATENÇÃO: as mudanças da V053 foram escritas à mão em 01/10/2026 (sem Postgres local). Regerar pelo script e apagar esta linha.
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
@@ -439,13 +440,18 @@ CREATE TABLE public.evento (
     vagas integer,
     responsavel_nome character varying(150),
     responsavel_telefone character varying(20),
-    lembrete_dias integer DEFAULT 1 NOT NULL,
-    mensagem_confirmacao text NOT NULL,
-    mensagem_lembrete text NOT NULL,
+    lembrete_dias character varying(50) DEFAULT '1'::character varying NOT NULL,
+    mensagem_confirmacao text,
+    mensagem_lembrete text,
     situacao character varying(20) DEFAULT 'RASCUNHO'::character varying NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT evento_lembrete_dias_check CHECK (((lembrete_dias >= 0) AND (lembrete_dias <= 30))),
+    whatsapp_habilitado boolean DEFAULT true NOT NULL,
+    whatsapp_layout_confirmacao_id uuid,
+    whatsapp_layout_lembrete_id uuid,
+    email_habilitado boolean DEFAULT false NOT NULL,
+    email_layout_confirmacao_id uuid,
+    email_layout_lembrete_id uuid,
     CONSTRAINT evento_situacao_check CHECK (((situacao)::text = ANY ((ARRAY['RASCUNHO'::character varying, 'PUBLICADO'::character varying, 'CANCELADO'::character varying])::text[]))),
     CONSTRAINT evento_termino_depois_do_inicio CHECK (((termino IS NULL) OR (termino >= inicio))),
     CONSTRAINT evento_vagas_check CHECK (((vagas IS NULL) OR (vagas > 0)))
@@ -477,7 +483,10 @@ CREATE TABLE public.evento_inscricao (
     confirmacao_destinatario_id uuid,
     lembrete_destinatario_id uuid,
     lembrete_enviado_em timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    confirmacao_email_destinatario_id uuid,
+    lembrete_email_destinatario_id uuid,
+    lembrete_email_enviado_em timestamp with time zone
 );
 
 --
@@ -677,7 +686,7 @@ CREATE TABLE public.layout_envio (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT layout_envio_conteudo_check CHECK ((char_length(conteudo) <= 50000)),
     CONSTRAINT layout_envio_tipo_envio_check CHECK (((tipo_envio)::text = ANY ((ARRAY['EMAIL'::character varying, 'WHATSAPP'::character varying])::text[]))),
-    CONSTRAINT layout_envio_tipo_layout_check CHECK (((tipo_layout)::text = ANY ((ARRAY['TODOS'::character varying, 'RESPONSAVEL'::character varying, 'COROINHA'::character varying, 'ACOLITO'::character varying, 'COROINHA_ACOLITO'::character varying, 'MINISTRO'::character varying])::text[])))
+    CONSTRAINT layout_envio_tipo_layout_check CHECK (((tipo_layout)::text = ANY ((ARRAY['TODOS'::character varying, 'RESPONSAVEL'::character varying, 'COROINHA'::character varying, 'ACOLITO'::character varying, 'COROINHA_ACOLITO'::character varying, 'MINISTRO'::character varying, 'EVENTO'::character varying])::text[])))
 );
 
 --
@@ -2303,6 +2312,34 @@ ALTER TABLE ONLY public.comunicado_destinatario
 
 ALTER TABLE ONLY public.comunicado_destinatario
     ADD CONSTRAINT fk_destinatario_pessoa FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE SET NULL (pessoa_id);
+
+--
+-- Name: evento fk_evento_email_confirmacao; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT fk_evento_email_confirmacao FOREIGN KEY (tenant_id, email_layout_confirmacao_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (email_layout_confirmacao_id);
+
+--
+-- Name: evento fk_evento_email_lembrete; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT fk_evento_email_lembrete FOREIGN KEY (tenant_id, email_layout_lembrete_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (email_layout_lembrete_id);
+
+--
+-- Name: evento fk_evento_whatsapp_confirmacao; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT fk_evento_whatsapp_confirmacao FOREIGN KEY (tenant_id, whatsapp_layout_confirmacao_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (whatsapp_layout_confirmacao_id);
+
+--
+-- Name: evento fk_evento_whatsapp_lembrete; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT fk_evento_whatsapp_lembrete FOREIGN KEY (tenant_id, whatsapp_layout_lembrete_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (whatsapp_layout_lembrete_id);
 
 --
 -- Name: evento_foto fk_evento_foto_evento; Type: FK CONSTRAINT; Schema: public; Owner: -

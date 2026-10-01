@@ -23,6 +23,10 @@ public class EnvioAvulso {
     public record Mensagem(UUID pessoaId, String nome, String telefone, String texto) {
     }
 
+    /** Uma mensagem pronta para um e-mail. */
+    public record MensagemEmail(UUID pessoaId, String nome, String email, String assunto, String textoHtml) {
+    }
+
     private final ComunicadoRepository comunicados;
     private final ComunicadoDestinatarioRepository destinatarios;
 
@@ -43,6 +47,25 @@ public class EnvioAvulso {
         for (Mensagem m : mensagens) {
             linhas.add(new ComunicadoDestinatario(comunicado.getId(), m.pessoaId(), limitar(m.nome(), 200),
                     m.telefone().trim(), null, m.texto()));
+        }
+        destinatarios.saveAll(linhas);
+        comunicado.setTotal(linhas.size());
+        return linhas.stream().map(ComunicadoDestinatario::getId).toList();
+    }
+
+    /**
+     * Enfileira as mensagens de e-mail num comunicado com o nome {@code origem}.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<UUID> enfileirarEmail(String origem, String assuntoPadrao, List<MensagemEmail> mensagens) {
+        if (mensagens.isEmpty()) return List.of();
+        Comunicado comunicado = comunicados.save(new Comunicado(TipoEnvio.EMAIL, origem, usuarioAtual()));
+        comunicado.setAssunto(limitar(assuntoPadrao, 200));
+        List<ComunicadoDestinatario> linhas = new ArrayList<>();
+        for (MensagemEmail m : mensagens) {
+            String assunto = m.assunto() != null && !m.assunto().isBlank() ? m.assunto() : assuntoPadrao;
+            linhas.add(new ComunicadoDestinatario(comunicado.getId(), m.pessoaId(), limitar(m.nome(), 200),
+                    m.email().trim(), limitar(assunto, 200), m.textoHtml()));
         }
         destinatarios.saveAll(linhas);
         comunicado.setTotal(linhas.size());

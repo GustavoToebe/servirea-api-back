@@ -99,6 +99,7 @@ public class Comunicado {
     public Instant getConcluidoEm() { return concluidoEm; }
 
     void setTotal(int total) { this.total = total; }
+    void setAssunto(String assunto) { this.assunto = assunto; }
 
     void marcarEnviando() {
         if (status == StatusComunicado.NA_FILA) status = StatusComunicado.ENVIANDO;

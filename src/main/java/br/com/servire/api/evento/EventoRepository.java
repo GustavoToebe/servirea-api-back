@@ -17,7 +17,7 @@ public interface EventoRepository extends JpaRepository<Evento, UUID> {
     @Query("""
             SELECT e FROM Evento e
             WHERE e.situacao = br.com.servire.api.evento.Evento.Situacao.PUBLICADO
-              AND e.lembreteDias > 0 AND e.inicio >= :de AND e.inicio < :ate
+              AND e.lembreteDias IS NOT NULL AND e.lembreteDias <> '' AND e.inicio >= :de AND e.inicio < :ate
             """)
     List<Evento> publicadosEntre(@Param("de") LocalDateTime de, @Param("ate") LocalDateTime ate);
 }

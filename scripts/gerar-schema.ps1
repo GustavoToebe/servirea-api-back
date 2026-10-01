@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 $banco = "servirea_dev"
 $destino = Join-Path $PSScriptRoot "..\schema.sql"
 $cabecalho = @(
-    "-- Esquema do banco, gerado das migrations (V001-V052). NÃO editar à mão.",
+    "-- Esquema do banco, gerado das migrations (V001-V053). NÃO editar à mão.",
     "-- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).",
     "-- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.",
     ""

@@ -109,6 +109,7 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
         // De 48 para 50 em 30/09/2026: V049 (descrição e padrão do layout) e V050 (recria escalas e layouts).
         // De 50 para 51 em 30/09/2026: V051 (remove o financeiro antigo: plano, assinatura, cobranca, backoffice_log).
         // De 51 para 52 em 01/10/2026: V052 (eventos: evento, evento_foto, evento_inscricao).
+        // De 52 para 53 em 01/10/2026: V053 (evento layouts e lembretes).
         Integer total = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM flyway_schema_history WHERE type = 'SQL'", Integer.class);
         Integer sucesso = jdbcTemplate.queryForObject(
@@ -117,10 +118,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(52);
-        assertThat(sucesso).isEqualTo(52);
+        assertThat(total).isEqualTo(53);
+        assertThat(sucesso).isEqualTo(53);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("eventos");
+        assertThat(descricoes.getLast()).isEqualTo("evento layouts e lembretes");
 
         Integer sobras = jdbcTemplate.queryForObject("""
                 SELECT count(*) FROM information_schema.tables

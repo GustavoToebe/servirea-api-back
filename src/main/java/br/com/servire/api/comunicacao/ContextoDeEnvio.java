@@ -26,8 +26,37 @@ public record ContextoDeEnvio(
         // Responsável (nulo quando não há)
         String responsavelNome,
         // Dependentes
-        List<String> dependentesNomes
+        List<String> dependentesNomes,
+        // Evento (opcional)
+        String eventoTitulo,
+        String eventoData,
+        String eventoHora,
+        String eventoQuando,
+        String eventoLocal,
+        String eventoEndereco,
+        String eventoMapa,
+        String eventoResponsavel,
+        String eventoTelefone
 ) {
+
+    public ContextoDeEnvio(
+            String paroquiaNome, String paroquiaCidade, String paroquiaUf, String paroquiaEmail, String paroquiaTelefone,
+            String pessoaNome, String pessoaNumero, LocalDate pessoaNascimento, String pessoaTipo, String pessoaEmail,
+            String pessoaTelefone, String pessoaMandatoFim, String responsavelNome, List<String> dependentesNomes) {
+        this(paroquiaNome, paroquiaCidade, paroquiaUf, paroquiaEmail, paroquiaTelefone,
+                pessoaNome, pessoaNumero, pessoaNascimento, pessoaTipo, pessoaEmail,
+                pessoaTelefone, pessoaMandatoFim, responsavelNome, dependentesNomes,
+                null, null, null, null, null, null, null, null, null);
+    }
+
+    /** Mesmo contexto, com os dados do evento preenchidos (layouts do tipo EVENTO). */
+    public ContextoDeEnvio comEvento(String titulo, String data, String hora, String quando, String local,
+                                     String endereco, String mapa, String responsavel, String telefone) {
+        return new ContextoDeEnvio(paroquiaNome, paroquiaCidade, paroquiaUf, paroquiaEmail, paroquiaTelefone,
+                pessoaNome, pessoaNumero, pessoaNascimento, pessoaTipo, pessoaEmail, pessoaTelefone, pessoaMandatoFim,
+                responsavelNome, dependentesNomes,
+                titulo, data, hora, quando, local, endereco, mapa, responsavel, telefone);
+    }
 
     /**
      * Contexto com dados fictícios para a pré-visualização de layout.
@@ -48,7 +77,16 @@ public record ContextoDeEnvio(
                 "(11) 99999-8888",
                 "31/12/2026",
                 "Maria Souza",
-                List.of("Pedro Souza", "Lucas Souza")
+                List.of("Pedro Souza", "Lucas Souza"),
+                "Encontro Geral de Formação",
+                "15/10/2026",
+                "19:30",
+                "amanhã",
+                "Salão Paroquial",
+                "Rua das Flores, 123 - Centro",
+                "https://maps.app.goo.gl/exemplo",
+                "Carlos Silva",
+                "(11) 98888-7777"
         );
     }
 
@@ -68,7 +106,16 @@ public record ContextoDeEnvio(
                 base.pessoaTelefone(),
                 base.pessoaMandatoFim(),
                 base.responsavelNome(),
-                base.dependentesNomes()
+                base.dependentesNomes(),
+                base.eventoTitulo(),
+                base.eventoData(),
+                base.eventoHora(),
+                base.eventoQuando(),
+                base.eventoLocal(),
+                base.eventoEndereco(),
+                base.eventoMapa(),
+                base.eventoResponsavel(),
+                base.eventoTelefone()
         );
     }
 }

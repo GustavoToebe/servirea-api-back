@@ -1,5 +1,6 @@
 package br.com.servire.api.evento;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -34,7 +35,13 @@ public final class EventoDtos {
             @Min(value = 1, message = "Vagas: deixe em branco para ilimitado ou informe 1 ou mais.") Integer vagas,
             @Size(max = 150) String responsavelNome,
             String responsavelTelefone,
-            @Min(value = 0, message = "Lembrete: de 0 a 30 dias.") @Max(value = 30, message = "Lembrete: de 0 a 30 dias.") Integer lembreteDias,
+            @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY) List<Integer> lembreteDias,
+            Boolean whatsappHabilitado,
+            UUID whatsappLayoutConfirmacaoId,
+            UUID whatsappLayoutLembreteId,
+            Boolean emailHabilitado,
+            UUID emailLayoutConfirmacaoId,
+            UUID emailLayoutLembreteId,
             @Size(max = 2000, message = "Mensagem de confirmação muito longa.") String mensagemConfirmacao,
             @Size(max = 2000, message = "Mensagem de lembrete muito longa.") String mensagemLembrete) {
     }
@@ -50,16 +57,20 @@ public final class EventoDtos {
     }
 
     /** Situação de cada mensagem para o inscrito. */
-    public enum SituacaoMensagem { PENDENTE, ENVIADA, FALHOU, SEM_AUTORIZACAO, SEM_TELEFONE }
+    public enum SituacaoMensagem { PENDENTE, ENVIADA, FALHOU, SEM_AUTORIZACAO, SEM_TELEFONE, SEM_EMAIL }
 
-    public record InscritoResponse(UUID id, UUID pessoaId, String nome, String telefone,
+    public record InscritoResponse(UUID id, UUID pessoaId, String nome, String telefone, String email,
+                                   SituacaoMensagem confirmacaoWhatsapp, SituacaoMensagem lembreteWhatsapp,
+                                   SituacaoMensagem confirmacaoEmail, SituacaoMensagem lembreteEmail,
                                    SituacaoMensagem confirmacao, SituacaoMensagem lembrete) {
     }
 
     public record EventoDetalhe(UUID id, String titulo, String descricao, LocalDateTime inicio, LocalDateTime termino,
                                 String localNome, String cep, String logradouro, String numero, String complemento,
                                 String bairro, String cidade, String uf, String mapaUrl, Integer vagas,
-                                String responsavelNome, String responsavelTelefone, int lembreteDias,
+                                String responsavelNome, String responsavelTelefone, List<Integer> lembreteDias,
+                                boolean whatsappHabilitado, UUID whatsappLayoutConfirmacaoId, UUID whatsappLayoutLembreteId,
+                                boolean emailHabilitado, UUID emailLayoutConfirmacaoId, UUID emailLayoutLembreteId,
                                 String mensagemConfirmacao, String mensagemLembrete, SituacaoTela situacao,
                                 List<FotoResponse> fotos, List<InscritoResponse> inscritos, Map<String, String> tags) {
     }

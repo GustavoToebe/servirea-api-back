@@ -51,6 +51,31 @@ public final class Renderizador {
     }
 
     /**
+     * Como {@link #renderizar}, mas a linha que tem tag e cujas tags ficaram todas vazias some da mensagem
+     * (ex.: "Mapa: #EVENTO.MAPA#" num evento sem mapa). Pensado para texto de WhatsApp, que é uma tag por linha.
+     */
+    public static String renderizarSemLinhasVazias(String conteudo, TipoEnvio envio, ContextoDeEnvio ctx) {
+        if (conteudo == null) return "";
+        Map<String, CatalogoDeTags.Tag> catalogo = CatalogoDeTags.porCodigo();
+        List<String> linhas = new ArrayList<>();
+        for (String linha : conteudo.split("\n", -1)) {
+            Matcher m = TAG_PATTERN.matcher(linha);
+            boolean temTag = false;
+            boolean algumaCheia = false;
+            while (m.find()) {
+                CatalogoDeTags.Tag tag = catalogo.get(m.group());
+                if (tag == null) continue;
+                temTag = true;
+                String valor = tag.valor().apply(ctx);
+                if (valor != null && !valor.isBlank()) algumaCheia = true;
+            }
+            if (temTag && !algumaCheia) continue;
+            linhas.add(renderizar(linha, envio, ctx).stripTrailing());
+        }
+        return String.join("\n", linhas).strip();
+    }
+
+    /**
      * Tags presentes no conteúdo (regex {@code #[A-Z_]+.[A-Z_]+#}) que não
      * existem para o tipo de layout informado.
      */
