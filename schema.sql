@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V051). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V052). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict ZgDV469v2eLVGLfKAlVR7YzSb0RioBrI7X0xwCXXk8VMVpVfKYsJKvZmFb1cd4g
+\restrict gIzxoONWfZPk0GU4abuheBKaaGlbMhblc0gmzxbQWIHjUoVXGiYIyZkOmH7B3yQ
 
 --
 -- Name: public; Type: SCHEMA; Schema: -; Owner: -
@@ -414,6 +414,70 @@ CREATE TABLE public.escalas (
     layout_id uuid,
     CONSTRAINT escalas_ano_check CHECK (((ano >= 2020) AND (ano <= 2100))),
     CONSTRAINT escalas_mes_check CHECK (((mes >= 1) AND (mes <= 12)))
+);
+
+--
+-- Name: evento; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.evento (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    titulo character varying(150) NOT NULL,
+    descricao text,
+    inicio timestamp without time zone NOT NULL,
+    termino timestamp without time zone,
+    local_nome character varying(150),
+    cep character varying(9),
+    logradouro character varying(200),
+    numero character varying(20),
+    complemento character varying(100),
+    bairro character varying(100),
+    cidade character varying(100),
+    uf character varying(2),
+    mapa_url character varying(500),
+    vagas integer,
+    responsavel_nome character varying(150),
+    responsavel_telefone character varying(20),
+    lembrete_dias integer DEFAULT 1 NOT NULL,
+    mensagem_confirmacao text NOT NULL,
+    mensagem_lembrete text NOT NULL,
+    situacao character varying(20) DEFAULT 'RASCUNHO'::character varying NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT evento_lembrete_dias_check CHECK (((lembrete_dias >= 0) AND (lembrete_dias <= 30))),
+    CONSTRAINT evento_situacao_check CHECK (((situacao)::text = ANY ((ARRAY['RASCUNHO'::character varying, 'PUBLICADO'::character varying, 'CANCELADO'::character varying])::text[]))),
+    CONSTRAINT evento_termino_depois_do_inicio CHECK (((termino IS NULL) OR (termino >= inicio))),
+    CONSTRAINT evento_vagas_check CHECK (((vagas IS NULL) OR (vagas > 0)))
+);
+
+--
+-- Name: evento_foto; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.evento_foto (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    evento_id uuid NOT NULL,
+    caminho character varying(300) NOT NULL,
+    capa boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+--
+-- Name: evento_inscricao; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.evento_inscricao (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    tenant_id uuid NOT NULL,
+    evento_id uuid NOT NULL,
+    pessoa_id uuid NOT NULL,
+    autoriza_whatsapp boolean NOT NULL,
+    confirmacao_destinatario_id uuid,
+    lembrete_destinatario_id uuid,
+    lembrete_enviado_em timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 --
@@ -1170,6 +1234,41 @@ ALTER TABLE ONLY public.escalas
     ADD CONSTRAINT escalas_tenant_id_id_key UNIQUE (tenant_id, id);
 
 --
+-- Name: evento_foto evento_foto_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento_foto
+    ADD CONSTRAINT evento_foto_pkey PRIMARY KEY (id);
+
+--
+-- Name: evento_inscricao evento_inscricao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento_inscricao
+    ADD CONSTRAINT evento_inscricao_pkey PRIMARY KEY (id);
+
+--
+-- Name: evento_inscricao evento_inscricao_unica; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento_inscricao
+    ADD CONSTRAINT evento_inscricao_unica UNIQUE (evento_id, pessoa_id);
+
+--
+-- Name: evento evento_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT evento_pkey PRIMARY KEY (id);
+
+--
+-- Name: evento evento_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT evento_tenant_id_id_key UNIQUE (tenant_id, id);
+
+--
 -- Name: flyway_schema_history flyway_schema_history_pk; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1634,6 +1733,24 @@ CREATE INDEX idx_escalas_status ON public.escalas USING btree (status);
 --
 
 CREATE INDEX idx_escalas_tenant_id ON public.escalas USING btree (tenant_id);
+
+--
+-- Name: idx_evento_foto_evento; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evento_foto_evento ON public.evento_foto USING btree (evento_id);
+
+--
+-- Name: idx_evento_inscricao_evento; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evento_inscricao_evento ON public.evento_inscricao USING btree (evento_id);
+
+--
+-- Name: idx_evento_tenant_inicio; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_evento_tenant_inicio ON public.evento USING btree (tenant_id, inicio);
 
 --
 -- Name: idx_indisponibilidade_tenant_data; Type: INDEX; Schema: public; Owner: -
@@ -2139,6 +2256,27 @@ ALTER TABLE ONLY public.escalas
     ADD CONSTRAINT escalas_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 --
+-- Name: evento_foto evento_foto_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento_foto
+    ADD CONSTRAINT evento_foto_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+--
+-- Name: evento_inscricao evento_inscricao_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento_inscricao
+    ADD CONSTRAINT evento_inscricao_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+--
+-- Name: evento evento_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento
+    ADD CONSTRAINT evento_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+--
 -- Name: comunicado_anexo fk_anexo_comunicado; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2165,6 +2303,27 @@ ALTER TABLE ONLY public.comunicado_destinatario
 
 ALTER TABLE ONLY public.comunicado_destinatario
     ADD CONSTRAINT fk_destinatario_pessoa FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE SET NULL (pessoa_id);
+
+--
+-- Name: evento_foto fk_evento_foto_evento; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento_foto
+    ADD CONSTRAINT fk_evento_foto_evento FOREIGN KEY (tenant_id, evento_id) REFERENCES public.evento(tenant_id, id) ON DELETE CASCADE;
+
+--
+-- Name: evento_inscricao fk_evento_inscricao_evento; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento_inscricao
+    ADD CONSTRAINT fk_evento_inscricao_evento FOREIGN KEY (tenant_id, evento_id) REFERENCES public.evento(tenant_id, id) ON DELETE CASCADE;
+
+--
+-- Name: evento_inscricao fk_evento_inscricao_pessoa; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.evento_inscricao
+    ADD CONSTRAINT fk_evento_inscricao_pessoa FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE CASCADE;
 
 --
 -- Name: indisponibilidade_voluntario fk_indisponibilidade_voluntario; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -2528,6 +2687,24 @@ ALTER TABLE public.escala_vagas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.escalas ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: evento; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.evento ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: evento_foto; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.evento_foto ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: evento_inscricao; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.evento_inscricao ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: indisponibilidade_voluntario; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -2704,5 +2881,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict ZgDV469v2eLVGLfKAlVR7YzSb0RioBrI7X0xwCXXk8VMVpVfKYsJKvZmFb1cd4g
+\unrestrict gIzxoONWfZPk0GU4abuheBKaaGlbMhblc0gmzxbQWIHjUoVXGiYIyZkOmH7B3yQ
 

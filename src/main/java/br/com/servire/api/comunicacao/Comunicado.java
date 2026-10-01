@@ -77,6 +77,14 @@ public class Comunicado {
         this.criadoPor = criadoPor;
     }
 
+    /** Mensagem do próprio sistema (ex.: confirmação de evento), sem layout: {@code origem} aparece no histórico. */
+    Comunicado(TipoEnvio canal, String origem, UUID criadoPor) {
+        this.canal = canal;
+        this.layoutNome = origem.length() > 120 ? origem.substring(0, 120) : origem;
+        this.enviarPara = EnviarPara.PESSOA;
+        this.criadoPor = criadoPor;
+    }
+
     public UUID getId() { return id; }
     public TipoEnvio getCanal() { return canal; }
     public UUID getLayoutId() { return layoutId; }
