@@ -13,7 +13,7 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V056__reservas_fila_comunicados.sql",
-    "quantidade": 56
+    "ultima": "V057__tamanho_fotos_armazenamento.sql",
+    "quantidade": 57
   }
 }

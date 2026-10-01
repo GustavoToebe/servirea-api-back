@@ -33,15 +33,16 @@ public class VoluntarioService {
     private final EscalaVagaRepository escalaVagaRepository;
     private final StorageService storageService;
     private final AuditLogService auditLogService;
+    private final br.com.servire.api.minhaconta.CotasService cotas;
 
     public VoluntarioService(VoluntarioRepository voluntarioRepository,
                               EscalaVagaRepository escalaVagaRepository,
                               StorageService storageService,
-                              AuditLogService auditLogService) {
+                              AuditLogService auditLogService, br.com.servire.api.minhaconta.CotasService cotas) {
         this.voluntarioRepository = voluntarioRepository;
         this.escalaVagaRepository = escalaVagaRepository;
         this.storageService = storageService;
-        this.auditLogService = auditLogService;
+        this.auditLogService = auditLogService; this.cotas = cotas;
     }
 
     @Transactional(readOnly = true)
@@ -109,19 +110,23 @@ public class VoluntarioService {
 
     @Transactional
     public Voluntario definirFoto(UUID id, MultipartFile foto) {
+        var reserva=cotas.reservar();
         Voluntario voluntario = buscarPorId(id);
         if (foto == null || foto.isEmpty()) {
             throw new BadRequestException("Nenhum arquivo de foto enviado.");
         }
-        String caminho = voluntario.getId() + "/perfil-" + System.currentTimeMillis() + ExtensaoDeFoto.de(foto.getContentType());
+        String caminho = voluntario.getId() + "/perfil-" + UUID.randomUUID() + ExtensaoDeFoto.de(foto.getContentType());
         byte[] conteudo;
         try {
             conteudo = foto.getBytes();
         } catch (IOException e) {
             throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
         }
+        cotas.validarUpload(reserva,conteudo.length,voluntario.getFotoPath());
         String caminhoSalvo = storageService.armazenar(caminho, conteudo, foto.getContentType());
         voluntario.setFotoPath(caminhoSalvo);
+        voluntario.setFotoTamanhoBytes((long)conteudo.length);
+        cotas.validar(reserva);
         auditLogService.registrar("FOTO_ATUALIZADA", "VOLUNTARIO", id, List.of("fotoPath"));
         return voluntario;
     }

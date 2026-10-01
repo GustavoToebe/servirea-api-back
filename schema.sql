@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V056). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V057). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict aSa5ZdQYSnHMNaA0aZcg96jevDZeCqhWNirKGobvJ6gpbECQbqbwdNsD3xEnwr4
+\restrict z9u8fqEmJaHFf7TKiFDNw4GezgPwTIX46r79vpVrHcPXCeoCYaEa5dshUNNN9sh
 
 
 
@@ -509,7 +509,9 @@ CREATE TABLE public.evento_foto (
     evento_id uuid NOT NULL,
     caminho character varying(300) NOT NULL,
     capa boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    foto_tamanho_bytes bigint,
+    CONSTRAINT evento_foto_foto_tamanho_bytes_check CHECK ((foto_tamanho_bytes > 0))
 );
 
 
@@ -750,7 +752,9 @@ CREATE TABLE public.inscricoes (
     condicao_outra character varying(200),
     cuidados character varying(1000),
     consentimento_cuidados_em timestamp with time zone,
+    foto_tamanho_bytes bigint,
     CONSTRAINT inscricoes_aprovada_ck CHECK (((status <> 'APROVADA'::public.status_inscricao) OR ((voluntario_id IS NOT NULL) AND (data_aprovacao IS NOT NULL) AND (aprovado_por IS NOT NULL)))),
+    CONSTRAINT inscricoes_foto_tamanho_bytes_check CHECK ((foto_tamanho_bytes > 0)),
     CONSTRAINT inscricoes_nivel_suporte_tea_check CHECK (((nivel_suporte_tea >= 1) AND (nivel_suporte_tea <= 3))),
     CONSTRAINT inscricoes_rejeitada_ck CHECK (((status <> 'REJEITADA'::public.status_inscricao) OR ((data_rejeicao IS NOT NULL) AND (rejeitado_por IS NOT NULL))))
 );
@@ -1260,6 +1264,8 @@ CREATE TABLE public.voluntarios (
     tenant_id uuid NOT NULL,
     mandato_inicio date,
     mandato_fim date,
+    foto_tamanho_bytes bigint,
+    CONSTRAINT voluntarios_foto_tamanho_bytes_check CHECK ((foto_tamanho_bytes > 0)),
     CONSTRAINT voluntarios_horario_estudo_check CHECK (((horario_estudo IS NULL) OR (horario_estudo = ANY (ARRAY['MANHA'::text, 'TARDE'::text, 'NOITE'::text])))),
     CONSTRAINT voluntarios_mandato_ordem CHECK (((mandato_fim IS NULL) OR (mandato_inicio IS NULL) OR (mandato_fim >= mandato_inicio)))
 );
@@ -3455,5 +3461,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict aSa5ZdQYSnHMNaA0aZcg96jevDZeCqhWNirKGobvJ6gpbECQbqbwdNsD3xEnwr4
+\unrestrict z9u8fqEmJaHFf7TKiFDNw4GezgPwTIX46r79vpVrHcPXCeoCYaEa5dshUNNN9sh
 

@@ -72,10 +72,11 @@ public class ComunicadoService {
     private final TenantRepository tenants;
     private final ParoquiaWhatsappService whatsapp;
     private final AuditLogService auditLogService;
+    private final br.com.servire.api.minhaconta.CotasService cotas;
 
     public ComunicadoService(ComunicadoRepository comunicados, ComunicadoDestinatarioRepository destinatarios,
                              ComunicadoAnexoRepository anexos, LayoutRepository layouts, PessoaRepository pessoas,
-                             TenantRepository tenants, ParoquiaWhatsappService whatsapp, AuditLogService auditLogService) {
+                             TenantRepository tenants, ParoquiaWhatsappService whatsapp, AuditLogService auditLogService, br.com.servire.api.minhaconta.CotasService cotas) {
         this.comunicados = comunicados;
         this.destinatarios = destinatarios;
         this.anexos = anexos;
@@ -83,7 +84,7 @@ public class ComunicadoService {
         this.pessoas = pessoas;
         this.tenants = tenants;
         this.whatsapp = whatsapp;
-        this.auditLogService = auditLogService;
+        this.auditLogService = auditLogService; this.cotas = cotas;
     }
 
     /** Um endereço de envio com o dono (a pessoa marcada ou um responsável dela). */
@@ -125,6 +126,7 @@ public class ComunicadoService {
 
     @Transactional
     public Criado criar(CriarRequest req, List<MultipartFile> arquivos) {
+        var reserva=cotas.reservar();
         Layout layout = layouts.findById(req.layoutId())
                 .orElseThrow(() -> new ResourceNotFoundException("Layout não encontrado."));
         if (layout.getTipoLayout() == TipoLayout.EVENTO) {
@@ -157,9 +159,11 @@ public class ComunicadoService {
         }
         if (linhas.isEmpty()) throw new BadRequestException("Nenhum dos selecionados tem contato para este canal.");
         destinatarios.saveAll(linhas);
+        if (!lista.isEmpty()) cotas.validarUpload(reserva,lista.stream().mapToLong(MultipartFile::getSize).sum(),null);
         for (MultipartFile f : lista) {
             anexos.save(new ComunicadoAnexo(comunicado.getId(), nomeArquivo(f), f.getContentType(), bytes(f)));
         }
+        cotas.validar(reserva);
         comunicado.setTotal(linhas.size());
         auditLogService.registrar("ENVIO", "COMUNICADO", comunicado.getId(), List.of());
         return new Criado(comunicado.getId(), linhas.size());

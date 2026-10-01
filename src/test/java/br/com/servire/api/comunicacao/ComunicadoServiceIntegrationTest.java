@@ -93,6 +93,17 @@ class ComunicadoServiceIntegrationTest extends AbstractIntegrationTest {
         return r.stream().flatMap(d -> d.destinos().stream().map(x -> d.nome() + "->" + x.endereco())).toList();
     }
 
+    @Autowired private br.com.servire.api.integracao.DireitosLocaisRepository direitos;
+    @Test void anexoAcimaDaCotaNaoGravaComunicadoNemFila() {
+        var d=new br.com.servire.api.integracao.DireitosLocais(tenantId,UUID.randomUUID());
+        d.setLimites("{\"armazenamento_mb\":0}");d.setSituacao("ATIVA");d.setAcessoLiberado(true);d.setConfirmadoEm(java.time.Instant.now());direitos.saveAndFlush(d);
+        var l=layout(TipoEnvio.EMAIL,"<p>Aviso</p>",true);
+        var f=new MockMultipartFile("anexos","documento.pdf","application/pdf",new byte[]{1,2,3});
+        assertThatThrownBy(() -> service.criar(new CriarRequest(TipoEnvio.EMAIL,l.getId(),null,EnviarPara.PESSOA,QuaisContatos.PRINCIPAL,List.of(maria.getId())),List.of(f)))
+            .isInstanceOf(br.com.servire.api.minhaconta.CotaException.class);
+        assertThat(service.listar(null,null)).isEmpty();assertThat(destinatarioRepository.count()).isZero();
+    }
+
     @Test
     void destinatariosPorParaEContatos() {
         assertThat(destinos(EnviarPara.PESSOA, QuaisContatos.PRINCIPAL, ana, bruno))

@@ -41,6 +41,22 @@ class SupabaseStorageServiceTest {
                 List.of("image/jpeg", "image/png", "image/webp", "image/heic"));
     }
 
+    @Test void tamanhoUsaHeadAutenticadoSemBaixarFoto() {
+        var builder=RestClient.builder(); var servidor=MockRestServiceServer.bindTo(builder).build();
+        var servico=new SupabaseStorageService(builder,properties(BASE_URL,"chave-teste"));
+        servidor.expect(requestTo(BASE_URL+"/storage/v1/object/authenticated/voluntarios-fotos/perfil/foto.jpg"))
+            .andExpect(method(HttpMethod.HEAD)).andExpect(header("apikey","chave-teste"))
+            .andExpect(header("Authorization","Bearer chave-teste"))
+            .andRespond(withSuccess().header("Content-Length","800000"));
+        assertThat(servico.tamanho("perfil/foto.jpg")).isEqualTo(800000);servidor.verify();
+    }
+    @Test void tamanhoAusenteNaoViraZero() {
+        var builder=RestClient.builder(); var servidor=MockRestServiceServer.bindTo(builder).build();
+        var servico=new SupabaseStorageService(builder,properties(BASE_URL,"chave-teste"));
+        servidor.expect(requestTo(BASE_URL+"/storage/v1/object/authenticated/voluntarios-fotos/foto.jpg")).andRespond(withSuccess());
+        assertThatThrownBy(() -> servico.tamanho("foto.jpg")).isInstanceOf(StorageException.class);servidor.verify();
+    }
+
     @Test
     void falhaAltoECedoSeBaseUrlOuServiceRoleKeyAusentes() {
         RestClient.Builder builder = RestClient.builder();

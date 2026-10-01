@@ -27,4 +27,7 @@ public interface StorageService {
 
     /** Remove o arquivo — usado quando uma foto é substituída ou um voluntário/inscrição é excluído. */
     void excluir(String caminho);
+
+    /** Tamanho real pelo provedor, sem baixar a imagem. Não aceitar tamanho do navegador. */
+    long tamanho(String caminho);
 }

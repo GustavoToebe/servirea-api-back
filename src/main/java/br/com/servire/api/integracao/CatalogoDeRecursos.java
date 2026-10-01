@@ -25,7 +25,7 @@ public final class CatalogoDeRecursos {
             new RecursoDoApp("pessoas", "Pessoas cadastradas", Tipo.LIMITE, "pessoa", true),
             new RecursoDoApp("voluntarios", "Voluntários cadastrados", Tipo.LIMITE, "pessoa", true),
             new RecursoDoApp("usuarios", "Usuários com acesso ativo ou convite", Tipo.LIMITE, "usuário", true),
-            new RecursoDoApp("armazenamento_mb", "Armazenamento", Tipo.LIMITE, "MB", false),
+            new RecursoDoApp("armazenamento_mb", "Armazenamento de arquivos vinculados", Tipo.LIMITE, "MB", true),
             new RecursoDoApp("ESCALAS", "Escalas", Tipo.FUNCIONALIDADE, null, false),
             new RecursoDoApp("INSCRICAO_PUBLICA", "Inscrição pública", Tipo.FUNCIONALIDADE, null, false));
 

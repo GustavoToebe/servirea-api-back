@@ -77,18 +77,19 @@ public class EventoService {
     private final ComunicadoService comunicados;
     private final AuditLogService audit;
     private final Clock clock;
+    private final br.com.servire.api.minhaconta.CotasService cotas;
 
     @Autowired
     public EventoService(EventoRepository eventos, EventoFotoRepository fotos, EventoInscricaoRepository inscricoes,
                          PessoaRepository pessoas, TenantRepository tenants, StorageService storage, EnvioAvulso envio,
-                         LayoutRepository layouts, ComunicadoService comunicados, AuditLogService audit) {
-        this(eventos, fotos, inscricoes, pessoas, tenants, storage, envio, layouts, comunicados, audit,
+                         LayoutRepository layouts, ComunicadoService comunicados, AuditLogService audit, br.com.servire.api.minhaconta.CotasService cotas) {
+        this(eventos, fotos, inscricoes, pessoas, tenants, storage, envio, layouts, comunicados, audit, cotas,
                 Clock.system(BRASILIA));
     }
 
     EventoService(EventoRepository eventos, EventoFotoRepository fotos, EventoInscricaoRepository inscricoes,
                   PessoaRepository pessoas, TenantRepository tenants, StorageService storage, EnvioAvulso envio,
-                  LayoutRepository layouts, ComunicadoService comunicados, AuditLogService audit, Clock clock) {
+                  LayoutRepository layouts, ComunicadoService comunicados, AuditLogService audit, br.com.servire.api.minhaconta.CotasService cotas, Clock clock) {
         this.eventos = eventos;
         this.fotos = fotos;
         this.inscricoes = inscricoes;
@@ -99,7 +100,7 @@ public class EventoService {
         this.layouts = layouts;
         this.comunicados = comunicados;
         this.audit = audit;
-        this.clock = clock;
+        this.clock = clock; this.cotas = cotas;
     }
 
     LocalDateTime agora() {
@@ -402,6 +403,7 @@ public class EventoService {
 
     @Transactional
     public EventoDetalhe enviarFoto(UUID id, MultipartFile arquivo) {
+        var reserva=cotas.reservar();
         Evento e = buscarParaAlterar(id);
         if (arquivo == null || arquivo.isEmpty()) throw new BadRequestException("Nenhuma foto enviada.");
         if (fotos.countByEventoId(id) >= MAX_FOTOS) throw new ConflictException("No máximo " + MAX_FOTOS + " fotos por evento.");
@@ -412,8 +414,11 @@ public class EventoService {
         } catch (IOException ex) {
             throw new UncheckedIOException("Falha ao ler a foto enviada.", ex);
         }
+        cotas.validarUpload(reserva,conteudo.length,null);
         String salvo = storage.armazenar(caminho, conteudo, arquivo.getContentType());
-        fotos.save(new EventoFoto(id, salvo, fotos.countByEventoId(id) == 0));
+        var foto=new EventoFoto(id, salvo, fotos.countByEventoId(id) == 0);
+        foto.setFotoTamanhoBytes((long)conteudo.length); fotos.save(foto);
+        cotas.validar(reserva);
         audit.registrar("FOTO", "EVENTO", id, List.of("fotos"));
         return detalhe(e);
     }

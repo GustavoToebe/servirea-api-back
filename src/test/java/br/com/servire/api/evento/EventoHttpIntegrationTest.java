@@ -504,6 +504,25 @@ class EventoHttpIntegrationTest extends AbstractIntegrationTest {
 
     // ---- fotos
 
+    @Autowired private br.com.servire.api.integracao.DireitosLocaisRepository direitos;
+    @Autowired private br.com.servire.api.minhaconta.CotasService cotas;
+
+    @Test void cotaDeArmazenamentoImpedeFotoDoEventoEExcluirLiberaEspaco() throws Exception {
+        String id=criarPublicado("Cota fotos",agoraBrasilia().plusDays(4),null,1);
+        var d=new br.com.servire.api.integracao.DireitosLocais(paroquia,UUID.randomUUID());
+        d.setLimites("{\"armazenamento_mb\":1}");d.setSituacao("ATIVA");d.setAcessoLiberado(true);d.setConfirmadoEm(java.time.Instant.now());direitos.saveAndFlush(d);
+        var grande=new MockMultipartFile("foto","foto.jpg","image/jpeg",new byte[800000]);
+        String r=mvc.perform(multipart("/eventos/"+id+"/fotos").file(grande).with(csrf()).with(authentication(usuario(TUDO))))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        TenantContext.set(paroquia);
+        mvc.perform(multipart("/eventos/"+id+"/fotos").file(grande).with(csrf()).with(authentication(usuario(TUDO))))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.codigo").value("COTA_EXCEDIDA"));
+        TenantContext.set(paroquia);assertThat(cotas.consumo().itens().getLast().usado()).isEqualTo(800000);
+        String foto=JsonPath.read(r,"$.fotos[0].id");
+        mvc.perform(delete("/eventos/"+id+"/fotos/"+foto).with(csrf()).with(authentication(usuario(TUDO)))).andExpect(status().isOk());
+        TenantContext.set(paroquia);assertThat(cotas.consumo().itens().getLast().usado()).isZero();
+    }
+
     @Test
     void fotosPrimeiraViraCapaTipoInvalidoRecusadoEExcluirPassaACapa() throws Exception {
         String id = criarPublicado("Com fotos", agoraBrasilia().plusDays(4), null, 1);

@@ -117,6 +117,7 @@ public class InscricaoService {
     }
 
     private Inscricao gravarInscricaoPublica(InscricaoPublicaRequest request, MultipartFile foto) {
+        var reserva=foto!=null && !foto.isEmpty() ? cotas.reservar() : null;
         validarContatos(request.emails(), request.telefones(), request.responsaveis());
         Inscricao inscricao = new Inscricao(request.nomeCompleto().trim());
         
@@ -154,7 +155,10 @@ public class InscricaoService {
             } catch (IOException e) {
                 throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
             }
+            cotas.validarUpload(reserva,conteudo.length,null);
             inscricao.setFotoPath(storageService.armazenar(caminho, conteudo, foto.getContentType()));
+            inscricao.setFotoTamanhoBytes((long)conteudo.length);
+            cotas.validar(reserva);
         }
         auditLogService.registrar("CRIACAO", "INSCRICAO", inscricao.getId(), null);
         return inscricao;
@@ -270,6 +274,7 @@ public class InscricaoService {
         perfil.setTipo(inscricao.getTipo());
         perfil.setAtivo(true);
         perfil.setFotoPath(inscricao.getFotoPath());
+        perfil.setFotoTamanhoBytes(inscricao.getFotoTamanhoBytes());
         perfil.setEtapaCatequese(opcional(inscricao.getEtapaCatequese()));
         perfil.setEucaristiaAno(opcional(inscricao.getEucaristiaAno()));
         perfil.setCrismaAno(opcional(inscricao.getCrismaAno()));

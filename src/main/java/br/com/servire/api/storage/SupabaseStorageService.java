@@ -147,6 +147,21 @@ public class SupabaseStorageService implements StorageService {
         }
     }
 
+    @Override
+    public long tamanho(String caminho) {
+        requireConfigurado();
+        try {
+            var resposta=restClient.head()
+                    .uri(properties.baseUrl()+"/storage/v1/object/authenticated/"+properties.bucket()+"/"+caminho)
+                    .headers(this::aplicarAuthSupabase).retrieve().toBodilessEntity();
+            long tamanho=resposta.getHeaders().getContentLength();
+            if (tamanho<=0) throw new StorageException("O provedor não confirmou o tamanho da foto.",null);
+            return tamanho;
+        } catch (RestClientException ex) {
+            throw new StorageException("Não foi possível conferir o tamanho da foto no momento.",ex);
+        }
+    }
+
     private void validarArquivo(String contentType, byte[] conteudo) {
         if (contentType == null || !properties.allowedMimeTypes().contains(contentType)) {
             throw new BadRequestException(

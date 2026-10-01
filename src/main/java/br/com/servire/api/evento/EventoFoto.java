@@ -30,6 +30,12 @@ public class EventoFoto {
     @Column(nullable = false, length = 300)
     private String caminho;
 
+    @Column(name = "foto_tamanho_bytes")
+    private Long fotoTamanhoBytes;
+
+    public Long getFotoTamanhoBytes() { return fotoTamanhoBytes; }
+    public void setFotoTamanhoBytes(Long valor) { fotoTamanhoBytes = valor; }
+
     @Column(nullable = false)
     private boolean capa;
 

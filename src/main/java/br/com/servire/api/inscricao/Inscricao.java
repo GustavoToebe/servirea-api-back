@@ -69,6 +69,12 @@ public class Inscricao {
     @Column(name = "foto_path")
     private String fotoPath;
 
+    @Column(name = "foto_tamanho_bytes")
+    private Long fotoTamanhoBytes;
+
+    public Long getFotoTamanhoBytes() { return fotoTamanhoBytes; }
+    public void setFotoTamanhoBytes(Long valor) { fotoTamanhoBytes = valor; }
+
     @Column(name = "etapa_catequese")
     private String etapaCatequese;
 

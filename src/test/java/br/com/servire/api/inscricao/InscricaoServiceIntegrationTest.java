@@ -57,6 +57,18 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    @Autowired private br.com.servire.api.integracao.DireitosLocaisRepository direitos;
+
+    @Test void fotoPublicaSemCotaNaoCriaInscricaoNemFazUpload() {
+        Tenant tenant=criarTenant("sem-cota-foto");
+        var d=new br.com.servire.api.integracao.DireitosLocais(tenant.getId(),UUID.randomUUID());
+        d.setLimites("{\"armazenamento_mb\":0}");d.setSituacao("ATIVA");d.setAcessoLiberado(true);d.setConfirmadoEm(java.time.Instant.now());direitos.saveAndFlush(d);
+        var foto=new org.springframework.mock.web.MockMultipartFile("foto","foto.jpg","image/jpeg",new byte[]{1,2,3});
+        assertThatThrownBy(() -> inscricaoService.criarPublica(tenant.getSlug(),requestPublica("Candidato"),foto,"10.199.1.1"))
+            .isInstanceOf(br.com.servire.api.minhaconta.CotaException.class);
+        TenantContext.set(tenant.getId());assertThat(inscricaoRepository.count()).isZero();
+        org.mockito.Mockito.verify(storageService,org.mockito.Mockito.never()).armazenar(anyString(),org.mockito.ArgumentMatchers.any(),anyString());
+    }
 
     @MockitoBean
     private TurnstileService turnstileService;
