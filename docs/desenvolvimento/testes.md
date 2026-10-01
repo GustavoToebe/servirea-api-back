@@ -25,3 +25,5 @@ mvn -o -B -q verify "-DargLine=-Djdk.net.unixdomain.tmpdir=C:\Users\ICONDESKTOP_
 ```
 
 Criar previamente o diretório. Este argumento é local; não configura produção.
+
+O profile test limita cada Hikari a quatro conexões/minimum-idle um; contextos com mocks diferentes compartilham o PostgreSQL singleton. Não elevar os pools para contornar pressão de contextos da suíte. Testes das cotas exercitam rodada de uma paróquia para não depender das filas deixadas por outras fixtures.

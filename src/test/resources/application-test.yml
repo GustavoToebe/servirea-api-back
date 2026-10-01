@@ -3,6 +3,12 @@
 # @DynamicPropertySource, apontando para o container Testcontainers — os
 # valores abaixo são só um fallback caso algum teste rode sem o container.
 spring:
+  # Contextos de teste têm pools próprios e compartilham o PostgreSQL singleton.
+  # Manter folga para concorrência sem esgotar max_connections ao ampliar a suíte.
+  datasource:
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
   jpa:
     hibernate:
       ddl-auto: validate

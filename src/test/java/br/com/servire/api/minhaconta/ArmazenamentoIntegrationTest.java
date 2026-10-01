@@ -47,7 +47,7 @@ class ArmazenamentoIntegrationTest extends AbstractIntegrationTest {
     }
     void limitar() {var d=new DireitosLocais(tenant,UUID.randomUUID());d.setLimites("{\"armazenamento_mb\":1}");d.setSituacao("ATIVA");d.setAcessoLiberado(true);d.setConfirmadoEm(java.time.Instant.now());direitos.saveAndFlush(d);}
     MockMultipartFile arquivo(int bytes) {return new MockMultipartFile("foto","foto.jpg","image/jpeg",new byte[bytes]);}
-    CotasService.Item consumo() {return cotas.consumo().itens().getLast();}
+    CotasService.Item consumo() {return cotas.consumo().itens().stream().filter(i -> i.codigo().equals("armazenamento_mb")).findFirst().orElseThrow();}
     @Test void tamanhoExatoContaBytesESubstituicaoNaoDuplica() {
         var p=foto("perfil-antigo",1048576L);limitar();
         assertThat(consumo().estado()).isEqualTo("ATINGIDO");

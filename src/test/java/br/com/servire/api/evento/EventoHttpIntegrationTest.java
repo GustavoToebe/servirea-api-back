@@ -517,10 +517,10 @@ class EventoHttpIntegrationTest extends AbstractIntegrationTest {
         TenantContext.set(paroquia);
         mvc.perform(multipart("/eventos/"+id+"/fotos").file(grande).with(csrf()).with(authentication(usuario(TUDO))))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.codigo").value("COTA_EXCEDIDA"));
-        TenantContext.set(paroquia);assertThat(cotas.consumo().itens().getLast().usado()).isEqualTo(800000);
+        TenantContext.set(paroquia);assertThat(cotas.consumo().itens().stream().filter(i -> i.codigo().equals("armazenamento_mb")).findFirst().orElseThrow().usado()).isEqualTo(800000);
         String foto=JsonPath.read(r,"$.fotos[0].id");
         mvc.perform(delete("/eventos/"+id+"/fotos/"+foto).with(csrf()).with(authentication(usuario(TUDO)))).andExpect(status().isOk());
-        TenantContext.set(paroquia);assertThat(cotas.consumo().itens().getLast().usado()).isZero();
+        TenantContext.set(paroquia);assertThat(cotas.consumo().itens().stream().filter(i -> i.codigo().equals("armazenamento_mb")).findFirst().orElseThrow().usado()).isZero();
     }
 
     @Test

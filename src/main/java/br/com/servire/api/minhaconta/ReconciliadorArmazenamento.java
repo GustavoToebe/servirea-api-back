@@ -24,7 +24,7 @@ public class ReconciliadorArmazenamento {
                 cotas.registrarTamanhoConferido(caminho,tamanho); conferidos++;
             } catch (StorageException ex) {falhas++;}
         }
-        long pendentes=cotas.consumo().itens().getLast().pendentes();
+        long pendentes=cotas.consumo().itens().stream().filter(i -> i.codigo().equals("armazenamento_mb")).findFirst().orElseThrow().pendentes();
         long proximo=inicio+falhas;
         return new Resultado(conferidos,falhas,pendentes,proximo<pendentes ? proximo : 0);
     }

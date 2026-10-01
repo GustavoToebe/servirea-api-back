@@ -24,6 +24,7 @@ public class FilaDeEnvio {
     private static final Logger log=LoggerFactory.getLogger(FilaDeEnvio.class);
     static final int LOTE=30;
     private static final List<StatusComunicado> ABERTOS=List.of(StatusComunicado.NA_FILA,StatusComunicado.ENVIANDO);
+    private final br.com.servire.api.minhaconta.CotasService cotas;
     private final TenantRepository tenants;
     private final AcessoParoquia acesso;
     private final ComunicadoRepository comunicados;
@@ -54,10 +55,10 @@ public class FilaDeEnvio {
     public FilaDeEnvio(TenantRepository tenants,AcessoParoquia acesso,ComunicadoRepository comunicados,
         ComunicadoDestinatarioRepository destinatarios,ComunicadoAnexoRepository anexos,ParoquiaWhatsappService whatsapp,
         EmailSender email,WhatsappSender zap,WhatsappProperties properties,JanelaEnvioRepository janelas,PessoaRepository pessoas,
-        PlatformTransactionManager tm,@Value("${servire.comunicado.fila-ativa:true}") boolean ativa,
+        PlatformTransactionManager tm,br.com.servire.api.minhaconta.CotasService cotas,@Value("${servire.comunicado.fila-ativa:true}") boolean ativa,
         @Value("${servire.comunicado.pausa-email-ms:600}") long pausaEmailMs,
         @Value("${servire.comunicado.retentativa-ms:60000}") long retentativaMs) {
-        this.tenants=tenants; this.acesso=acesso; this.comunicados=comunicados; this.destinatarios=destinatarios;
+        this.cotas=cotas; this.tenants=tenants; this.acesso=acesso; this.comunicados=comunicados; this.destinatarios=destinatarios;
         this.anexos=anexos; this.whatsapp=whatsapp; this.email=email; this.zap=zap; this.properties=properties;
         this.janelas=janelas; this.pessoas=pessoas; this.tx=new TransactionTemplate(tm); this.ativa=ativa;
         this.pausaEmailMs=Math.max(0,pausaEmailMs); this.retentativaMs=Math.max(0,retentativaMs);
@@ -118,6 +119,8 @@ public class FilaDeEnvio {
         Instant agora=Instant.now(); String janela=canal==TipoEnvio.EMAIL ? "EMAIL" : "WHATSAPP:"+tenant.getId();
         var ids=destinatarios.candidatos(StatusEnvio.PENDENTE,ABERTOS,canal,agora,PageRequest.of(0,1));
         if (ids.isEmpty()) return null;
+        cotas.travarEnvios();
+        agora=Instant.now();
         var j=janelas.buscarParaAlterar(janela).orElse(null);
         if (j==null) { janelas.saveAndFlush(new JanelaEnvio(janela)); j=janelas.buscarParaAlterar(janela).orElseThrow(); }
         if (!j.disponivel(agora)) return null;
@@ -130,6 +133,10 @@ public class FilaDeEnvio {
             if (pessoa==null || pessoa.getVoluntario()==null || !pessoa.getVoluntario().isAutorizaWhatsapp()) {
                 d.falhaDefinitiva("Autorização de WhatsApp revogada ou indisponível."); atualizar(c); return null;
             }
+        }
+        if (!cotas.contabilizarEnvio(d,canal,agora)) {
+            d.aguardarCota(agora.plusSeconds(300));
+            return null;
         }
         UUID dono=UUID.randomUUID(); Instant ate=agora.plusSeconds(120);
         long intervalo=canal==TipoEnvio.EMAIL ? pausaEmailMs : intervaloZap();

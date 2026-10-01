@@ -2,7 +2,11 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V057. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V059. Migration já aplicada não se edita.
+
+## O que entrou na V058–V059
+
+Competência durável de cota nos destinatários, índice mensal e backfill de envios confirmados. Registro de lotes CSV concluídos sem arquivo/dados pessoais, chave idempotente por paróquia, quantidade e competência. Tabela com RLS e revogação de acesso direto. Uso em docs/cotas-envios-importacao.md.
 
 ## O que entrou na V054
 

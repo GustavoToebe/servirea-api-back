@@ -26,7 +26,7 @@ Esta é uma cota do produto para arquivos **referenciados pelo aplicativo**, nã
 
 O campo legado uso.armazenamento_mb da consulta HMAC de instância continua devolvendo 0 como placeholder; não usar esse campo para faturamento ou inferir espaço livre. A medição real desta etapa é a consulta local /minha-conta/consumo. Integrar esse consumo ao painel agregado da Central permanece pendente (F06/F26).
 
-Não limita quantidade mensal de mensagens, importação de documentos ou tamanho do banco inteiro. Payload por arquivo/proxy continua com seus limites próprios. Não anunciar limites de envios/importação como entregues.
+A cota de bytes não limita quantidade mensal de mensagens ou importação de documentos nem tamanho do banco inteiro. Cotas mensais da fila e lotes CSV de pessoas estão separadas em [envios/importação](cotas-envios-importacao.md). Payload por arquivo/proxy continua com seus limites próprios. XLSX e documentos gerais continuam pendentes.
 
 ## Verificação
 

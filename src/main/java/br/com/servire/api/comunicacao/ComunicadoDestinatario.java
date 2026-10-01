@@ -68,6 +68,16 @@ public class ComunicadoDestinatario {
     void liberar() { reservadoPor=null; reservaAte=null; }
     void reagendar(Instant quando) { proximaTentativa=quando; }
     void falhaDefinitiva(String motivo) { status=StatusEnvio.FALHA; erro=motivo; }
+    @Column(name="cota_competencia") private java.time.LocalDate cotaCompetencia;
+    public java.time.LocalDate getCotaCompetencia() { return cotaCompetencia; }
+    /** Reserva durável da unidade: falha/crash/reenvio não apagam esta competência. */
+    public void contabilizarCota(java.time.LocalDate competencia) {
+        if (cotaCompetencia == null) cotaCompetencia = competencia;
+    }
+    void aguardarCota(Instant quando) {
+        proximaTentativa = quando;
+        erro = "Aguardando disponibilidade da cota mensal de envios.";
+    }
     protected ComunicadoDestinatario() {
     }
 

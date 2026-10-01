@@ -25,7 +25,9 @@ import java.util.*;
 @Service
 public class CotasService {
     private static final List<String> CODIGOS = List.of("pessoas", "voluntarios", "usuarios", "armazenamento_mb");
-    private static final Map<String, String> NOMES = Map.of("pessoas", "Pessoas cadastradas", "voluntarios", "Voluntários cadastrados", "usuarios", "Usuários com acesso ativo ou convite", "armazenamento_mb", "Armazenamento de arquivos vinculados");
+    private static final List<String> MENSAIS = List.of("emails_mes", "whatsapp_mes", "importacoes_mes");
+    private static final java.time.ZoneId FUSO = java.time.ZoneId.of("America/Sao_Paulo");
+    private static final Map<String, String> NOMES = Map.of("pessoas", "Pessoas cadastradas", "voluntarios", "Voluntários cadastrados", "usuarios", "Usuários com acesso ativo ou convite", "armazenamento_mb", "Armazenamento de arquivos vinculados", "emails_mes", "E-mails da fila por mês", "whatsapp_mes", "WhatsApp da fila por mês", "importacoes_mes", "Lotes CSV de pessoas por mês");
     private final TenantRepository tenants;
     private final DireitosLocaisRepository direitos;
     private final UsuarioTenantRepository usuarios;
@@ -66,12 +68,13 @@ public class CotasService {
         UUID id = exigirTenant();
         DireitosLocais local = direitos.findById(id).orElse(null);
         Map<String, Long> limites = limites(local), usados = contagens(id,true);
-        List<Item> itens = CODIGOS.stream().map(codigo -> {
-            Long limite = limites.get(codigo); long usado = usados.get(codigo);
+        java.time.LocalDate competencia = competencia(Instant.now());
+        List<Item> itens = java.util.stream.Stream.concat(CODIGOS.stream(), MENSAIS.stream()).map(codigo -> {
+            Long limite = limites.get(codigo); long usado = MENSAIS.contains(codigo) ? contarEnvios(codigo,competencia) : usados.get(codigo);
             long pendentes = codigo.equals("armazenamento_mb") ? usados.get("fotos_sem_tamanho") : 0;
             String estado = pendentes > 0 ? "INVENTARIO_PENDENTE" : limite == null ? "SEM_LIMITE_CONFIGURADO" : usado > limite ? "EXCEDIDO" : usado == limite ? "ATINGIDO"
                     : limite > 0 && usado >= (limite / 5) * 4 + ((limite % 5) * 4 + 4) / 5 ? "ATENCAO" : "DISPONIVEL";
-            return new Item(codigo, NOMES.get(codigo), usado, limite, limite == null || pendentes > 0 ? null : Math.max(0, limite - usado), estado, codigo.equals("armazenamento_mb") ? "bytes" : "unidade", pendentes);
+            return new Item(codigo, NOMES.get(codigo), usado, limite, limite == null || pendentes > 0 ? null : Math.max(0, limite - usado), estado, codigo.equals("armazenamento_mb") ? "bytes" : "unidade", pendentes, MENSAIS.contains(codigo) ? competencia.toString().substring(0,7) : null);
         }).toList();
         return new Consumo(local == null ? null : local.getPlanoNome(), local == null ? null : local.getVersao(),
                 local == null ? null : local.getConfirmadoEm(), Instant.now(), itens);
@@ -91,7 +94,7 @@ public class CotasService {
             var raiz = json.readTree(local.getLimites());
             if (!raiz.isObject()) throw new IllegalArgumentException();
             Map<String, Long> resultado = new HashMap<>();
-            for (String codigo : CODIGOS) {
+            for (String codigo : java.util.stream.Stream.concat(CODIGOS.stream(),MENSAIS.stream()).toList()) {
                 var valor = raiz.get(codigo);
                 if (valor == null) continue;
                 if (!valor.isIntegralNumber() || !valor.canConvertToLong() || valor.asLong() < 0) throw new IllegalArgumentException();
@@ -155,12 +158,50 @@ public class CotasService {
         }
         if (alterados>0) audit.registrar("TAMANHO_CONFERIDO","ARMAZENAMENTO",exigirTenant(),List.of("fotoTamanhoBytes"));
     }
+    /** Ordem de lock: paróquia antes de janela, comunicado e destinatário. */
+    @Transactional(propagation=Propagation.MANDATORY)
+    public void travarEnvios() {
+        tenants.bloquearParaCotas(exigirTenant()).orElseThrow();
+    }
+
+    /** Chamado com a trava da paróquia já adquirida, antes de reservar posse e fazer HTTP. */
+    @Transactional(propagation=Propagation.MANDATORY)
+    public boolean contabilizarEnvio(br.com.servire.api.comunicacao.ComunicadoDestinatario destinatario,
+                                    br.com.servire.api.comunicacao.TipoEnvio canal, Instant agora) {
+        UUID id=exigirTenant();
+        if (destinatario.getCotaCompetencia()!=null) return true;
+        String codigo=canal==br.com.servire.api.comunicacao.TipoEnvio.EMAIL ? "emails_mes" : "whatsapp_mes";
+        Long limite=limites(direitos.findById(id).orElse(null)).get(codigo);
+        var competencia=competencia(agora);
+        if (limite!=null && contarEnvios(codigo,competencia)>=limite) return false;
+        destinatario.contabilizarCota(competencia);
+        return true;
+    }
+
+    private long contarEnvios(String codigo,java.time.LocalDate competencia) {
+        if(codigo.equals("importacoes_mes")) return em.createQuery("select count(i) from ImportacaoPessoa i where i.competencia=:competencia",Long.class)
+            .setParameter("competencia",competencia).getSingleResult();
+        var canal=codigo.equals("emails_mes") ? br.com.servire.api.comunicacao.TipoEnvio.EMAIL : br.com.servire.api.comunicacao.TipoEnvio.WHATSAPP;
+        return em.createQuery("select count(d) from ComunicadoDestinatario d, Comunicado c where d.comunicadoId=c.id and c.canal=:canal and d.cotaCompetencia=:competencia",Long.class)
+                .setParameter("canal",canal).setParameter("competencia",competencia).getSingleResult();
+    }
+    @Transactional(propagation=Propagation.MANDATORY)
+    public java.time.LocalDate validarImportacao() {
+        Long limite=limites(direitos.findById(exigirTenant()).orElse(null)).get("importacoes_mes");
+        var mes=competencia(Instant.now());
+        if(limite!=null && contarEnvios("importacoes_mes",mes)>=limite)
+            throw new CotaException(HttpStatus.CONFLICT,"COTA_EXCEDIDA","Limite mensal de lotes CSV atingido. Ajuste seu plano antes de importar.");
+        return mes;
+    }
+    static java.time.LocalDate competencia(Instant agora) {
+        return agora.atZone(FUSO).toLocalDate().withDayOfMonth(1);
+    }
     private UUID exigirTenant() {
         UUID id = TenantContext.get();
         if (id == null || id.equals(new UUID(0, 0))) throw new CotaException(HttpStatus.FORBIDDEN, "PAROQUIA_NAO_SELECIONADA", "Selecione uma paróquia.");
         return id;
     }
     public record Reserva(UUID tenantId, Map<String, Long> antes, Map<String, Long> limites) {}
-    public record Item(String codigo, String nome, long usado, Long limite, Long disponivel, String estado, String unidade, long pendentes) {}
+    public record Item(String codigo, String nome, long usado, Long limite, Long disponivel, String estado, String unidade, long pendentes, String competencia) {}
     public record Consumo(String planoNome, Integer versaoDireitos, Instant direitosConfirmadosEm, Instant consultadoEm, List<Item> itens) {}
 }

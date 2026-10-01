@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V057). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V059). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict z9u8fqEmJaHFf7TKiFDNw4GezgPwTIX46r79vpVrHcPXCeoCYaEa5dshUNNN9sh
+\restrict VxyIkZM31XdgFuZphLLHWno6fct9ubuKJdcMUUdpLEcFYQ1QAXwZirHtNoKKth7
 
 
 
@@ -308,7 +308,9 @@ CREATE TABLE public.comunicado_destinatario (
     proxima_tentativa timestamp with time zone DEFAULT '1970-01-01 00:00:00+00'::timestamp with time zone NOT NULL,
     reservado_por uuid,
     reserva_ate timestamp with time zone,
+    cota_competencia date,
     CONSTRAINT ck_comunicado_destinatario_reserva CHECK (((reservado_por IS NULL) = (reserva_ate IS NULL))),
+    CONSTRAINT comunicado_destinatario_cota_competencia_check CHECK ((EXTRACT(day FROM cota_competencia) = (1)::numeric)),
     CONSTRAINT comunicado_destinatario_status_check CHECK (((status)::text = ANY ((ARRAY['PENDENTE'::character varying, 'ENVIADO'::character varying, 'FALHA'::character varying])::text[])))
 );
 
@@ -614,6 +616,23 @@ CREATE TABLE public.flyway_schema_history (
     installed_on timestamp without time zone DEFAULT now() NOT NULL,
     execution_time integer NOT NULL,
     success boolean NOT NULL
+);
+
+
+--
+-- Name: importacao_pessoa; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.importacao_pessoa (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    chave uuid NOT NULL,
+    hash_arquivo character varying(64) NOT NULL,
+    quantidade integer NOT NULL,
+    competencia date NOT NULL,
+    criado_em timestamp with time zone NOT NULL,
+    CONSTRAINT importacao_pessoa_competencia_check CHECK ((EXTRACT(day FROM competencia) = (1)::numeric)),
+    CONSTRAINT importacao_pessoa_quantidade_check CHECK (((quantidade >= 1) AND (quantidade <= 100)))
 );
 
 
@@ -1520,6 +1539,22 @@ ALTER TABLE ONLY public.flyway_schema_history
 
 
 --
+-- Name: importacao_pessoa importacao_pessoa_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.importacao_pessoa
+    ADD CONSTRAINT importacao_pessoa_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: importacao_pessoa importacao_pessoa_tenant_id_chave_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.importacao_pessoa
+    ADD CONSTRAINT importacao_pessoa_tenant_id_chave_key UNIQUE (tenant_id, chave);
+
+
+--
 -- Name: indisponibilidade_voluntario indisponibilidade_voluntario_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1977,6 +2012,13 @@ CREATE INDEX idx_destinatario_comunicado ON public.comunicado_destinatario USING
 
 
 --
+-- Name: idx_destinatario_cota_mes; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_destinatario_cota_mes ON public.comunicado_destinatario USING btree (tenant_id, cota_competencia, comunicado_id) WHERE (cota_competencia IS NOT NULL);
+
+
+--
 -- Name: idx_destinatario_tenant_status; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2289,6 +2331,13 @@ CREATE INDEX ix_financeiro_movimento_baixa ON public.financeiro_movimento USING 
 --
 
 CREATE INDEX ix_financeiro_movimento_vencimento ON public.financeiro_movimento USING btree (tenant_id, vencimento, id);
+
+
+--
+-- Name: ix_importacao_pessoa_mes; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_importacao_pessoa_mes ON public.importacao_pessoa USING btree (tenant_id, competencia);
 
 
 --
@@ -2855,6 +2904,14 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 
 
 --
+-- Name: importacao_pessoa importacao_pessoa_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.importacao_pessoa
+    ADD CONSTRAINT importacao_pessoa_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
 -- Name: indisponibilidade_voluntario indisponibilidade_voluntario_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3285,6 +3342,12 @@ ALTER TABLE public.financeiro_conta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.financeiro_movimento ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: importacao_pessoa; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.importacao_pessoa ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: indisponibilidade_voluntario; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3461,5 +3524,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict z9u8fqEmJaHFf7TKiFDNw4GezgPwTIX46r79vpVrHcPXCeoCYaEa5dshUNNN9sh
+\unrestrict VxyIkZM31XdgFuZphLLHWno6fct9ubuKJdcMUUdpLEcFYQ1QAXwZirHtNoKKth7
 

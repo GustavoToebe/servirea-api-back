@@ -30,3 +30,5 @@
 - [Cotas do plano](cotas-plano.md): comportamento, contratos e limitações.
 
 - [Armazenamento e cotas](armazenamento-cotas.md): bytes, fotos compartilhadas, inventário antigo e limites da medição.
+
+- [Envios mensais e CSV](cotas-envios-importacao.md): unidades, reserva, idempotência e importação de pessoas.

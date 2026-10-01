@@ -26,6 +26,9 @@ public final class CatalogoDeRecursos {
             new RecursoDoApp("voluntarios", "Voluntários cadastrados", Tipo.LIMITE, "pessoa", true),
             new RecursoDoApp("usuarios", "Usuários com acesso ativo ou convite", Tipo.LIMITE, "usuário", true),
             new RecursoDoApp("armazenamento_mb", "Armazenamento de arquivos vinculados", Tipo.LIMITE, "MB", true),
+            new RecursoDoApp("emails_mes", "E-mails da fila por mês", Tipo.LIMITE, "mensagem/mês", true),
+            new RecursoDoApp("whatsapp_mes", "WhatsApp da fila por mês", Tipo.LIMITE, "mensagem/mês", true),
+            new RecursoDoApp("importacoes_mes", "Lotes CSV de pessoas por mês", Tipo.LIMITE, "lote/mês", true),
             new RecursoDoApp("ESCALAS", "Escalas", Tipo.FUNCIONALIDADE, null, false),
             new RecursoDoApp("INSCRICAO_PUBLICA", "Inscrição pública", Tipo.FUNCIONALIDADE, null, false));
 
