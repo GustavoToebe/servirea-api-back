@@ -13,3 +13,7 @@ Métricas são agregados de processo, reiniciam com a API e não são extrato fi
 X-Request-Id recebido só é propagado se ASCII seguro de 1–64 caracteres; caso contrário a API gera UUID. MDC limpo ao final. Log lento do Servirea usa padrão de rota resolvido, evitando caminho bruto com tokens de calendário. Testes com HTTP real verificam coleta/instrumentação e ausência de labels sensíveis.
 
 Instrumentação interna limita tags de rota a 256 (a aplicação possui mais de 100 rotas); exportação continua agregada e sem URI. Ao somar rotas, conferir cobertura e avisos de limite em vez de liberar cardinalidade ilimitada.
+
+## Métricas da fila de comunicados (02/10/2026)
+
+`ecossistema_fila_envios_total{canal,resultado}` conta, desde o início do processo, cada tentativa concluída: `enviado`, `falha_tentativa` (será repetida, no máximo três vezes), `falha_definitiva` (autorização revogada ou felicitação cancelada) e `aguardando_cota` (cota mensal esgotada, reavalia em 5 minutos). `ecossistema_fila_reservas_em_curso` mostra quantos destinos estão reservados agora. Rótulos fixos e validados (canal EMAIL ou WHATSAPP e os quatro resultados); paróquia, pessoa, destino e conteúdo nunca entram. Os contadores reiniciam com a API e valem por réplica. Não há medição da idade do item mais antigo nem da profundidade da fila (exigiria varrer o banco a cada coleta); isso continua pendente. Alertas sugeridos estão em `central-api-back/deploy/monitoramento/alertas.yml`.

@@ -122,3 +122,5 @@ Dependentes exigem autorização explícita e conta ligada à pessoa; parentesco
 - F09/V078: docs/privacidade.md. privacidade/ConsentimentoService registra só mudanças; exportação nunca traz corpo de mensagem nem destino e exige PESSOA_CUIDADOS_LER para cuidados; retenção é manual e irreversível (anonimiza comunicados concluídos). PRIVACIDADE, PRIVACIDADE_EXPORTAR, PRIVACIDADE_RETENCAO.
 
 - F15/V079: docs/checkin-encontro.md. Token aleatório só como hash, 404 genérico para qualquer código inválido, um registro por vaga, FALTOU não é sobrescrito, pessoa vem do vínculo. CHECKIN, CHECKIN_GERENCIAR.
+
+- T14 fila: docs/monitoramento.md. Contadores fila.envios por canal/resultado e reservas em curso, sem dado de negócio; rótulos validados no MetricasController.

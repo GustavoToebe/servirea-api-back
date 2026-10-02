@@ -40,6 +40,9 @@ public class FilaDeEnvio {
     private final TransactionTemplate tx;
     private final boolean ativa;
     private volatile boolean pronta;
+    private final io.micrometer.core.instrument.MeterRegistry metricas;
+    /** Contadores agregados por canal e resultado (T14): sem paróquia, pessoa, destino ou conteúdo. */
+    private void contar(TipoEnvio canal,String resultado) { metricas.counter("fila.envios","canal",canal.name(),"resultado",resultado).increment(); }
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     void pronta() { pronta=true; }
     private final long pausaEmailMs,retentativaMs;
@@ -58,7 +61,9 @@ public class FilaDeEnvio {
         EmailSender email,WhatsappSender zap,WhatsappProperties properties,JanelaEnvioRepository janelas,PessoaRepository pessoas,
         PlatformTransactionManager tm,br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades,br.com.servire.api.minhaconta.CotasService cotas,@Value("${servire.comunicado.fila-ativa:true}") boolean ativa,
         @Value("${servire.comunicado.pausa-email-ms:600}") long pausaEmailMs,
-        @Value("${servire.comunicado.retentativa-ms:60000}") long retentativaMs) {
+        @Value("${servire.comunicado.retentativa-ms:60000}") long retentativaMs,io.micrometer.core.instrument.MeterRegistry metricas) {
+        this.metricas=metricas;
+        metricas.gauge("fila.reservas.em.curso",emCurso,Set::size);
         this.funcionalidades=funcionalidades; this.cotas=cotas; this.tenants=tenants; this.acesso=acesso; this.comunicados=comunicados; this.destinatarios=destinatarios;
         this.anexos=anexos; this.whatsapp=whatsapp; this.email=email; this.zap=zap; this.properties=properties;
         this.janelas=janelas; this.pessoas=pessoas; this.tx=new TransactionTemplate(tm); this.ativa=ativa;
@@ -110,7 +115,7 @@ public class FilaDeEnvio {
                         zap.enviarTexto(config.getInstancia(),config.getToken(),envio.destino(),envio.conteudo());
                     }
                 } catch (RuntimeException ex) { erro="Falha no envio ("+ex.getClass().getSimpleName()+")."; }
-                String falha=erro; tx.executeWithoutResult(status -> concluir(envio,falha));
+                String falha=erro; contar(canal,erro==null ? "enviado" : "falha_tentativa"); tx.executeWithoutResult(status -> concluir(envio,falha));
             }
         } catch (RuntimeException ex) { log.error("Falha na fila da paróquia {}: {}",tenant.getId(),ex.getClass().getSimpleName()); }
         finally { TenantContext.clear(); }
@@ -136,16 +141,17 @@ public class FilaDeEnvio {
             var x=aniversarios.getFirst();var hoje=java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
             long autorizados=aniversarioEm.createQuery("select count(a) from AniversarioAutorizacao a where a.pessoaId=:p and a.canal=:c and a.autorizado=true",Long.class).setParameter("p",x.pessoaId).setParameter("c",canal).getSingleResult();
             long ativos=aniversarioEm.createQuery("select count(c) from AniversarioConfig c where c.canal=:c and c.ativo=true",Long.class).setParameter("c",canal).getSingleResult();
-            if(autorizados==0||ativos==0||!x.dia.equals(hoje)){d.falhaDefinitiva("Felicitação cancelada: autorização, configuração ou data indisponível.");atualizar(c);return null;}
+            if(autorizados==0||ativos==0||!x.dia.equals(hoje)){d.falhaDefinitiva("Felicitação cancelada: autorização, configuração ou data indisponível.");contar(canal,"falha_definitiva");atualizar(c);return null;}
         }
         if (canal==TipoEnvio.WHATSAPP && d.getPessoaId()!=null) {
             var pessoa=pessoas.findById(d.getPessoaId()).orElse(null);
             if (pessoa==null || pessoa.getVoluntario()==null || !pessoa.getVoluntario().isAutorizaWhatsapp()) {
-                d.falhaDefinitiva("Autorização de WhatsApp revogada ou indisponível."); atualizar(c); return null;
+                d.falhaDefinitiva("Autorização de WhatsApp revogada ou indisponível."); contar(canal,"falha_definitiva"); atualizar(c); return null;
             }
         }
         if (!cotas.contabilizarEnvio(d,canal,agora)) {
             d.aguardarCota(agora.plusSeconds(300));
+            contar(canal,"aguardando_cota");
             return null;
         }
         UUID dono=UUID.randomUUID(); Instant ate=agora.plusSeconds(120);

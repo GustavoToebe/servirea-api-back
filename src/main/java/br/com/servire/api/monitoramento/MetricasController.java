@@ -22,7 +22,25 @@ import java.util.concurrent.TimeUnit;
             }
         }
         );
+        fila(b);
         return ResponseEntity.ok().header("Cache-Control","no-store").body(b.toString());
+    }
+    /** Fila de comunicados: contadores por canal/resultado e reservas em curso, sem dado de negócio. */
+    private void fila(StringBuilder b) {
+        final char fim=(char)10;
+        var grupos=new TreeMap<String,Double>();
+        for(var c:registry.find("fila.envios").counters()) {
+            String canal=c.getId().getTag("canal"),resultado=c.getId().getTag("resultado");
+            if(!Set.of("EMAIL","WHATSAPP").contains(canal)||!Set.of("enviado","falha_tentativa","falha_definitiva","aguardando_cota").contains(resultado))continue;
+            grupos.merge("{canal=\""+canal+"\",resultado=\""+resultado+"\"}",c.count(),Double::sum);
+        }
+        b.append("# TYPE ecossistema_fila_envios_total counter").append(fim);
+        grupos.forEach((k,v)->b.append("ecossistema_fila_envios_total").append(k).append(' ').append((long)(double)v).append(fim));
+        var gs=registry.find("fila.reservas.em.curso").gauges();
+        if(!gs.isEmpty()) {
+            double v=gs.stream().mapToDouble(Gauge::value).sum();
+            if(Double.isFinite(v))b.append("# TYPE ecossistema_fila_reservas_em_curso gauge").append(fim).append("ecossistema_fila_reservas_em_curso ").append((long)v).append(fim);
+        }
     }
     private void timers(StringBuilder b,String origem,String nome) {
         var grupos=new TreeMap<String,double[]>();

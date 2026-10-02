@@ -17,6 +17,21 @@ class MetricasTest {
         String s=new MetricasController(r).metricas().getBody();
         assertThat(s).contains("_count{metodo=\"GET\",status=\"2xx\"} 2","_sum").doesNotContain("pessoas","segredo","outra","uri=");
     }
+    @Test void exportaFilaPorCanalEResultadoSemDadosDeNegocio() {
+        var r=new SimpleMeterRegistry();
+        r.counter("fila.envios","canal","EMAIL","resultado","enviado").increment(3);
+        r.counter("fila.envios","canal","WHATSAPP","resultado","falha_tentativa").increment(2);
+        r.counter("fila.envios","canal","WHATSAPP","resultado","aguardando_cota").increment();
+        r.counter("fila.envios","canal","pessoa@x.com","resultado","enviado").increment(9);
+        r.counter("fila.envios","canal","EMAIL","resultado","conteudo secreto").increment(9);
+        java.util.concurrent.atomic.AtomicInteger emCurso=new java.util.concurrent.atomic.AtomicInteger(2);
+        r.gauge("fila.reservas.em.curso",emCurso);
+        String s=new MetricasController(r).metricas().getBody();
+        assertThat(s).contains("ecossistema_fila_envios_total{canal=\"EMAIL\",resultado=\"enviado\"} 3",
+            "ecossistema_fila_envios_total{canal=\"WHATSAPP\",resultado=\"falha_tentativa\"} 2",
+            "ecossistema_fila_envios_total{canal=\"WHATSAPP\",resultado=\"aguardando_cota\"} 1",
+            "ecossistema_fila_reservas_em_curso 2").doesNotContain("pessoa@x.com","secreto");
+    }
     @Test void filtroAceitaSomenteColetaERestauraContexto()throws Exception {
         var req=new MockHttpServletRequest("GET","/monitoramento/metrics");
         req.setServletPath("/monitoramento/metrics");
