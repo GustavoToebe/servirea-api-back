@@ -1,0 +1,3458 @@
+{
+  "produto" : "Servirea",
+  "rotas" : [ {
+    "metodo" : "GET",
+    "caminho" : "/aniversarios/configuracoes",
+    "autorizacao" : "hasAuthority('PERM_ANIVERSARIO')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.AniversarioDtos.Config[]",
+    "controlador" : "AniversarioController#configuracoes"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/aniversarios/configuracoes/{canal}",
+    "autorizacao" : "hasAuthority('PERM_ANIVERSARIO') and hasAuthority('PERM_ANIVERSARIO_CONFIGURAR')",
+    "corpo" : "comunicacao.dto.AniversarioDtos.Configurar",
+    "resposta" : "comunicacao.dto.AniversarioDtos.Config",
+    "controlador" : "AniversarioController#configurar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/aniversarios/layouts",
+    "autorizacao" : "hasAuthority('PERM_ANIVERSARIO')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.AniversarioDtos.OpcaoLayout[]",
+    "controlador" : "AniversarioController#layouts"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/aniversarios/pessoas/{id}",
+    "autorizacao" : "hasAuthority('PERM_ANIVERSARIO') and hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.AniversarioDtos.Autorizacao[]",
+    "controlador" : "AniversarioController#autorizacoes"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/aniversarios/pessoas/{id}/{canal}",
+    "autorizacao" : "hasAuthority('PERM_ANIVERSARIO') and hasAuthority('PERM_PESSOA') and hasAuthority('PERM_ANIVERSARIO_AUTORIZAR')",
+    "corpo" : "comunicacao.dto.AniversarioDtos.Autorizar",
+    "resposta" : "comunicacao.dto.AniversarioDtos.Autorizacao",
+    "controlador" : "AniversarioController#autorizar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/audit-log",
+    "autorizacao" : "hasRole('ADMIN')",
+    "corpo" : null,
+    "resposta" : "audit.dto.AuditLogResponse[]",
+    "controlador" : "AuditLogController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/auth/forgot-password",
+    "autorizacao" : null,
+    "corpo" : "auth.dto.ForgotPasswordRequest",
+    "resposta" : null,
+    "controlador" : "AuthController#forgotPassword"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/auth/login",
+    "autorizacao" : null,
+    "corpo" : "auth.dto.LoginRequest",
+    "resposta" : "auth.dto.LoginResponse",
+    "controlador" : "AuthController#login"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/auth/logout",
+    "autorizacao" : null,
+    "corpo" : null,
+    "resposta" : null,
+    "controlador" : "AuthController#logout"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/auth/refresh",
+    "autorizacao" : null,
+    "corpo" : "auth.dto.RefreshRequest",
+    "resposta" : "auth.dto.AccessTokenResponse",
+    "controlador" : "AuthController#refresh"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/auth/reset-password",
+    "autorizacao" : null,
+    "corpo" : "auth.dto.ResetPasswordRequest",
+    "resposta" : null,
+    "controlador" : "AuthController#resetPassword"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/auth/select-tenant",
+    "autorizacao" : null,
+    "corpo" : "auth.dto.SelectTenantRequest",
+    "resposta" : "auth.dto.AccessTokenResponse",
+    "controlador" : "AuthController#selectTenant"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/auth/suporte/trocar",
+    "autorizacao" : null,
+    "corpo" : "integracao.SuporteTrocaController.Pedido",
+    "resposta" : "auth.dto.AccessTokenResponse",
+    "controlador" : "SuporteTrocaController#trocar"
+  }, {
+    "metodo" : "DELETE",
+    "caminho" : "/calendario/assinatura",
+    "autorizacao" : "hasAuthority('PERM_CALENDARIO') and hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : null,
+    "resposta" : null,
+    "controlador" : "CalendarioController#revogar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/calendario/assinatura",
+    "autorizacao" : "hasAuthority('PERM_CALENDARIO') and hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : null,
+    "resposta" : "calendario.CalendarioService.Criada",
+    "controlador" : "CalendarioController#criar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/comunicados",
+    "autorizacao" : "hasAuthority('PERM_COMUNICADO')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.ComunicadoDtos.Resumo[]",
+    "controlador" : "ComunicadoController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/comunicados",
+    "autorizacao" : "hasAuthority('PERM_COMUNICADO_ENVIAR')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.ComunicadoDtos.Criado",
+    "controlador" : "ComunicadoController#criar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/comunicados/destinatarios",
+    "autorizacao" : "hasAuthority('PERM_COMUNICADO_ENVIAR')",
+    "corpo" : "comunicacao.dto.ComunicadoDtos.DestinatariosRequest",
+    "resposta" : "comunicacao.dto.ComunicadoDtos.DestinatarioPrevia[]",
+    "controlador" : "ComunicadoController#destinatarios"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/comunicados/pre-visualizar",
+    "autorizacao" : "hasAuthority('PERM_COMUNICADO_ENVIAR')",
+    "corpo" : "comunicacao.dto.ComunicadoDtos.PreVisualizarRequest",
+    "resposta" : "comunicacao.dto.ComunicadoDtos.PreVisualizacao",
+    "controlador" : "ComunicadoController#preVisualizar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/comunicados/{id}",
+    "autorizacao" : "hasAuthority('PERM_COMUNICADO')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.ComunicadoDtos.Detalhe",
+    "controlador" : "ComunicadoController#detalhe"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/comunicados/{id}/reenviar-falhas",
+    "autorizacao" : "hasAuthority('PERM_COMUNICADO_ENVIAR')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.ComunicadoDtos.Resumo",
+    "controlador" : "ComunicadoController#reenviarFalhas"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/dioceses",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA')",
+    "corpo" : null,
+    "resposta" : "diocese.dto.DioceseResponse[]",
+    "controlador" : "DioceseController#listar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas",
+    "autorizacao" : "hasAuthority('PERM_ESCALA')",
+    "corpo" : null,
+    "resposta" : "escala.dto.EscalaResponse[]",
+    "controlador" : "EscalaController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_CRIAR')",
+    "corpo" : "escala.dto.EscalaRequest",
+    "resposta" : "escala.dto.EscalaResponse",
+    "controlador" : "EscalaController#criar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/escalas/candidaturas/{id}/decisao",
+    "autorizacao" : "hasAuthority('PERM_VAGA_CANDIDATURA_DECIDIR')",
+    "corpo" : "portal.dto.CandidaturaDtos.Decisao",
+    "resposta" : "portal.dto.CandidaturaDtos.Pedido",
+    "controlador" : "CandidaturaController#decidir"
+  }, {
+    "metodo" : "DELETE",
+    "caminho" : "/escalas/eventos/{id}/checkin",
+    "autorizacao" : "hasAuthority('PERM_CHECKIN_GERENCIAR')",
+    "corpo" : null,
+    "resposta" : null,
+    "controlador" : "CheckinController#encerrar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/eventos/{id}/checkin",
+    "autorizacao" : "hasAuthority('PERM_CHECKIN')",
+    "corpo" : null,
+    "resposta" : "checkin.CheckinDtos.Estado",
+    "controlador" : "CheckinController#estado"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas/eventos/{id}/checkin",
+    "autorizacao" : "hasAuthority('PERM_CHECKIN_GERENCIAR')",
+    "corpo" : "checkin.CheckinDtos.Abrir",
+    "resposta" : "checkin.CheckinDtos.Aberto",
+    "controlador" : "CheckinController#abrir"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/indisponibilidades",
+    "autorizacao" : "hasAuthority('PERM_ESCALA')",
+    "corpo" : null,
+    "resposta" : "escala.dto.IndisponibilidadeDtos.MesResponse",
+    "controlador" : "IndisponibilidadeController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/escalas/indisponibilidades",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_ALTERAR')",
+    "corpo" : "escala.dto.IndisponibilidadeDtos.MesRequest",
+    "resposta" : "escala.dto.IndisponibilidadeDtos.MesResponse",
+    "controlador" : "IndisponibilidadeController#salvar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/layouts",
+    "autorizacao" : "hasAuthority('PERM_ESCALA')",
+    "corpo" : null,
+    "resposta" : "escala.LayoutEscalaDto[]",
+    "controlador" : "LayoutEscalaController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas/layouts",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_ALTERAR')",
+    "corpo" : "escala.LayoutEscalaDto",
+    "resposta" : "escala.LayoutEscalaDto",
+    "controlador" : "LayoutEscalaController#criar"
+  }, {
+    "metodo" : "DELETE",
+    "caminho" : "/escalas/layouts/{id}",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_ALTERAR')",
+    "corpo" : null,
+    "resposta" : null,
+    "controlador" : "LayoutEscalaController#excluir"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/layouts/{id}",
+    "autorizacao" : "hasAuthority('PERM_ESCALA')",
+    "corpo" : null,
+    "resposta" : "escala.LayoutEscalaDto",
+    "controlador" : "LayoutEscalaController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/escalas/layouts/{id}",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_ALTERAR')",
+    "corpo" : "escala.LayoutEscalaDto",
+    "resposta" : "escala.LayoutEscalaDto",
+    "controlador" : "LayoutEscalaController#atualizar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/escalas/trocas/{id}/decisao",
+    "autorizacao" : "hasAuthority('PERM_VAGA_TROCA_DECIDIR')",
+    "corpo" : "portal.dto.TrocaDtos.Decisao",
+    "resposta" : "portal.dto.TrocaDtos.Pedido",
+    "controlador" : "TrocaController#decidir"
+  }, {
+    "metodo" : "PATCH",
+    "caminho" : "/escalas/vagas/{vagaId}",
+    "autorizacao" : "hasAuthority('PERM_VAGA_ALOCAR')",
+    "corpo" : "escala.dto.AlocacaoVagaRequest",
+    "resposta" : "escala.dto.EscalaVagaResponse",
+    "controlador" : "EscalaController#alocarVaga"
+  }, {
+    "metodo" : "PATCH",
+    "caminho" : "/escalas/vagas/{vagaId}/presenca",
+    "autorizacao" : "hasAuthority('PERM_VAGA_PRESENCA')",
+    "corpo" : "escala.dto.PresencaRequest",
+    "resposta" : "escala.dto.EscalaVagaResponse",
+    "controlador" : "EscalaController#registrarPresenca"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/{eventoId}/candidatos",
+    "autorizacao" : "hasAnyAuthority('PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "escala.dto.CandidatoResponse[]",
+    "controlador" : "EscalaController#listarCandidatos"
+  }, {
+    "metodo" : "DELETE",
+    "caminho" : "/escalas/{id}",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_EXCLUIR')",
+    "corpo" : null,
+    "resposta" : null,
+    "controlador" : "EscalaController#excluir"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/{id}",
+    "autorizacao" : "hasAuthority('PERM_ESCALA')",
+    "corpo" : null,
+    "resposta" : "escala.dto.EscalaResponse",
+    "controlador" : "EscalaController#buscarPorId"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/escalas/{id}",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_ALTERAR')",
+    "corpo" : "escala.dto.EscalaRequest",
+    "resposta" : "escala.dto.EscalaResponse",
+    "controlador" : "EscalaController#atualizar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/{id}/apoio",
+    "autorizacao" : "hasAnyAuthority('PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "escala.dto.IndisponibilidadeDtos.ApoioEscala",
+    "controlador" : "IndisponibilidadeController#apoio"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas/{id}/cancelar",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_CANCELAR')",
+    "corpo" : null,
+    "resposta" : "escala.dto.EscalaResponse",
+    "controlador" : "EscalaController#cancelar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/{id}/candidaturas",
+    "autorizacao" : "hasAuthority('PERM_VAGA_CANDIDATURA_LER')",
+    "corpo" : null,
+    "resposta" : "portal.dto.CandidaturaDtos.Pagina<portal.dto.CandidaturaDtos.Pedido>",
+    "controlador" : "CandidaturaController#coordenacao"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas/{id}/distribuicao/aplicacao",
+    "autorizacao" : "hasAuthority('PERM_VAGA_DISTRIBUIR') and hasAuthority('PERM_VAGA_ALOCAR')",
+    "corpo" : "escala.dto.DistribuicaoDtos.AplicarRequest",
+    "resposta" : "escala.dto.DistribuicaoDtos.Aplicada",
+    "controlador" : "DistribuicaoController#aplicar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas/{id}/distribuicao/previa",
+    "autorizacao" : "hasAuthority('PERM_VAGA_DISTRIBUIR')",
+    "corpo" : "escala.dto.DistribuicaoDtos.PreviaRequest",
+    "resposta" : "escala.dto.DistribuicaoDtos.Previa",
+    "controlador" : "DistribuicaoController#previa"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas/{id}/finalizar",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_FINALIZAR_REABRIR')",
+    "corpo" : null,
+    "resposta" : "escala.dto.EscalaResponse",
+    "controlador" : "EscalaController#finalizar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas/{id}/notificacoes",
+    "autorizacao" : "hasAuthority('PERM_NOTIFICACAO_ENVIAR')",
+    "corpo" : "notificacao.NotificacaoDtos.EscalaRequest",
+    "resposta" : "notificacao.NotificacaoDtos.Resultado",
+    "controlador" : "NotificacaoController#notificarEscala"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/escalas/{id}/reabrir",
+    "autorizacao" : "hasAuthority('PERM_ESCALA_FINALIZAR_REABRIR')",
+    "corpo" : null,
+    "resposta" : "escala.dto.EscalaResponse",
+    "controlador" : "EscalaController#reabrir"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/{id}/respostas",
+    "autorizacao" : "hasAuthority('PERM_VAGA_RESPOSTA_LER')",
+    "corpo" : null,
+    "resposta" : "portal.dto.RespostaEscalaDtos.Pagina<portal.dto.RespostaEscalaDtos.Item>",
+    "controlador" : "RespostaEscalaController#coordenacao"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/escalas/{id}/trocas",
+    "autorizacao" : "hasAuthority('PERM_VAGA_TROCA_LER')",
+    "corpo" : null,
+    "resposta" : "portal.dto.TrocaDtos.Pagina<portal.dto.TrocaDtos.Pedido>",
+    "controlador" : "TrocaController#coordenacao"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/estoque",
+    "autorizacao" : "hasAuthority('PERM_ESTOQUE')",
+    "corpo" : null,
+    "resposta" : "estoque.dto.EstoqueDtos.Pagina<estoque.dto.EstoqueDtos.Item>",
+    "controlador" : "EstoqueController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/estoque",
+    "autorizacao" : "hasAuthority('PERM_ESTOQUE') and hasAuthority('PERM_ESTOQUE_EDITAR')",
+    "corpo" : "estoque.dto.EstoqueDtos.Salvar",
+    "resposta" : "estoque.dto.EstoqueDtos.Item",
+    "controlador" : "EstoqueController#criar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/estoque/responsaveis",
+    "autorizacao" : "hasAuthority('PERM_ESTOQUE')",
+    "corpo" : null,
+    "resposta" : "estoque.dto.EstoqueDtos.Responsavel[]",
+    "controlador" : "EstoqueController#responsaveis"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/estoque/{id}",
+    "autorizacao" : "hasAuthority('PERM_ESTOQUE')",
+    "corpo" : null,
+    "resposta" : "estoque.dto.EstoqueDtos.Item",
+    "controlador" : "EstoqueController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/estoque/{id}",
+    "autorizacao" : "hasAuthority('PERM_ESTOQUE') and hasAuthority('PERM_ESTOQUE_EDITAR')",
+    "corpo" : "estoque.dto.EstoqueDtos.Salvar",
+    "resposta" : "estoque.dto.EstoqueDtos.Item",
+    "controlador" : "EstoqueController#editar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/estoque/{id}/movimentos",
+    "autorizacao" : "hasAuthority('PERM_ESTOQUE')",
+    "corpo" : null,
+    "resposta" : "estoque.dto.EstoqueDtos.Pagina<estoque.dto.EstoqueDtos.Movimento>",
+    "controlador" : "EstoqueController#historico"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/estoque/{id}/movimentos",
+    "autorizacao" : "hasAuthority('PERM_ESTOQUE') and hasAuthority('PERM_ESTOQUE_MOVIMENTAR') and (#r.tipo() != 'AJUSTE' or hasAuthority('PERM_ESTOQUE_AJUSTAR'))",
+    "corpo" : "estoque.dto.EstoqueDtos.Movimentar",
+    "resposta" : "estoque.dto.EstoqueDtos.Movimento",
+    "controlador" : "EstoqueController#movimentar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/eventos",
+    "autorizacao" : "hasAuthority('PERM_EVENTO')",
+    "corpo" : null,
+    "resposta" : "evento.EventoDtos.EventoResumo[]",
+    "controlador" : "EventoController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/eventos",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_CRIAR')",
+    "corpo" : "evento.EventoDtos.EventoRequest",
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#criar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/eventos/pagina",
+    "autorizacao" : "hasAuthority('PERM_EVENTO')",
+    "corpo" : null,
+    "resposta" : "web.PaginaLista<evento.EventoDtos.EventoResumo>",
+    "controlador" : "EventoController#pagina"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/eventos/{id}",
+    "autorizacao" : "hasAuthority('PERM_EVENTO')",
+    "corpo" : null,
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#detalhe"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/eventos/{id}",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_ALTERAR')",
+    "corpo" : "evento.EventoDtos.EventoRequest",
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#atualizar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/eventos/{id}/cancelar",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_CANCELAR')",
+    "corpo" : "evento.EventoDtos.CancelarRequest",
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#cancelar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/eventos/{id}/fotos",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#enviarFoto"
+  }, {
+    "metodo" : "DELETE",
+    "caminho" : "/eventos/{id}/fotos/{fotoId}",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#excluirFoto"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/eventos/{id}/fotos/{fotoId}/capa",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#definirCapa"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/eventos/{id}/inscricoes",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_INSCREVER')",
+    "corpo" : "evento.EventoDtos.InscreverRequest",
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#inscrever"
+  }, {
+    "metodo" : "DELETE",
+    "caminho" : "/eventos/{id}/inscricoes/{inscricaoId}",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_INSCREVER')",
+    "corpo" : null,
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#removerInscricao"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/eventos/{id}/publicar",
+    "autorizacao" : "hasAuthority('PERM_EVENTO_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "evento.EventoDtos.EventoDetalhe",
+    "controlador" : "EventoController#publicar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/financeiro/categorias",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO')",
+    "corpo" : null,
+    "resposta" : "financeiro.FinanceiroDtos.CategoriaResponse[]",
+    "controlador" : "FinanceiroController#categorias"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/financeiro/categorias",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_CONFIGURAR')",
+    "corpo" : "financeiro.FinanceiroDtos.CategoriaRequest",
+    "resposta" : "financeiro.FinanceiroDtos.CategoriaResponse",
+    "controlador" : "FinanceiroController#criarCategoria"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/financeiro/categorias/{id}",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_CONFIGURAR')",
+    "corpo" : "financeiro.FinanceiroDtos.CategoriaRequest",
+    "resposta" : "financeiro.FinanceiroDtos.CategoriaResponse",
+    "controlador" : "FinanceiroController#alterarCategoria"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/financeiro/contas",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO')",
+    "corpo" : null,
+    "resposta" : "financeiro.FinanceiroDtos.ContaResponse[]",
+    "controlador" : "FinanceiroController#contas"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/financeiro/contas",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_CONFIGURAR')",
+    "corpo" : "financeiro.FinanceiroDtos.ContaRequest",
+    "resposta" : "financeiro.FinanceiroDtos.ContaResponse",
+    "controlador" : "FinanceiroController#criarConta"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/financeiro/contas/{id}",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_CONFIGURAR')",
+    "corpo" : "financeiro.FinanceiroDtos.ContaRequest",
+    "resposta" : "financeiro.FinanceiroDtos.ContaResponse",
+    "controlador" : "FinanceiroController#alterarConta"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/financeiro/movimentos",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO')",
+    "corpo" : null,
+    "resposta" : "financeiro.FinanceiroDtos.Pagina",
+    "controlador" : "FinanceiroController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/financeiro/movimentos",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_CRIAR')",
+    "corpo" : "financeiro.FinanceiroDtos.MovimentoRequest",
+    "resposta" : "financeiro.FinanceiroDtos.MovimentoResponse",
+    "controlador" : "FinanceiroController#criar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/financeiro/movimentos/{id}",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_ALTERAR')",
+    "corpo" : "financeiro.FinanceiroDtos.MovimentoRequest",
+    "resposta" : "financeiro.FinanceiroDtos.MovimentoResponse",
+    "controlador" : "FinanceiroController#alterar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/financeiro/movimentos/{id}/baixar",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_BAIXAR')",
+    "corpo" : "financeiro.FinanceiroDtos.BaixaRequest",
+    "resposta" : "financeiro.FinanceiroDtos.MovimentoResponse",
+    "controlador" : "FinanceiroController#baixar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/financeiro/movimentos/{id}/cancelar",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_ALTERAR')",
+    "corpo" : "financeiro.FinanceiroDtos.VersaoRequest",
+    "resposta" : "financeiro.FinanceiroDtos.MovimentoResponse",
+    "controlador" : "FinanceiroController#cancelar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/financeiro/movimentos/{id}/estornar",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO_BAIXAR')",
+    "corpo" : "financeiro.FinanceiroDtos.VersaoRequest",
+    "resposta" : "financeiro.FinanceiroDtos.MovimentoResponse",
+    "controlador" : "FinanceiroController#estornar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/financeiro/resumo",
+    "autorizacao" : "hasAuthority('PERM_FINANCEIRO')",
+    "corpo" : null,
+    "resposta" : "financeiro.FinanceiroDtos.Resumo",
+    "controlador" : "FinanceiroController#resumo"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/funcionalidades-plano",
+    "autorizacao" : "isAuthenticated()",
+    "corpo" : null,
+    "resposta" : "string[]",
+    "controlador" : "FuncionalidadesPlanoController#liberadas"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/indicadores/participacao",
+    "autorizacao" : "hasAuthority('PERM_INDICADORES') and hasAuthority('PERM_ESCALA')",
+    "corpo" : null,
+    "resposta" : "relatorios.IndicadoresService.Pagina",
+    "controlador" : "IndicadoresController#consultar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/inscricoes",
+    "autorizacao" : "hasAuthority('PERM_INSCRICAO')",
+    "corpo" : null,
+    "resposta" : "inscricao.dto.InscricaoResponse[]",
+    "controlador" : "InscricaoController#listar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/inscricoes/pagina",
+    "autorizacao" : "hasAuthority('PERM_INSCRICAO')",
+    "corpo" : null,
+    "resposta" : "web.PaginaLista<inscricao.dto.InscricaoResponse>",
+    "controlador" : "InscricaoController#pagina"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/inscricoes/{id}",
+    "autorizacao" : "hasAuthority('PERM_INSCRICAO')",
+    "corpo" : null,
+    "resposta" : "inscricao.dto.InscricaoResponse",
+    "controlador" : "InscricaoController#buscarPorId"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/inscricoes/{id}",
+    "autorizacao" : "hasAuthority('PERM_INSCRICAO_ALTERAR')",
+    "corpo" : "inscricao.dto.InscricaoAtualizarRequest",
+    "resposta" : "inscricao.dto.InscricaoResponse",
+    "controlador" : "InscricaoController#atualizar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/inscricoes/{id}/aprovar",
+    "autorizacao" : "hasAuthority('PERM_INSCRICAO_APROVAR')",
+    "corpo" : null,
+    "resposta" : "inscricao.dto.InscricaoResponse",
+    "controlador" : "InscricaoController#aprovar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/inscricoes/{id}/duplicidades",
+    "autorizacao" : "hasAuthority('PERM_INSCRICAO')",
+    "corpo" : null,
+    "resposta" : "pessoa.dto.DuplicidadeResponse[]",
+    "controlador" : "InscricaoController#verificarDuplicidades"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/inscricoes/{id}/rejeitar",
+    "autorizacao" : "hasAuthority('PERM_INSCRICAO_REJEITAR')",
+    "corpo" : "inscricao.dto.InscricaoRejeitarRequest",
+    "resposta" : "inscricao.dto.InscricaoResponse",
+    "controlador" : "InscricaoController#rejeitar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/integracao/v1/instancias",
+    "autorizacao" : "hasAuthority('PERM_INTEGRACAO')",
+    "corpo" : "integracao.dto.ProvisionarInstanciaRequest",
+    "resposta" : null,
+    "controlador" : "IntegracaoController#provisionar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/integracao/v1/instancias/{id}/consumo",
+    "autorizacao" : "hasAuthority('PERM_INTEGRACAO')",
+    "corpo" : null,
+    "resposta" : "integracao.ConsumoInstanciaService.Resposta",
+    "controlador" : "ConsumoInstanciaController#consultar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/integracao/v1/instancias/{tenantId}",
+    "autorizacao" : "hasAuthority('PERM_INTEGRACAO')",
+    "corpo" : null,
+    "resposta" : "Record<string,unknown>",
+    "controlador" : "IntegracaoController#consultar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/integracao/v1/instancias/{tenantId}/direitos",
+    "autorizacao" : "hasAuthority('PERM_INTEGRACAO')",
+    "corpo" : "integracao.dto.DireitosInstancia",
+    "resposta" : "Record<string,unknown>",
+    "controlador" : "IntegracaoController#direitos"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/integracao/v1/instancias/{tenantId}/suporte",
+    "autorizacao" : "hasAuthority('PERM_INTEGRACAO')",
+    "corpo" : "integracao.IntegracaoController.SuportePedido",
+    "resposta" : "Record<string,unknown>",
+    "controlador" : "IntegracaoController#suporte"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/integracao/v1/recursos",
+    "autorizacao" : "hasAuthority('PERM_INTEGRACAO')",
+    "corpo" : null,
+    "resposta" : "integracao.CatalogoDeRecursos.RecursoDoApp[]",
+    "controlador" : "IntegracaoController#recursos"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/layouts",
+    "autorizacao" : "hasAuthority('PERM_LAYOUT')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.LayoutResponse[]",
+    "controlador" : "LayoutController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/layouts",
+    "autorizacao" : "hasAuthority('PERM_LAYOUT_CRIAR')",
+    "corpo" : "comunicacao.dto.LayoutRequest",
+    "resposta" : "comunicacao.dto.LayoutResponse",
+    "controlador" : "LayoutController#criar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/layouts/pre-visualizar",
+    "autorizacao" : "hasAuthority('PERM_LAYOUT')",
+    "corpo" : "comunicacao.dto.PreVisualizarRequest",
+    "resposta" : "comunicacao.dto.PreVisualizacaoResponse",
+    "controlador" : "LayoutController#preVisualizar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/layouts/tags",
+    "autorizacao" : "hasAuthority('PERM_LAYOUT')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.TagResponse[]",
+    "controlador" : "LayoutController#tags"
+  }, {
+    "metodo" : "DELETE",
+    "caminho" : "/layouts/{id}",
+    "autorizacao" : "hasAuthority('PERM_LAYOUT_EXCLUIR')",
+    "corpo" : null,
+    "resposta" : null,
+    "controlador" : "LayoutController#excluir"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/layouts/{id}",
+    "autorizacao" : "hasAuthority('PERM_LAYOUT')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.LayoutResponse",
+    "controlador" : "LayoutController#buscarPorId"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/layouts/{id}",
+    "autorizacao" : "hasAuthority('PERM_LAYOUT_ALTERAR')",
+    "corpo" : "comunicacao.dto.LayoutRequest",
+    "resposta" : "comunicacao.dto.LayoutResponse",
+    "controlador" : "LayoutController#atualizar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/liturgia/referencias",
+    "autorizacao" : "hasAuthority('PERM_LITURGIA')",
+    "corpo" : null,
+    "resposta" : "liturgia.dto.LiturgiaDtos.Pagina<liturgia.dto.LiturgiaDtos.Referencia>",
+    "controlador" : "LiturgiaController#referencias"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/liturgia/referencias",
+    "autorizacao" : "hasAuthority('PERM_LITURGIA') and hasAuthority('PERM_LITURGIA_EDITAR')",
+    "corpo" : "liturgia.dto.LiturgiaDtos.ReferenciaSalvar",
+    "resposta" : "liturgia.dto.LiturgiaDtos.Referencia",
+    "controlador" : "LiturgiaController#novaReferencia"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/liturgia/referencias/{id}",
+    "autorizacao" : "hasAuthority('PERM_LITURGIA') and hasAuthority('PERM_LITURGIA_EDITAR')",
+    "corpo" : "liturgia.dto.LiturgiaDtos.ReferenciaSalvar",
+    "resposta" : "liturgia.dto.LiturgiaDtos.Referencia",
+    "controlador" : "LiturgiaController#editarReferencia"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/liturgia/roteiros",
+    "autorizacao" : "hasAuthority('PERM_LITURGIA')",
+    "corpo" : null,
+    "resposta" : "liturgia.dto.LiturgiaDtos.Pagina<liturgia.dto.LiturgiaDtos.Roteiro>",
+    "controlador" : "LiturgiaController#roteiros"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/liturgia/roteiros",
+    "autorizacao" : "hasAuthority('PERM_LITURGIA') and hasAuthority('PERM_LITURGIA_EDITAR')",
+    "corpo" : "liturgia.dto.LiturgiaDtos.RoteiroSalvar",
+    "resposta" : "liturgia.dto.LiturgiaDtos.Roteiro",
+    "controlador" : "LiturgiaController#novoRoteiro"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/liturgia/roteiros/{id}",
+    "autorizacao" : "hasAuthority('PERM_LITURGIA') and hasAuthority('PERM_LITURGIA_EDITAR')",
+    "corpo" : "liturgia.dto.LiturgiaDtos.RoteiroSalvar",
+    "resposta" : "liturgia.dto.LiturgiaDtos.Roteiro",
+    "controlador" : "LiturgiaController#editarRoteiro"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/me",
+    "autorizacao" : null,
+    "corpo" : null,
+    "resposta" : "acesso.dto.MeResponse",
+    "controlador" : "MeController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/me",
+    "autorizacao" : null,
+    "corpo" : "acesso.dto.MeRequest",
+    "resposta" : "acesso.dto.MeResponse",
+    "controlador" : "MeController#atualizar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/me/mfa",
+    "autorizacao" : "isAuthenticated() and !principal.suporte()",
+    "corpo" : null,
+    "resposta" : "auth.MfaService.Status",
+    "controlador" : "MfaController#status"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/me/mfa/ativar",
+    "autorizacao" : "isAuthenticated() and !principal.suporte()",
+    "corpo" : "auth.MfaController.Confirmacao",
+    "resposta" : "auth.MfaService.Recuperacao",
+    "controlador" : "MfaController#ativar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/me/mfa/desativar",
+    "autorizacao" : "isAuthenticated() and !principal.suporte()",
+    "corpo" : "auth.MfaController.Confirmacao",
+    "resposta" : null,
+    "controlador" : "MfaController#desativar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/me/mfa/preparar",
+    "autorizacao" : "isAuthenticated() and !principal.suporte()",
+    "corpo" : "auth.MfaController.Senha",
+    "resposta" : "auth.MfaService.Preparacao",
+    "controlador" : "MfaController#preparar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/me/mfa/recuperacao",
+    "autorizacao" : "isAuthenticated() and !principal.suporte()",
+    "corpo" : "auth.MfaController.Confirmacao",
+    "resposta" : "auth.MfaService.Recuperacao",
+    "controlador" : "MfaController#recuperar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/minha-conta",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA')",
+    "corpo" : null,
+    "resposta" : "string",
+    "controlador" : "MinhaContaController#obterDados"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/minha-conta/armazenamento/conferir",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "minhaconta.ReconciliadorArmazenamento.Resultado",
+    "controlador" : "MinhaContaController#conferirArmazenamento"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/minha-conta/consumo",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA')",
+    "corpo" : null,
+    "resposta" : "minhaconta.CotasService.Consumo",
+    "controlador" : "MinhaContaController#consumo"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/minha-conta/consumo/historico",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA')",
+    "corpo" : null,
+    "resposta" : "minhaconta.ConsumoHistoricoService.Ponto[]",
+    "controlador" : "MinhaContaController#historico"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/monitoramento/metrics",
+    "autorizacao" : "hasRole('MONITORAMENTO')",
+    "corpo" : null,
+    "resposta" : "string",
+    "controlador" : "MetricasController#metricas"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/mural/avisos",
+    "autorizacao" : "hasAuthority('PERM_MURAL')",
+    "corpo" : null,
+    "resposta" : "mural.dto.AvisoDtos.Pagina",
+    "controlador" : "AvisoController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/mural/avisos",
+    "autorizacao" : "hasAuthority('PERM_MURAL_CRIAR')",
+    "corpo" : "mural.dto.AvisoDtos.Salvar",
+    "resposta" : "mural.dto.AvisoDtos.Resposta",
+    "controlador" : "AvisoController#criar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/mural/avisos/destinatarios",
+    "autorizacao" : "hasAuthority('PERM_MURAL') and (hasAuthority('PERM_MURAL_CRIAR') or hasAuthority('PERM_MURAL_ALTERAR'))",
+    "corpo" : null,
+    "resposta" : "mural.dto.AvisoDtos.Conta[]",
+    "controlador" : "AvisoController#contas"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/mural/avisos/{id}",
+    "autorizacao" : "hasAuthority('PERM_MURAL')",
+    "corpo" : null,
+    "resposta" : "mural.dto.AvisoDtos.Resposta",
+    "controlador" : "AvisoController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/mural/avisos/{id}",
+    "autorizacao" : "hasAuthority('PERM_MURAL_ALTERAR')",
+    "corpo" : "mural.dto.AvisoDtos.Salvar",
+    "resposta" : "mural.dto.AvisoDtos.Resposta",
+    "controlador" : "AvisoController#alterar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/mural/avisos/{id}/leitura",
+    "autorizacao" : "hasAuthority('PERM_MURAL') and hasAuthority('PERM_MURAL_CONFIRMAR')",
+    "corpo" : "mural.dto.AvisoDtos.Confirmar",
+    "resposta" : "mural.dto.AvisoDtos.Resposta",
+    "controlador" : "AvisoController#confirmar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/mural/avisos/{id}/notificacoes",
+    "autorizacao" : "hasAuthority('PERM_NOTIFICACAO_ENVIAR')",
+    "corpo" : "notificacao.NotificacaoDtos.AvisoRequest",
+    "resposta" : "notificacao.NotificacaoDtos.Resultado",
+    "controlador" : "NotificacaoController#notificarAviso"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/notificacoes/configuracoes",
+    "autorizacao" : "hasAuthority('PERM_NOTIFICACAO')",
+    "corpo" : null,
+    "resposta" : "notificacao.NotificacaoDtos.Config[]",
+    "controlador" : "NotificacaoController#configuracoes"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/notificacoes/configuracoes/{origem}/{canal}",
+    "autorizacao" : "hasAuthority('PERM_NOTIFICACAO_CONFIGURAR')",
+    "corpo" : "notificacao.NotificacaoDtos.Configurar",
+    "resposta" : "notificacao.NotificacaoDtos.Config",
+    "controlador" : "NotificacaoController#configurar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/notificacoes/entregas",
+    "autorizacao" : "hasAuthority('PERM_NOTIFICACAO')",
+    "corpo" : null,
+    "resposta" : "notificacao.NotificacaoDtos.Pagina",
+    "controlador" : "NotificacaoController#entregas"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/onboarding",
+    "autorizacao" : "hasAuthority('PERM_ONBOARDING')",
+    "corpo" : null,
+    "resposta" : "onboarding.dto.OnboardingDtos.Resposta",
+    "controlador" : "OnboardingController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/onboarding/etapas/{codigo}",
+    "autorizacao" : "hasAuthority('PERM_ONBOARDING') and hasAuthority('PERM_ONBOARDING_GERENCIAR')",
+    "corpo" : "onboarding.dto.OnboardingDtos.Salvar",
+    "resposta" : "onboarding.dto.OnboardingDtos.Resposta",
+    "controlador" : "OnboardingController#alterar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pastorais/equipes",
+    "autorizacao" : "hasAuthority('PERM_PASTORAL')",
+    "corpo" : null,
+    "resposta" : "pastoral.dto.PastoralDtos.Pagina<pastoral.dto.PastoralDtos.Equipe>",
+    "controlador" : "PastoralController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/pastorais/equipes",
+    "autorizacao" : "hasAuthority('PERM_PASTORAL_CRIAR')",
+    "corpo" : "pastoral.dto.PastoralDtos.SalvarEquipe",
+    "resposta" : "pastoral.dto.PastoralDtos.Equipe",
+    "controlador" : "PastoralController#criar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/pastorais/equipes/{id}",
+    "autorizacao" : "hasAuthority('PERM_PASTORAL_ALTERAR')",
+    "corpo" : "pastoral.dto.PastoralDtos.SalvarEquipe",
+    "resposta" : "pastoral.dto.PastoralDtos.Equipe",
+    "controlador" : "PastoralController#alterar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pastorais/equipes/{id}/membros",
+    "autorizacao" : "hasAuthority('PERM_PASTORAL')",
+    "corpo" : null,
+    "resposta" : "pastoral.dto.PastoralDtos.Pagina<pastoral.dto.PastoralDtos.Membro>",
+    "controlador" : "PastoralController#membros"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/pastorais/equipes/{id}/membros",
+    "autorizacao" : "hasAuthority('PERM_PASTORAL_GERENCIAR')",
+    "corpo" : "pastoral.dto.PastoralDtos.SalvarMembro",
+    "resposta" : null,
+    "controlador" : "PastoralController#membro"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pastorais/minhas-equipes",
+    "autorizacao" : "hasAuthority('PERM_PASTORAL_COORDENACAO')",
+    "corpo" : null,
+    "resposta" : "pastoral.dto.PastoralDtos.Equipe[]",
+    "controlador" : "PastoralController#minhas"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pastorais/minhas-equipes/{id}/membros",
+    "autorizacao" : "hasAuthority('PERM_PASTORAL_COORDENACAO')",
+    "corpo" : null,
+    "resposta" : "pastoral.dto.PastoralDtos.Pagina<pastoral.dto.PastoralDtos.Membro>",
+    "controlador" : "PastoralController#proprios"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/pastorais/minhas-equipes/{id}/membros/{pessoa}",
+    "autorizacao" : "hasAuthority('PERM_PASTORAL_COORDENACAO_GERENCIAR')",
+    "corpo" : "pastoral.PastoralController.Ativo",
+    "resposta" : null,
+    "controlador" : "PastoralController#proprio"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pastorais/pessoas",
+    "autorizacao" : "hasAnyAuthority('PERM_PASTORAL_GERENCIAR','PERM_USUARIO_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "pastoral.dto.PastoralDtos.PessoaOpcao[]",
+    "controlador" : "PastoralController#pessoas"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/perfis",
+    "autorizacao" : "hasAnyAuthority('PERM_PERFIL','PERM_USUARIO')",
+    "corpo" : null,
+    "resposta" : "acesso.dto.PerfilResponse[]",
+    "controlador" : "PerfilController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/perfis",
+    "autorizacao" : "hasAuthority('PERM_PERFIL_CRIAR')",
+    "corpo" : "acesso.dto.PerfilRequest",
+    "resposta" : "acesso.dto.PerfilResponse",
+    "controlador" : "PerfilController#criar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/perfis/{id}",
+    "autorizacao" : "hasAnyAuthority('PERM_PERFIL','PERM_USUARIO')",
+    "corpo" : null,
+    "resposta" : "acesso.dto.PerfilResponse",
+    "controlador" : "PerfilController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/perfis/{id}",
+    "autorizacao" : "hasAuthority('PERM_PERFIL_ALTERAR')",
+    "corpo" : "acesso.dto.PerfilRequest",
+    "resposta" : "acesso.dto.PerfilResponse",
+    "controlador" : "PerfilController#atualizar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/perfis/{id}/duplicar",
+    "autorizacao" : "hasAuthority('PERM_PERFIL_CRIAR')",
+    "corpo" : null,
+    "resposta" : "acesso.dto.PerfilResponse",
+    "controlador" : "PerfilController#duplicar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/permissoes/catalogo",
+    "autorizacao" : "hasAnyAuthority('PERM_PERFIL','PERM_USUARIO')",
+    "corpo" : null,
+    "resposta" : "acesso.CatalogoPermissao.Secao[]",
+    "controlador" : "PermissaoCatalogoController#catalogo"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "pessoa.dto.PessoaResponse[]",
+    "controlador" : "PessoaController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/pessoas",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_CRIAR')",
+    "corpo" : "pessoa.dto.PessoaRequest",
+    "resposta" : "pessoa.dto.PessoaResponse",
+    "controlador" : "PessoaController#criar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/pessoas",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_CRIAR')",
+    "corpo" : null,
+    "resposta" : "pessoa.dto.PessoaResponse",
+    "controlador" : "PessoaController#criarComFoto"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas/aniversariantes",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "pessoa.dto.AniversarianteResponse[]",
+    "controlador" : "PessoaController#aniversariantes"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/pessoas/duplicidades",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : "pessoa.dto.DuplicidadeRequest",
+    "resposta" : "pessoa.dto.DuplicidadeResponse[]",
+    "controlador" : "PessoaController#verificarDuplicidades"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/pessoas/importacoes/confirmar",
+    "autorizacao" : "hasAuthority('PERM_PESSOA') and hasAuthority('PERM_PESSOA_CRIAR')",
+    "corpo" : null,
+    "resposta" : "pessoa.importacao.dto.ImportacaoPessoaDtos.Resultado",
+    "controlador" : "ImportacaoPessoaController#confirmar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/pessoas/importacoes/estrutura",
+    "autorizacao" : "hasAuthority('PERM_PESSOA') and hasAuthority('PERM_PESSOA_CRIAR')",
+    "corpo" : null,
+    "resposta" : "pessoa.importacao.dto.ImportacaoPessoaDtos.Estrutura",
+    "controlador" : "ImportacaoPessoaController#estrutura"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/pessoas/importacoes/previa",
+    "autorizacao" : "hasAuthority('PERM_PESSOA') and hasAuthority('PERM_PESSOA_CRIAR')",
+    "corpo" : null,
+    "resposta" : "pessoa.importacao.dto.ImportacaoPessoaDtos.Previa",
+    "controlador" : "ImportacaoPessoaController#previa"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas/opcoes",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "pessoa.PessoaService.Opcao[]",
+    "controlador" : "PessoaController#opcoes"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas/pagina",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "web.PaginaLista<pessoa.dto.PessoaResponse>",
+    "controlador" : "PessoaController#pagina"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas/resumo",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "pessoa.PessoaService.Resumo",
+    "controlador" : "PessoaController#resumo"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas/{id}",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "pessoa.dto.PessoaResponse",
+    "controlador" : "PessoaController#buscarPorId"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/pessoas/{id}",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_ALTERAR')",
+    "corpo" : "pessoa.dto.PessoaRequest",
+    "resposta" : "pessoa.dto.PessoaResponse",
+    "controlador" : "PessoaController#atualizar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/pessoas/{id}",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "pessoa.dto.PessoaResponse",
+    "controlador" : "PessoaController#atualizarComFoto"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas/{id}/consentimentos",
+    "autorizacao" : "hasAuthority('PERM_PRIVACIDADE')",
+    "corpo" : null,
+    "resposta" : "privacidade.PrivacidadeDtos.PaginaConsentimentos",
+    "controlador" : "PrivacidadeController#historico"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas/{id}/exportacao",
+    "autorizacao" : "hasAuthority('PERM_PRIVACIDADE_EXPORTAR')",
+    "corpo" : null,
+    "resposta" : "privacidade.PrivacidadeDtos.Exportacao",
+    "controlador" : "PrivacidadeController#exportar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/pessoas/{responsavel}/acessos-dependentes",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "portal.AcessosDependentesService.Autorizacao[]",
+    "controlador" : "AcessosDependentesController#autorizacoes"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/pessoas/{responsavel}/acessos-dependentes/{dependente}",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_ALTERAR')",
+    "corpo" : "portal.AcessosDependentesController.Autorizar",
+    "resposta" : null,
+    "controlador" : "AcessosDependentesController#autorizar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/candidaturas",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : null,
+    "resposta" : "portal.dto.CandidaturaDtos.Pagina<portal.dto.CandidaturaDtos.Pedido>",
+    "controlador" : "CandidaturaController#minhas"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/portal/candidaturas/{id}/desistencia",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_CANDIDATAR')",
+    "corpo" : "portal.dto.CandidaturaDtos.Versao",
+    "resposta" : "portal.dto.CandidaturaDtos.Pedido",
+    "controlador" : "CandidaturaController#desistir"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/portal/checkin",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : "checkin.CheckinDtos.Registrar",
+    "resposta" : "checkin.CheckinDtos.Resultado",
+    "controlador" : "CheckinController#registrar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/compromissos",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : null,
+    "resposta" : "portal.PortalService.Resposta",
+    "controlador" : "PortalController#consultar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/dependentes",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_DEPENDENTES')",
+    "corpo" : null,
+    "resposta" : "portal.AcessosDependentesService.Dependente[]",
+    "controlador" : "AcessosDependentesController#dependentes"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/dependentes/{id}/compromissos",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_DEPENDENTES')",
+    "corpo" : null,
+    "resposta" : "portal.PortalService.Resposta",
+    "controlador" : "AcessosDependentesController#compromissos"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/portal/dependentes/{pessoa}/vagas/{vaga}/resposta",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_DEPENDENTES') and hasAuthority('PERM_PORTAL_RESPONDER')",
+    "corpo" : "portal.dto.RespostaEscalaDtos.Responder",
+    "resposta" : "portal.dto.RespostaEscalaDtos.Atual",
+    "controlador" : "AcessosDependentesController#responder"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/indisponibilidades",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : null,
+    "resposta" : "portal.dto.DisponibilidadeDtos.Resposta",
+    "controlador" : "DisponibilidadePortalController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/portal/indisponibilidades",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_DISPONIBILIDADE')",
+    "corpo" : "portal.dto.DisponibilidadeDtos.Salvar",
+    "resposta" : "portal.dto.DisponibilidadeDtos.Resposta",
+    "controlador" : "DisponibilidadePortalController#salvar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/trocas",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : null,
+    "resposta" : "portal.dto.TrocaDtos.Pagina<portal.dto.TrocaDtos.Pedido>",
+    "controlador" : "TrocaController#minhas"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/trocas/substitutos",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_TROCAR')",
+    "corpo" : null,
+    "resposta" : "portal.dto.TrocaDtos.Substituto[]",
+    "controlador" : "TrocaController#substitutos"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/portal/trocas/{id}/aceite",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_TROCAR')",
+    "corpo" : "portal.dto.TrocaDtos.Decisao",
+    "resposta" : "portal.dto.TrocaDtos.Pedido",
+    "controlador" : "TrocaController#responder"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/portal/trocas/{id}/cancelamento",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_TROCAR')",
+    "corpo" : "portal.dto.TrocaDtos.Versao",
+    "resposta" : "portal.dto.TrocaDtos.Pedido",
+    "controlador" : "TrocaController#cancelar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/vagas-abertas",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : null,
+    "resposta" : "portal.dto.CandidaturaDtos.Pagina<portal.dto.CandidaturaDtos.Vaga>",
+    "controlador" : "CandidaturaController#vagas"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/portal/vagas/{id}/candidaturas",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_CANDIDATAR')",
+    "corpo" : "portal.dto.CandidaturaDtos.Versao",
+    "resposta" : "portal.dto.CandidaturaDtos.Pedido",
+    "controlador" : "CandidaturaController#candidatar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/portal/vagas/{id}/resposta",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_VOLUNTARIO') and hasAuthority('PERM_PORTAL_RESPONDER')",
+    "corpo" : "portal.dto.RespostaEscalaDtos.Responder",
+    "resposta" : "portal.dto.RespostaEscalaDtos.Atual",
+    "controlador" : "RespostaEscalaController#responder"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/portal/vagas/{id}/respostas",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_VOLUNTARIO')",
+    "corpo" : null,
+    "resposta" : "portal.dto.RespostaEscalaDtos.Pagina<portal.dto.RespostaEscalaDtos.Historico>",
+    "controlador" : "RespostaEscalaController#historico"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/portal/vagas/{id}/trocas",
+    "autorizacao" : "hasAuthority('PERM_PORTAL_TROCAR')",
+    "corpo" : "portal.dto.TrocaDtos.Solicitar",
+    "resposta" : "portal.dto.TrocaDtos.Pedido",
+    "controlador" : "TrocaController#solicitar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/privacidade/retencao",
+    "autorizacao" : "hasAuthority('PERM_PRIVACIDADE')",
+    "corpo" : null,
+    "resposta" : "privacidade.PrivacidadeDtos.Retencao",
+    "controlador" : "PrivacidadeController#retencao"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/privacidade/retencao",
+    "autorizacao" : "hasAuthority('PERM_PRIVACIDADE_RETENCAO')",
+    "corpo" : "privacidade.PrivacidadeDtos.AtualizarRetencao",
+    "resposta" : "privacidade.PrivacidadeDtos.Retencao",
+    "controlador" : "PrivacidadeController#atualizar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/privacidade/retencao/execucao",
+    "autorizacao" : "hasAuthority('PERM_PRIVACIDADE_RETENCAO')",
+    "corpo" : "privacidade.PrivacidadeDtos.ExecutarRetencao",
+    "resposta" : "privacidade.PrivacidadeDtos.ResultadoRetencao",
+    "controlador" : "PrivacidadeController#executar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/public/calendario/{token}.ics",
+    "autorizacao" : null,
+    "corpo" : null,
+    "resposta" : "string",
+    "controlador" : "CalendarioController#feed"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/public/paroquias/{slug}",
+    "autorizacao" : "permitAll()",
+    "corpo" : null,
+    "resposta" : "site.dto.SiteDtos.Dados",
+    "controlador" : "SiteController#publico"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/public/{tenantSlug}/inscricoes",
+    "autorizacao" : null,
+    "corpo" : null,
+    "resposta" : "inscricao.dto.InscricaoResponse",
+    "controlador" : "PublicInscricaoController#criar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/relatorios/participacao",
+    "autorizacao" : "hasAuthority('PERM_AUDITORIA')",
+    "corpo" : null,
+    "resposta" : "relatorios.dto.ParticipacaoDtos.Pagina",
+    "controlador" : "ParticipacaoController#listar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/relatorios/participacao/csv",
+    "autorizacao" : "hasAuthority('PERM_AUDITORIA') and hasAuthority('PERM_RELATORIO_EXPORTAR')",
+    "corpo" : null,
+    "resposta" : "number[]",
+    "controlador" : "ParticipacaoController#csv"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/site-paroquia",
+    "autorizacao" : "hasAuthority('PERM_SITE')",
+    "corpo" : null,
+    "resposta" : "site.dto.SiteDtos.Estado",
+    "controlador" : "SiteController#consultar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/site-paroquia",
+    "autorizacao" : "hasAuthority('PERM_SITE') and hasAuthority('PERM_SITE_EDITAR')",
+    "corpo" : "site.dto.SiteDtos.Salvar",
+    "resposta" : "site.dto.SiteDtos.Estado",
+    "controlador" : "SiteController#salvar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/site-paroquia/despublicar",
+    "autorizacao" : "hasAuthority('PERM_SITE') and hasAuthority('PERM_SITE_PUBLICAR')",
+    "corpo" : "site.dto.SiteDtos.Revisao",
+    "resposta" : "site.dto.SiteDtos.Estado",
+    "controlador" : "SiteController#despublicar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/site-paroquia/publicar",
+    "autorizacao" : "hasAuthority('PERM_SITE') and hasAuthority('PERM_SITE_PUBLICAR')",
+    "corpo" : "site.dto.SiteDtos.Publicar",
+    "resposta" : "site.dto.SiteDtos.Estado",
+    "controlador" : "SiteController#publicar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/tarefas",
+    "autorizacao" : "hasAuthority('PERM_TAREFA')",
+    "corpo" : null,
+    "resposta" : "tarefas.dto.TarefaDtos.Pagina",
+    "controlador" : "TarefaController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/tarefas",
+    "autorizacao" : "hasAuthority('PERM_TAREFA_CRIAR')",
+    "corpo" : "tarefas.dto.TarefaDtos.Salvar",
+    "resposta" : "tarefas.dto.TarefaDtos.Resposta",
+    "controlador" : "TarefaController#criar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/tarefas/responsaveis",
+    "autorizacao" : "hasAuthority('PERM_TAREFA')",
+    "corpo" : null,
+    "resposta" : "tarefas.dto.TarefaDtos.Responsavel[]",
+    "controlador" : "TarefaController#responsaveis"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/tarefas/{id}",
+    "autorizacao" : "hasAuthority('PERM_TAREFA')",
+    "corpo" : null,
+    "resposta" : "tarefas.dto.TarefaDtos.Resposta",
+    "controlador" : "TarefaController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/tarefas/{id}",
+    "autorizacao" : "hasAuthority('PERM_TAREFA_ALTERAR')",
+    "corpo" : "tarefas.dto.TarefaDtos.Salvar",
+    "resposta" : "tarefas.dto.TarefaDtos.Resposta",
+    "controlador" : "TarefaController#alterar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/tenant",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA')",
+    "corpo" : null,
+    "resposta" : "tenant.dto.TenantResponse",
+    "controlador" : "TenantController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/tenant",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA_ALTERAR')",
+    "corpo" : "tenant.dto.TenantRequest",
+    "resposta" : "tenant.dto.TenantResponse",
+    "controlador" : "TenantController#atualizar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/tenant/whatsapp",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA')",
+    "corpo" : null,
+    "resposta" : "comunicacao.dto.WhatsappConfigResponse",
+    "controlador" : "ParoquiaWhatsappController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/tenant/whatsapp",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA_ALTERAR')",
+    "corpo" : "comunicacao.dto.WhatsappConfigRequest",
+    "resposta" : "comunicacao.dto.WhatsappConfigResponse",
+    "controlador" : "ParoquiaWhatsappController#salvar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/tenant/whatsapp/testar",
+    "autorizacao" : "hasAuthority('PERM_PAROQUIA_ALTERAR')",
+    "corpo" : "comunicacao.dto.TestarWhatsappRequest",
+    "resposta" : null,
+    "controlador" : "ParoquiaWhatsappController#testar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/usuarios",
+    "autorizacao" : "hasAnyAuthority('PERM_USUARIO','PERM_USUARIO_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "acesso.dto.UsuarioParoquiaResponse[]",
+    "controlador" : "UsuarioParoquiaController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/usuarios",
+    "autorizacao" : "hasAuthority('PERM_USUARIO_CRIAR')",
+    "corpo" : "acesso.dto.UsuarioParoquiaRequest",
+    "resposta" : "acesso.dto.UsuarioParoquiaResponse",
+    "controlador" : "UsuarioParoquiaController#criar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/usuarios/{id}",
+    "autorizacao" : "hasAnyAuthority('PERM_USUARIO','PERM_USUARIO_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "acesso.dto.UsuarioParoquiaResponse",
+    "controlador" : "UsuarioParoquiaController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/usuarios/{id}",
+    "autorizacao" : "hasAuthority('PERM_USUARIO_ALTERAR')",
+    "corpo" : "acesso.dto.UsuarioParoquiaRequest",
+    "resposta" : "acesso.dto.UsuarioParoquiaResponse",
+    "controlador" : "UsuarioParoquiaController#atualizar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/usuarios/{id}/convite",
+    "autorizacao" : "hasAuthority('PERM_USUARIO_REENVIAR_CONVITE')",
+    "corpo" : null,
+    "resposta" : null,
+    "controlador" : "UsuarioParoquiaController#reenviar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/usuarios/{id}/pessoa",
+    "autorizacao" : "hasAuthority('PERM_USUARIO_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "acesso.VinculoPessoaService.Vinculo",
+    "controlador" : "VinculoPessoaController#buscar"
+  }, {
+    "metodo" : "PUT",
+    "caminho" : "/usuarios/{id}/pessoa",
+    "autorizacao" : "hasAuthority('PERM_USUARIO_ALTERAR')",
+    "corpo" : "acesso.VinculoPessoaService.Vinculo",
+    "resposta" : "acesso.VinculoPessoaService.Vinculo",
+    "controlador" : "VinculoPessoaController#salvar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios",
+    "autorizacao" : "hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.VoluntarioResponse[]",
+    "controlador" : "VoluntarioController#listar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios/contagens",
+    "autorizacao" : "hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.ContagemVoluntarios",
+    "controlador" : "VoluntarioController#contagens"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios/count",
+    "autorizacao" : "hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "number",
+    "controlador" : "VoluntarioController#contar"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios/opcoes",
+    "autorizacao" : "hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "voluntario.VoluntarioOpcaoService.Pagina",
+    "controlador" : "VoluntarioOpcaoController#buscar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/voluntarios/opcoes/ids",
+    "autorizacao" : "hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')",
+    "corpo" : "voluntario.VoluntarioOpcaoService.Resolver",
+    "resposta" : "voluntario.VoluntarioOpcaoService.Opcao[]",
+    "controlador" : "VoluntarioOpcaoController#resolver"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios/painel",
+    "autorizacao" : "hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.PainelVoluntarios",
+    "controlador" : "VoluntarioController#painel"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios/{id}",
+    "autorizacao" : "hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.VoluntarioResponse",
+    "controlador" : "VoluntarioController#buscarPorId"
+  }, {
+    "metodo" : "PATCH",
+    "caminho" : "/voluntarios/{id}/ativo",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_ATIVAR_INATIVAR')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.VoluntarioResponse",
+    "controlador" : "VoluntarioController#alterarAtivo"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios/{id}/commitments",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.CompromissoResponse[]",
+    "controlador" : "VoluntarioController#listarCompromissos"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/voluntarios/{id}/foto",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_ALTERAR')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.VoluntarioResponse",
+    "controlador" : "VoluntarioController#enviarFoto"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios/{id}/foto-url",
+    "autorizacao" : "hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.FotoUrlResponse",
+    "controlador" : "VoluntarioController#obterUrlFoto"
+  }, {
+    "metodo" : "GET",
+    "caminho" : "/voluntarios/{voluntarioId}/disponibilidades",
+    "autorizacao" : "hasAuthority('PERM_PESSOA')",
+    "corpo" : null,
+    "resposta" : "voluntario.dto.DisponibilidadeVoluntarioResponse[]",
+    "controlador" : "DisponibilidadeVoluntarioController#listar"
+  }, {
+    "metodo" : "POST",
+    "caminho" : "/voluntarios/{voluntarioId}/disponibilidades",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_ALTERAR')",
+    "corpo" : "voluntario.dto.DisponibilidadeVoluntarioRequest",
+    "resposta" : "voluntario.dto.DisponibilidadeVoluntarioResponse",
+    "controlador" : "DisponibilidadeVoluntarioController#criar"
+  }, {
+    "metodo" : "DELETE",
+    "caminho" : "/voluntarios/{voluntarioId}/disponibilidades/{id}",
+    "autorizacao" : "hasAuthority('PERM_PESSOA_ALTERAR')",
+    "corpo" : null,
+    "resposta" : null,
+    "controlador" : "DisponibilidadeVoluntarioController#excluir"
+  } ],
+  "esquemas" : {
+    "acesso.CatalogoPermissao.Acao" : {
+      "codigo" : "string?",
+      "nome" : "string?"
+    },
+    "acesso.CatalogoPermissao.Modulo" : {
+      "acoes" : "acesso.CatalogoPermissao.Acao[]?",
+      "codigo" : "string?",
+      "nome" : "string?"
+    },
+    "acesso.CatalogoPermissao.Secao" : {
+      "modulos" : "acesso.CatalogoPermissao.Modulo[]?",
+      "nome" : "string?"
+    },
+    "acesso.VinculoPessoaService.Vinculo" : {
+      "pessoaId" : "string?",
+      "pessoaNome" : "string?"
+    },
+    "acesso.dto.MeRequest" : {
+      "codigoMfa" : "string?",
+      "nome" : "string?",
+      "senha" : "string?",
+      "senhaAtual" : "string?",
+      "telefone" : "string?",
+      "tipoTelefone" : "string?"
+    },
+    "acesso.dto.MeResponse" : {
+      "email" : "string?",
+      "id" : "string?",
+      "nome" : "string?",
+      "perfil" : "string?",
+      "permissoes" : "string[]?",
+      "telefone" : "string?",
+      "tipoTelefone" : "string?"
+    },
+    "acesso.dto.PerfilRequest" : {
+      "acessoTotal" : "boolean",
+      "ativo" : "boolean",
+      "nome" : "string?",
+      "permissoes" : "string[]?"
+    },
+    "acesso.dto.PerfilResponse" : {
+      "acessoTotal" : "boolean",
+      "ativo" : "boolean",
+      "id" : "string?",
+      "nome" : "string?",
+      "permissoes" : "string[]?",
+      "sequencial" : "number?",
+      "sistema" : "boolean",
+      "usuarios" : "number"
+    },
+    "acesso.dto.UsuarioParoquiaRequest" : {
+      "ativo" : "boolean",
+      "email" : "string?",
+      "nome" : "string?",
+      "perfilId" : "string?",
+      "telefone" : "string?",
+      "tipoTelefone" : "string?"
+    },
+    "acesso.dto.UsuarioParoquiaResponse" : {
+      "ativo" : "boolean",
+      "email" : "string?",
+      "nome" : "string?",
+      "perfilId" : "string?",
+      "perfilNome" : "string?",
+      "senhaDefinida" : "boolean",
+      "sequencial" : "number?",
+      "situacaoAcesso" : "string?",
+      "somenteLeitura" : "boolean",
+      "telefone" : "string?",
+      "tipoTelefone" : "string?",
+      "usuarioId" : "string?"
+    },
+    "audit.dto.AuditLogResponse" : {
+      "acao" : "string?",
+      "changedFields" : "string[]?",
+      "createdAt" : "string?",
+      "entidade" : "string?",
+      "entidadeId" : "string?",
+      "id" : "string?",
+      "ip" : "string?",
+      "requestId" : "string?",
+      "userId" : "string?"
+    },
+    "auth.MfaController.Confirmacao" : {
+      "codigo" : "string?",
+      "senha" : "string?"
+    },
+    "auth.MfaController.Senha" : {
+      "senha" : "string?"
+    },
+    "auth.MfaService.Preparacao" : {
+      "expiraEm" : "string?",
+      "segredo" : "string?"
+    },
+    "auth.MfaService.Recuperacao" : {
+      "codigos" : "string[]?"
+    },
+    "auth.MfaService.Status" : {
+      "ativo" : "boolean",
+      "codigosRestantes" : "number",
+      "configurado" : "boolean"
+    },
+    "auth.dto.AccessTokenResponse" : {
+      "accessToken" : "string?",
+      "expiresInSeconds" : "number",
+      "tenantAtual" : "auth.dto.TenantResumo?"
+    },
+    "auth.dto.ForgotPasswordRequest" : {
+      "email" : "string?"
+    },
+    "auth.dto.LoginRequest" : {
+      "codigoMfa" : "string?",
+      "email" : "string?",
+      "senha" : "string?"
+    },
+    "auth.dto.LoginResponse" : {
+      "accessToken" : "string?",
+      "expiresInSeconds" : "number?",
+      "precisaSelecionarTenant" : "boolean",
+      "tenantAtual" : "auth.dto.TenantResumo?",
+      "tenantsDisponiveis" : "auth.dto.TenantResumo[]?",
+      "tokenSelecaoTenant" : "string?"
+    },
+    "auth.dto.RefreshRequest" : {
+      "tenantId" : "string?"
+    },
+    "auth.dto.ResetPasswordRequest" : {
+      "codigoMfa" : "string?",
+      "novaSenha" : "string?",
+      "token" : "string?"
+    },
+    "auth.dto.SelectTenantRequest" : {
+      "tenantId" : "string?",
+      "tokenSelecaoTenant" : "string?"
+    },
+    "auth.dto.TenantResumo" : {
+      "id" : "string?",
+      "nome" : "string?",
+      "slug" : "string?"
+    },
+    "calendario.CalendarioService.Criada" : {
+      "expiraEm" : "string?",
+      "token" : "string?"
+    },
+    "checkin.CheckinDtos.Aberto" : {
+      "expiraEm" : "string?",
+      "sessaoId" : "string?",
+      "token" : "string?"
+    },
+    "checkin.CheckinDtos.Abrir" : {
+      "minutos" : "number?"
+    },
+    "checkin.CheckinDtos.Estado" : {
+      "ativa" : "boolean",
+      "escalados" : "number",
+      "expiraEm" : "string?",
+      "presentes" : "number",
+      "registros" : "checkin.CheckinDtos.Presente[]?"
+    },
+    "checkin.CheckinDtos.Presente" : {
+      "funcao" : "string?",
+      "nome" : "string?",
+      "registradoEm" : "string?"
+    },
+    "checkin.CheckinDtos.Registrar" : {
+      "token" : "string?"
+    },
+    "checkin.CheckinDtos.Resultado" : {
+      "celebracao" : "string?",
+      "data" : "string?",
+      "funcao" : "string?",
+      "horario" : "string?",
+      "jaRegistrado" : "boolean"
+    },
+    "comunicacao.EnviarPara" : {
+      "enum" : [ "PESSOA", "RESPONSAVEIS", "AMBOS" ]
+    },
+    "comunicacao.QuaisContatos" : {
+      "enum" : [ "PRINCIPAL", "TODOS" ]
+    },
+    "comunicacao.StatusComunicado" : {
+      "enum" : [ "NA_FILA", "ENVIANDO", "CONCLUIDO" ]
+    },
+    "comunicacao.StatusEnvio" : {
+      "enum" : [ "PENDENTE", "ENVIADO", "FALHA" ]
+    },
+    "comunicacao.TipoEnvio" : {
+      "enum" : [ "EMAIL", "WHATSAPP" ]
+    },
+    "comunicacao.TipoLayout" : {
+      "enum" : [ "TODOS", "RESPONSAVEL", "COROINHA", "ACOLITO", "COROINHA_ACOLITO", "MINISTRO", "EVENTO" ]
+    },
+    "comunicacao.dto.AniversarioDtos.Autorizacao" : {
+      "autorizado" : "boolean",
+      "canal" : "comunicacao.TipoEnvio?",
+      "fonte" : "string?",
+      "pessoaId" : "string?",
+      "registradoEm" : "string?",
+      "versao" : "number"
+    },
+    "comunicacao.dto.AniversarioDtos.Autorizar" : {
+      "autorizado" : "boolean?",
+      "fonte" : "string?",
+      "versao" : "number?"
+    },
+    "comunicacao.dto.AniversarioDtos.Config" : {
+      "agendadorAtivo" : "boolean",
+      "ativo" : "boolean",
+      "canal" : "comunicacao.TipoEnvio?",
+      "layoutId" : "string?",
+      "versao" : "number"
+    },
+    "comunicacao.dto.AniversarioDtos.Configurar" : {
+      "ativo" : "boolean?",
+      "layoutId" : "string?",
+      "versao" : "number?"
+    },
+    "comunicacao.dto.AniversarioDtos.OpcaoLayout" : {
+      "canal" : "comunicacao.TipoEnvio?",
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "comunicacao.dto.ComunicadoDtos.AnexoLinha" : {
+      "id" : "string?",
+      "nome" : "string?",
+      "tamanho" : "number"
+    },
+    "comunicacao.dto.ComunicadoDtos.Criado" : {
+      "id" : "string?",
+      "total" : "number"
+    },
+    "comunicacao.dto.ComunicadoDtos.DestinatarioLinha" : {
+      "destino" : "string?",
+      "enviadoEm" : "string?",
+      "erro" : "string?",
+      "id" : "string?",
+      "nome" : "string?",
+      "status" : "comunicacao.StatusEnvio?"
+    },
+    "comunicacao.dto.ComunicadoDtos.DestinatarioPrevia" : {
+      "autorizaWhatsapp" : "boolean?",
+      "destinos" : "comunicacao.dto.ComunicadoDtos.Destino[]?",
+      "nome" : "string?",
+      "pessoaId" : "string?"
+    },
+    "comunicacao.dto.ComunicadoDtos.DestinatariosRequest" : {
+      "canal" : "comunicacao.TipoEnvio?",
+      "contatos" : "comunicacao.QuaisContatos?",
+      "enviarPara" : "comunicacao.EnviarPara?",
+      "pessoaIds" : "string[]?"
+    },
+    "comunicacao.dto.ComunicadoDtos.Destino" : {
+      "deQuem" : "string?",
+      "endereco" : "string?",
+      "nome" : "string?"
+    },
+    "comunicacao.dto.ComunicadoDtos.Detalhe" : {
+      "anexos" : "comunicacao.dto.ComunicadoDtos.AnexoLinha[]?",
+      "comunicado" : "comunicacao.dto.ComunicadoDtos.Resumo?",
+      "destinatarios" : "comunicacao.dto.ComunicadoDtos.DestinatarioLinha[]?"
+    },
+    "comunicacao.dto.ComunicadoDtos.PreVisualizacao" : {
+      "assunto" : "string?",
+      "conteudo" : "string?",
+      "de" : "string?",
+      "para" : "string?"
+    },
+    "comunicacao.dto.ComunicadoDtos.PreVisualizarRequest" : {
+      "assunto" : "string?",
+      "enviarPara" : "comunicacao.EnviarPara?",
+      "layoutId" : "string?",
+      "pessoaId" : "string?"
+    },
+    "comunicacao.dto.ComunicadoDtos.Resumo" : {
+      "assunto" : "string?",
+      "canal" : "comunicacao.TipoEnvio?",
+      "concluidoEm" : "string?",
+      "createdAt" : "string?",
+      "enviados" : "number",
+      "enviarPara" : "comunicacao.EnviarPara?",
+      "falhas" : "number",
+      "id" : "string?",
+      "layoutNome" : "string?",
+      "status" : "comunicacao.StatusComunicado?",
+      "total" : "number"
+    },
+    "comunicacao.dto.LayoutRequest" : {
+      "assunto" : "string?",
+      "ativo" : "boolean",
+      "conteudo" : "string?",
+      "nome" : "string?",
+      "tipoEnvio" : "comunicacao.TipoEnvio?",
+      "tipoLayout" : "comunicacao.TipoLayout?"
+    },
+    "comunicacao.dto.LayoutResponse" : {
+      "assunto" : "string?",
+      "ativo" : "boolean",
+      "conteudo" : "string?",
+      "id" : "string?",
+      "nome" : "string?",
+      "tipoEnvio" : "comunicacao.TipoEnvio?",
+      "tipoLayout" : "comunicacao.TipoLayout?"
+    },
+    "comunicacao.dto.PreVisualizacaoResponse" : {
+      "assunto" : "string?",
+      "conteudo" : "string?"
+    },
+    "comunicacao.dto.PreVisualizarRequest" : {
+      "assunto" : "string?",
+      "conteudo" : "string?",
+      "tipoEnvio" : "comunicacao.TipoEnvio?",
+      "tipoLayout" : "comunicacao.TipoLayout?"
+    },
+    "comunicacao.dto.TagResponse" : {
+      "codigo" : "string?",
+      "descricao" : "string?"
+    },
+    "comunicacao.dto.TestarWhatsappRequest" : {
+      "telefone" : "string?"
+    },
+    "comunicacao.dto.WhatsappConfigRequest" : {
+      "ativo" : "boolean",
+      "instancia" : "string?",
+      "token" : "string?"
+    },
+    "comunicacao.dto.WhatsappConfigResponse" : {
+      "ativo" : "boolean",
+      "instancia" : "string?",
+      "tokenConfigurado" : "boolean"
+    },
+    "diocese.dto.DioceseResponse" : {
+      "id" : "string?",
+      "nome" : "string?",
+      "uf" : "string?"
+    },
+    "escala.ColunaEscalaDto" : {
+      "alinhamento" : "string?",
+      "coluna" : "number?",
+      "conteudo" : "string?",
+      "escopo" : "string?",
+      "funcao" : "voluntario.FuncaoEscala?",
+      "idLocal" : "string?",
+      "largura" : "number?",
+      "linha" : "number?",
+      "negrito" : "boolean?",
+      "ordem" : "number?",
+      "posicao" : "number",
+      "rotulo" : "string?",
+      "tipo" : "string?"
+    },
+    "escala.LayoutEscalaDto" : {
+      "ativo" : "boolean?",
+      "colunas" : "escala.ColunaEscalaDto[]?",
+      "descricao" : "string?",
+      "id" : "string?",
+      "nome" : "string?",
+      "padrao" : "boolean?",
+      "sistema" : "boolean",
+      "tipo" : "escala.TipoEscala?"
+    },
+    "escala.Presenca" : {
+      "enum" : [ "PENDENTE", "PRESENTE", "FALTOU" ]
+    },
+    "escala.RespostaParticipacao" : {
+      "enum" : [ "PENDENTE", "CONFIRMADA", "RECUSADA" ]
+    },
+    "escala.StatusEscala" : {
+      "enum" : [ "RASCUNHO", "FINALIZADA", "CANCELADA" ]
+    },
+    "escala.TipoEscala" : {
+      "enum" : [ "SEMANAL", "MENSAL" ]
+    },
+    "escala.dto.AlocacaoVagaRequest" : {
+      "voluntarioId" : "string?"
+    },
+    "escala.dto.CandidatoResponse" : {
+      "fotoPath" : "string?",
+      "funcoesHabilitadas" : "voluntario.FuncaoEscala[]?",
+      "id" : "string?",
+      "nomeCompleto" : "string?",
+      "tipo" : "voluntario.TipoVoluntario?"
+    },
+    "escala.dto.DistribuicaoDtos.Aplicada" : {
+      "aplicadas" : "number",
+      "escalaId" : "string?",
+      "versao" : "number"
+    },
+    "escala.dto.DistribuicaoDtos.AplicarRequest" : {
+      "escolhas" : "escala.dto.DistribuicaoDtos.Escolha[]?",
+      "regras" : "escala.dto.DistribuicaoDtos.Regras?",
+      "versao" : "number?"
+    },
+    "escala.dto.DistribuicaoDtos.Conflito" : {
+      "alocacaoExistente" : "boolean",
+      "celebracao" : "string?",
+      "data" : "string?",
+      "descartes" : "escala.dto.DistribuicaoDtos.Descarte[]?",
+      "eventoId" : "string?",
+      "explicacao" : "string?",
+      "funcao" : "voluntario.FuncaoEscala?",
+      "horario" : "string?",
+      "vagaId" : "string?"
+    },
+    "escala.dto.DistribuicaoDtos.Descarte" : {
+      "codigo" : "string?",
+      "motivo" : "string?",
+      "quantidade" : "number"
+    },
+    "escala.dto.DistribuicaoDtos.Escolha" : {
+      "pessoaId" : "string?",
+      "vagaId" : "string?"
+    },
+    "escala.dto.DistribuicaoDtos.Previa" : {
+      "bloqueado" : "boolean",
+      "conflitos" : "escala.dto.DistribuicaoDtos.Conflito[]?",
+      "escalaId" : "string?",
+      "sugestoes" : "escala.dto.DistribuicaoDtos.Sugestao[]?",
+      "vagasVazias" : "number",
+      "versao" : "number"
+    },
+    "escala.dto.DistribuicaoDtos.PreviaRequest" : {
+      "regras" : "escala.dto.DistribuicaoDtos.Regras?"
+    },
+    "escala.dto.DistribuicaoDtos.Regras" : {
+      "exigirResposta" : "boolean",
+      "intervaloDias" : "number",
+      "maximoPorPessoa" : "number"
+    },
+    "escala.dto.DistribuicaoDtos.Sugestao" : {
+      "celebracao" : "string?",
+      "data" : "string?",
+      "eventoId" : "string?",
+      "explicacao" : "string?",
+      "funcao" : "voluntario.FuncaoEscala?",
+      "horario" : "string?",
+      "nome" : "string?",
+      "pessoaId" : "string?",
+      "vagaId" : "string?"
+    },
+    "escala.dto.EscalaEventoRequest" : {
+      "celebracao" : "string?",
+      "data" : "string?",
+      "horario" : "string?",
+      "referencia" : "boolean?",
+      "vagas" : "escala.dto.EscalaVagaRequest[]?"
+    },
+    "escala.dto.EscalaEventoResponse" : {
+      "celebracao" : "string?",
+      "data" : "string?",
+      "horario" : "string?",
+      "id" : "string?",
+      "referencia" : "boolean",
+      "vagas" : "escala.dto.EscalaVagaResponse[]?"
+    },
+    "escala.dto.EscalaRequest" : {
+      "ano" : "number?",
+      "colunas" : "escala.ColunaEscalaDto[]?",
+      "eventos" : "escala.dto.EscalaEventoRequest[]?",
+      "layoutId" : "string?",
+      "mes" : "number?",
+      "observacao" : "string?",
+      "tipo" : "escala.TipoEscala?",
+      "titulo" : "string?",
+      "version" : "number?"
+    },
+    "escala.dto.EscalaResponse" : {
+      "ano" : "number?",
+      "colunas" : "escala.ColunaEscalaDto[]?",
+      "createdBy" : "string?",
+      "eventos" : "escala.dto.EscalaEventoResponse[]?",
+      "id" : "string?",
+      "layoutId" : "string?",
+      "mes" : "number?",
+      "observacao" : "string?",
+      "sequencial" : "number?",
+      "status" : "escala.StatusEscala?",
+      "tipo" : "escala.TipoEscala?",
+      "titulo" : "string?",
+      "version" : "number?"
+    },
+    "escala.dto.EscalaVagaRequest" : {
+      "funcao" : "voluntario.FuncaoEscala?",
+      "posicao" : "number",
+      "voluntarioId" : "string?"
+    },
+    "escala.dto.EscalaVagaResponse" : {
+      "funcao" : "voluntario.FuncaoEscala?",
+      "id" : "string?",
+      "posicao" : "number",
+      "presenca" : "escala.Presenca?",
+      "voluntarioId" : "string?",
+      "voluntarioNome" : "string?"
+    },
+    "escala.dto.IndisponibilidadeDtos.ApoioEscala" : {
+      "voluntarios" : "escala.dto.IndisponibilidadeDtos.ApoioVoluntario[]?"
+    },
+    "escala.dto.IndisponibilidadeDtos.ApoioVoluntario" : {
+      "indisponiveis" : "escala.dto.IndisponibilidadeDtos.Indisponivel[]?",
+      "irmaos" : "string[]?",
+      "situacao" : "escala.dto.IndisponibilidadeDtos.Situacao?",
+      "voluntarioId" : "string?"
+    },
+    "escala.dto.IndisponibilidadeDtos.Indisponivel" : {
+      "data" : "string?",
+      "periodo" : "voluntario.Periodo?"
+    },
+    "escala.dto.IndisponibilidadeDtos.Item" : {
+      "data" : "string?",
+      "observacao" : "string?",
+      "periodo" : "voluntario.Periodo?",
+      "voluntarioId" : "string?"
+    },
+    "escala.dto.IndisponibilidadeDtos.MesRequest" : {
+      "itens" : "escala.dto.IndisponibilidadeDtos.Item[]?",
+      "semRestricao" : "string[]?",
+      "versao" : "number?"
+    },
+    "escala.dto.IndisponibilidadeDtos.MesResponse" : {
+      "ano" : "number",
+      "itens" : "escala.dto.IndisponibilidadeDtos.Item[]?",
+      "mes" : "number",
+      "semRestricao" : "string[]?",
+      "versao" : "number"
+    },
+    "escala.dto.IndisponibilidadeDtos.Situacao" : {
+      "enum" : [ "COM_RESTRICAO", "SEM_RESTRICAO", "PENDENTE" ]
+    },
+    "escala.dto.PresencaRequest" : {
+      "presenca" : "escala.Presenca?"
+    },
+    "estoque.dto.EstoqueDtos.Item" : {
+      "ativo" : "boolean",
+      "codigo" : "string?",
+      "id" : "string?",
+      "local" : "string?",
+      "nome" : "string?",
+      "responsavelNome" : "string?",
+      "responsavelUsuarioId" : "string?",
+      "saldo" : "number?",
+      "tipo" : "string?",
+      "unidade" : "string?",
+      "versao" : "number"
+    },
+    "estoque.dto.EstoqueDtos.Movimentar" : {
+      "chave" : "string?",
+      "motivo" : "string?",
+      "quantidade" : "number?",
+      "responsavelUsuarioId" : "string?",
+      "tipo" : "string?",
+      "versao" : "number"
+    },
+    "estoque.dto.EstoqueDtos.Movimento" : {
+      "chave" : "string?",
+      "id" : "string?",
+      "itemId" : "string?",
+      "motivo" : "string?",
+      "quantidade" : "number?",
+      "registradoEm" : "string?",
+      "registradoPor" : "string?",
+      "registradoPorNome" : "string?",
+      "responsavelNome" : "string?",
+      "responsavelUsuarioId" : "string?",
+      "saldoAntes" : "number?",
+      "saldoDepois" : "number?",
+      "tipo" : "string?"
+    },
+    "estoque.dto.EstoqueDtos.Pagina" : {
+      "itens" : "T[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "estoque.dto.EstoqueDtos.Responsavel" : {
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "estoque.dto.EstoqueDtos.Salvar" : {
+      "ativo" : "boolean",
+      "codigo" : "string?",
+      "local" : "string?",
+      "nome" : "string?",
+      "responsavelUsuarioId" : "string?",
+      "tipo" : "string?",
+      "unidade" : "string?",
+      "versao" : "number"
+    },
+    "evento.EventoDtos.CancelarRequest" : {
+      "avisarInscritos" : "boolean"
+    },
+    "evento.EventoDtos.EventoDetalhe" : {
+      "bairro" : "string?",
+      "cep" : "string?",
+      "cidade" : "string?",
+      "complemento" : "string?",
+      "descricao" : "string?",
+      "emailHabilitado" : "boolean",
+      "emailLayoutConfirmacaoId" : "string?",
+      "emailLayoutLembreteId" : "string?",
+      "fotos" : "evento.EventoDtos.FotoResponse[]?",
+      "id" : "string?",
+      "inicio" : "string?",
+      "inscritos" : "evento.EventoDtos.InscritoResponse[]?",
+      "lembreteDias" : "number[]?",
+      "localNome" : "string?",
+      "logradouro" : "string?",
+      "mapaUrl" : "string?",
+      "mensagemConfirmacao" : "string?",
+      "mensagemLembrete" : "string?",
+      "numero" : "string?",
+      "responsavelNome" : "string?",
+      "responsavelTelefone" : "string?",
+      "situacao" : "evento.EventoDtos.SituacaoTela?",
+      "tags" : "Record<string,string>?",
+      "termino" : "string?",
+      "titulo" : "string?",
+      "uf" : "string?",
+      "vagas" : "number?",
+      "whatsappHabilitado" : "boolean",
+      "whatsappLayoutConfirmacaoId" : "string?",
+      "whatsappLayoutLembreteId" : "string?"
+    },
+    "evento.EventoDtos.EventoRequest" : {
+      "bairro" : "string?",
+      "cep" : "string?",
+      "cidade" : "string?",
+      "complemento" : "string?",
+      "descricao" : "string?",
+      "emailHabilitado" : "boolean?",
+      "emailLayoutConfirmacaoId" : "string?",
+      "emailLayoutLembreteId" : "string?",
+      "inicio" : "string?",
+      "lembreteDias" : "number[]?",
+      "localNome" : "string?",
+      "logradouro" : "string?",
+      "mapaUrl" : "string?",
+      "mensagemConfirmacao" : "string?",
+      "mensagemLembrete" : "string?",
+      "numero" : "string?",
+      "responsavelNome" : "string?",
+      "responsavelTelefone" : "string?",
+      "termino" : "string?",
+      "titulo" : "string?",
+      "uf" : "string?",
+      "vagas" : "number?",
+      "whatsappHabilitado" : "boolean?",
+      "whatsappLayoutConfirmacaoId" : "string?",
+      "whatsappLayoutLembreteId" : "string?"
+    },
+    "evento.EventoDtos.EventoResumo" : {
+      "capaUrl" : "string?",
+      "id" : "string?",
+      "inicio" : "string?",
+      "inscritos" : "number",
+      "localNome" : "string?",
+      "situacao" : "evento.EventoDtos.SituacaoTela?",
+      "termino" : "string?",
+      "titulo" : "string?",
+      "vagas" : "number?"
+    },
+    "evento.EventoDtos.FotoResponse" : {
+      "capa" : "boolean",
+      "id" : "string?",
+      "url" : "string?"
+    },
+    "evento.EventoDtos.InscreverRequest" : {
+      "pessoaId" : "string?"
+    },
+    "evento.EventoDtos.InscritoResponse" : {
+      "confirmacao" : "evento.EventoDtos.SituacaoMensagem?",
+      "confirmacaoEmail" : "evento.EventoDtos.SituacaoMensagem?",
+      "confirmacaoWhatsapp" : "evento.EventoDtos.SituacaoMensagem?",
+      "email" : "string?",
+      "id" : "string?",
+      "lembrete" : "evento.EventoDtos.SituacaoMensagem?",
+      "lembreteEmail" : "evento.EventoDtos.SituacaoMensagem?",
+      "lembreteWhatsapp" : "evento.EventoDtos.SituacaoMensagem?",
+      "nome" : "string?",
+      "pessoaId" : "string?",
+      "telefone" : "string?"
+    },
+    "evento.EventoDtos.SituacaoMensagem" : {
+      "enum" : [ "PENDENTE", "ENVIADA", "FALHOU", "SEM_AUTORIZACAO", "SEM_TELEFONE", "SEM_EMAIL" ]
+    },
+    "evento.EventoDtos.SituacaoTela" : {
+      "enum" : [ "RASCUNHO", "PUBLICADO", "ENCERRADO", "CANCELADO" ]
+    },
+    "financeiro.FinanceiroDtos.BaixaRequest" : {
+      "dataPagamento" : "string?",
+      "versao" : "number?"
+    },
+    "financeiro.FinanceiroDtos.CategoriaRequest" : {
+      "ativo" : "boolean",
+      "nome" : "string?"
+    },
+    "financeiro.FinanceiroDtos.CategoriaResponse" : {
+      "ativo" : "boolean",
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "financeiro.FinanceiroDtos.ContaRequest" : {
+      "ativo" : "boolean",
+      "dataSaldoInicial" : "string?",
+      "nome" : "string?",
+      "saldoInicial" : "number?"
+    },
+    "financeiro.FinanceiroDtos.ContaResponse" : {
+      "ativo" : "boolean",
+      "dataSaldoInicial" : "string?",
+      "id" : "string?",
+      "nome" : "string?",
+      "saldoInicial" : "number?"
+    },
+    "financeiro.FinanceiroDtos.MovimentoRequest" : {
+      "categoriaId" : "string?",
+      "contaId" : "string?",
+      "descricao" : "string?",
+      "observacoes" : "string?",
+      "tipo" : "financeiro.MovimentoFinanceiro.Tipo?",
+      "valor" : "number?",
+      "vencimento" : "string?",
+      "versao" : "number?"
+    },
+    "financeiro.FinanceiroDtos.MovimentoResponse" : {
+      "categoria" : "string?",
+      "categoriaId" : "string?",
+      "conta" : "string?",
+      "contaId" : "string?",
+      "dataPagamento" : "string?",
+      "descricao" : "string?",
+      "id" : "string?",
+      "observacoes" : "string?",
+      "situacao" : "financeiro.MovimentoFinanceiro.Situacao?",
+      "tipo" : "financeiro.MovimentoFinanceiro.Tipo?",
+      "valor" : "number?",
+      "vencimento" : "string?",
+      "versao" : "number"
+    },
+    "financeiro.FinanceiroDtos.Pagina" : {
+      "itens" : "financeiro.FinanceiroDtos.MovimentoResponse[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "financeiro.FinanceiroDtos.Resumo" : {
+      "ate" : "string?",
+      "contas" : "financeiro.FinanceiroDtos.SaldoConta[]?",
+      "de" : "string?",
+      "despesas" : "number?",
+      "receitas" : "number?",
+      "resultado" : "number?",
+      "saldoTotal" : "number?"
+    },
+    "financeiro.FinanceiroDtos.SaldoConta" : {
+      "id" : "string?",
+      "nome" : "string?",
+      "saldo" : "number?"
+    },
+    "financeiro.FinanceiroDtos.VersaoRequest" : {
+      "versao" : "number?"
+    },
+    "financeiro.MovimentoFinanceiro.Situacao" : {
+      "enum" : [ "PENDENTE", "PAGO", "CANCELADO" ]
+    },
+    "financeiro.MovimentoFinanceiro.Tipo" : {
+      "enum" : [ "RECEITA", "DESPESA" ]
+    },
+    "inscricao.StatusInscricao" : {
+      "enum" : [ "PENDENTE", "APROVADA", "REJEITADA" ]
+    },
+    "inscricao.dto.InscricaoAtualizarRequest" : {
+      "autorizaWhatsapp" : "boolean",
+      "bairro" : "string?",
+      "cep" : "string?",
+      "cidade" : "string?",
+      "complemento" : "string?",
+      "condicaoOutra" : "string?",
+      "condicoes" : "pessoa.CondicaoEspecial[]?",
+      "cpf" : "string?",
+      "crismaAno" : "string?",
+      "cuidados" : "string?",
+      "dataNascimento" : "string?",
+      "emails" : "pessoa.dto.ContatoEmailRequest[]?",
+      "etapaCatequese" : "string?",
+      "eucaristiaAno" : "string?",
+      "funcoesHabilitadas" : "voluntario.FuncaoEscala[]?",
+      "horarioEstudo" : "voluntario.Voluntario.HorarioEstudo?",
+      "nivelSuporteTea" : "number?",
+      "nomeCompleto" : "string?",
+      "numero" : "string?",
+      "observacoes" : "string?",
+      "responsaveis" : "inscricao.dto.InscricaoResponsavelRequest[]?",
+      "rg" : "string?",
+      "rua" : "string?",
+      "sexo" : "string?",
+      "telefones" : "pessoa.dto.ContatoTelefoneRequest[]?",
+      "tipo" : "voluntario.TipoVoluntario?",
+      "uf" : "string?"
+    },
+    "inscricao.dto.InscricaoRejeitarRequest" : {
+      "motivo" : "string?"
+    },
+    "inscricao.dto.InscricaoResponsavelRequest" : {
+      "emails" : "pessoa.dto.ContatoEmailRequest[]?",
+      "nome" : "string?",
+      "parentesco" : "string?",
+      "parentescoInverso" : "string?",
+      "principal" : "boolean",
+      "telefones" : "pessoa.dto.ContatoTelefoneRequest[]?"
+    },
+    "inscricao.dto.InscricaoResponsavelResponse" : {
+      "emails" : "pessoa.dto.ContatoEmailResponse[]?",
+      "id" : "string?",
+      "nome" : "string?",
+      "parentesco" : "string?",
+      "parentescoInverso" : "string?",
+      "principal" : "boolean",
+      "telefones" : "pessoa.dto.ContatoTelefoneResponse[]?"
+    },
+    "inscricao.dto.InscricaoResponse" : {
+      "aprovadoPor" : "string?",
+      "autorizaWhatsapp" : "boolean",
+      "bairro" : "string?",
+      "cep" : "string?",
+      "cidade" : "string?",
+      "complemento" : "string?",
+      "condicaoOutra" : "string?",
+      "condicoes" : "pessoa.CondicaoEspecial[]?",
+      "consentimentoCuidadosEm" : "string?",
+      "cpf" : "string?",
+      "crismaAno" : "string?",
+      "cuidados" : "string?",
+      "dataAprovacao" : "string?",
+      "dataNascimento" : "string?",
+      "dataRejeicao" : "string?",
+      "emails" : "pessoa.dto.ContatoEmailResponse[]?",
+      "etapaCatequese" : "string?",
+      "eucaristiaAno" : "string?",
+      "fotoPath" : "string?",
+      "funcoesHabilitadas" : "voluntario.FuncaoEscala[]?",
+      "horarioEstudo" : "voluntario.Voluntario.HorarioEstudo?",
+      "id" : "string?",
+      "motivoRejeicao" : "string?",
+      "nivelSuporteTea" : "number?",
+      "nomeCompleto" : "string?",
+      "numero" : "string?",
+      "observacoes" : "string?",
+      "rejeitadoPor" : "string?",
+      "responsaveis" : "inscricao.dto.InscricaoResponsavelResponse[]?",
+      "rg" : "string?",
+      "rua" : "string?",
+      "sequencial" : "number?",
+      "sexo" : "string?",
+      "status" : "inscricao.StatusInscricao?",
+      "telefones" : "pessoa.dto.ContatoTelefoneResponse[]?",
+      "tipo" : "voluntario.TipoVoluntario?",
+      "uf" : "string?",
+      "voluntarioId" : "string?"
+    },
+    "integracao.CatalogoDeRecursos.RecursoDoApp" : {
+      "aplicado" : "boolean",
+      "codigo" : "string?",
+      "nome" : "string?",
+      "tipo" : "integracao.CatalogoDeRecursos.Tipo?",
+      "unidade" : "string?"
+    },
+    "integracao.CatalogoDeRecursos.Tipo" : {
+      "enum" : [ "LIMITE", "FUNCIONALIDADE" ]
+    },
+    "integracao.ConsumoInstanciaService.Resposta" : {
+      "consumo" : "minhaconta.CotasService.Consumo?",
+      "contratacaoId" : "string?",
+      "funcionalidades" : "string[]?",
+      "tenantId" : "string?",
+      "versaoContrato" : "number"
+    },
+    "integracao.IntegracaoController.Operador" : {
+      "email" : "string?",
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "integracao.IntegracaoController.SuportePedido" : {
+      "motivo" : "string?",
+      "operador" : "integracao.IntegracaoController.Operador?"
+    },
+    "integracao.SuporteTrocaController.Pedido" : {
+      "codigo" : "string?"
+    },
+    "integracao.dto.DireitosInstancia" : {
+      "acessoLiberado" : "boolean",
+      "clienteId" : "string?",
+      "contratacaoId" : "string?",
+      "funcionalidades" : "string[]?",
+      "geradoEm" : "string?",
+      "limites" : "Record<string,number>?",
+      "motivoBloqueio" : "string?",
+      "plano" : "integracao.dto.DireitosInstancia.Plano?",
+      "produto" : "string?",
+      "situacao" : "string?",
+      "tenantId" : "string?",
+      "versao" : "number",
+      "vigenteAte" : "string?"
+    },
+    "integracao.dto.DireitosInstancia.Plano" : {
+      "codigo" : "string?",
+      "nome" : "string?"
+    },
+    "integracao.dto.ProvisionarInstanciaRequest" : {
+      "administrador" : "integracao.dto.ProvisionarInstanciaRequest.Administrador?",
+      "clienteId" : "string?",
+      "contratacaoId" : "string?",
+      "direitos" : "integracao.dto.DireitosInstancia?",
+      "instancia" : "integracao.dto.ProvisionarInstanciaRequest.Instancia?"
+    },
+    "integracao.dto.ProvisionarInstanciaRequest.Administrador" : {
+      "email" : "string?",
+      "nome" : "string?"
+    },
+    "integracao.dto.ProvisionarInstanciaRequest.Instancia" : {
+      "nome" : "string?",
+      "slug" : "string?"
+    },
+    "liturgia.dto.LiturgiaDtos.Pagina" : {
+      "itens" : "T[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "liturgia.dto.LiturgiaDtos.Passo" : {
+      "observacao" : "string?",
+      "referenciaId" : "string?",
+      "titulo" : "string?"
+    },
+    "liturgia.dto.LiturgiaDtos.Referencia" : {
+      "ativo" : "boolean",
+      "fonte" : "string?",
+      "id" : "string?",
+      "observacao" : "string?",
+      "titulo" : "string?",
+      "url" : "string?",
+      "versao" : "number"
+    },
+    "liturgia.dto.LiturgiaDtos.ReferenciaSalvar" : {
+      "ativo" : "boolean",
+      "fonte" : "string?",
+      "observacao" : "string?",
+      "titulo" : "string?",
+      "url" : "string?",
+      "versao" : "number"
+    },
+    "liturgia.dto.LiturgiaDtos.Roteiro" : {
+      "ativo" : "boolean",
+      "celebracao" : "string?",
+      "id" : "string?",
+      "passos" : "liturgia.dto.LiturgiaDtos.Passo[]?",
+      "titulo" : "string?",
+      "versao" : "number"
+    },
+    "liturgia.dto.LiturgiaDtos.RoteiroSalvar" : {
+      "ativo" : "boolean",
+      "celebracao" : "string?",
+      "passos" : "liturgia.dto.LiturgiaDtos.Passo[]?",
+      "titulo" : "string?",
+      "versao" : "number"
+    },
+    "minhaconta.ConsumoHistoricoService.Ponto" : {
+      "consumo" : "minhaconta.CotasService.Consumo?",
+      "dia" : "string?"
+    },
+    "minhaconta.CotasService.Consumo" : {
+      "consultadoEm" : "string?",
+      "direitosConfirmadosEm" : "string?",
+      "itens" : "minhaconta.CotasService.Item[]?",
+      "planoNome" : "string?",
+      "versaoDireitos" : "number?"
+    },
+    "minhaconta.CotasService.Item" : {
+      "codigo" : "string?",
+      "competencia" : "string?",
+      "disponivel" : "number?",
+      "estado" : "string?",
+      "limite" : "number?",
+      "nome" : "string?",
+      "pendentes" : "number",
+      "unidade" : "string?",
+      "usado" : "number"
+    },
+    "minhaconta.ReconciliadorArmazenamento.Resultado" : {
+      "conferidos" : "number",
+      "falhas" : "number",
+      "pendentes" : "number",
+      "proximoInicio" : "number"
+    },
+    "mural.Aviso.Publico" : {
+      "enum" : [ "TODOS", "SELECIONADOS" ]
+    },
+    "mural.Aviso.Status" : {
+      "enum" : [ "PUBLICADO", "ARQUIVADO" ]
+    },
+    "mural.dto.AvisoDtos.Confirmar" : {
+      "versao" : "number?"
+    },
+    "mural.dto.AvisoDtos.Conta" : {
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "mural.dto.AvisoDtos.Pagina" : {
+      "itens" : "mural.dto.AvisoDtos.Resposta[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "mural.dto.AvisoDtos.Resposta" : {
+      "atualizadoEm" : "string?",
+      "criadoEm" : "string?",
+      "descricao" : "string?",
+      "destinatarios" : "string[]?",
+      "id" : "string?",
+      "leituras" : "number",
+      "lido" : "boolean",
+      "prazo" : "string?",
+      "publico" : "mural.Aviso.Publico?",
+      "status" : "mural.Aviso.Status?",
+      "titulo" : "string?",
+      "versao" : "number"
+    },
+    "mural.dto.AvisoDtos.Salvar" : {
+      "descricao" : "string?",
+      "destinatarios" : "string[]?",
+      "prazo" : "string?",
+      "publico" : "mural.Aviso.Publico?",
+      "status" : "mural.Aviso.Status?",
+      "titulo" : "string?",
+      "versao" : "number?"
+    },
+    "notificacao.NotificacaoDtos.AvisoRequest" : {
+      "canal" : "comunicacao.TipoEnvio?",
+      "versao" : "number?"
+    },
+    "notificacao.NotificacaoDtos.Config" : {
+      "ativo" : "boolean",
+      "canal" : "comunicacao.TipoEnvio?",
+      "origem" : "notificacao.OrigemNotificacao?",
+      "versao" : "number"
+    },
+    "notificacao.NotificacaoDtos.Configurar" : {
+      "ativo" : "boolean",
+      "versao" : "number?"
+    },
+    "notificacao.NotificacaoDtos.Entrega" : {
+      "canal" : "comunicacao.TipoEnvio?",
+      "criadoEm" : "string?",
+      "enviados" : "number",
+      "falhas" : "number",
+      "gatilho" : "notificacao.NotificacaoEntrega.Gatilho?",
+      "id" : "string?",
+      "ignorados" : "number",
+      "origem" : "notificacao.OrigemNotificacao?",
+      "pendentes" : "number",
+      "referenciaId" : "string?",
+      "referenciaVersao" : "number",
+      "titulo" : "string?",
+      "total" : "number"
+    },
+    "notificacao.NotificacaoDtos.EscalaRequest" : {
+      "canal" : "comunicacao.TipoEnvio?"
+    },
+    "notificacao.NotificacaoDtos.Pagina" : {
+      "itens" : "notificacao.NotificacaoDtos.Entrega[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "notificacao.NotificacaoDtos.Resultado" : {
+      "entregaId" : "string?",
+      "ignorados" : "number",
+      "total" : "number"
+    },
+    "notificacao.NotificacaoEntrega.Gatilho" : {
+      "enum" : [ "MANUAL", "AUTOMATICO" ]
+    },
+    "notificacao.OrigemNotificacao" : {
+      "enum" : [ "ESCALA", "MURAL" ]
+    },
+    "onboarding.EtapaOnboarding" : {
+      "enum" : [ "PAROQUIA", "CONVITE", "PESSOAS", "VOLUNTARIOS", "ESCALA" ]
+    },
+    "onboarding.dto.OnboardingDtos.Acao" : {
+      "enum" : [ "CONCLUIR", "REABRIR", "PULAR" ]
+    },
+    "onboarding.dto.OnboardingDtos.Etapa" : {
+      "codigo" : "onboarding.EtapaOnboarding?",
+      "orientacao" : "string?",
+      "permissao" : "string?",
+      "podeConcluir" : "boolean",
+      "podePular" : "boolean",
+      "podeReabrir" : "boolean",
+      "situacao" : "onboarding.dto.OnboardingDtos.Situacao?",
+      "titulo" : "string?",
+      "url" : "string?"
+    },
+    "onboarding.dto.OnboardingDtos.Resposta" : {
+      "atualizadoEm" : "string?",
+      "concluidas" : "number",
+      "etapas" : "onboarding.dto.OnboardingDtos.Etapa[]?",
+      "iniciadoEm" : "string?",
+      "percentual" : "number",
+      "proximaEtapa" : "onboarding.EtapaOnboarding?",
+      "total" : "number",
+      "versao" : "number"
+    },
+    "onboarding.dto.OnboardingDtos.Salvar" : {
+      "acao" : "onboarding.dto.OnboardingDtos.Acao?",
+      "versao" : "number?"
+    },
+    "onboarding.dto.OnboardingDtos.Situacao" : {
+      "enum" : [ "PENDENTE", "PRONTA", "CONCLUIDA", "DISPENSADA", "REVISAR", "SEM_PERMISSAO", "NAO_CONTRATADA" ]
+    },
+    "pastoral.MembroPastoral.Papel" : {
+      "enum" : [ "MEMBRO", "COORDENADOR" ]
+    },
+    "pastoral.PastoralController.Ativo" : {
+      "ativo" : "boolean?",
+      "versao" : "number?"
+    },
+    "pastoral.dto.PastoralDtos.Equipe" : {
+      "ativo" : "boolean",
+      "descricao" : "string?",
+      "id" : "string?",
+      "nome" : "string?",
+      "versao" : "number"
+    },
+    "pastoral.dto.PastoralDtos.Membro" : {
+      "ativo" : "boolean",
+      "id" : "string?",
+      "nome" : "string?",
+      "papel" : "pastoral.MembroPastoral.Papel?",
+      "pessoaId" : "string?",
+      "versao" : "number"
+    },
+    "pastoral.dto.PastoralDtos.Pagina" : {
+      "itens" : "T[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "pastoral.dto.PastoralDtos.PessoaOpcao" : {
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "pastoral.dto.PastoralDtos.SalvarEquipe" : {
+      "ativo" : "boolean?",
+      "descricao" : "string?",
+      "nome" : "string?",
+      "versao" : "number?"
+    },
+    "pastoral.dto.PastoralDtos.SalvarMembro" : {
+      "ativo" : "boolean?",
+      "papel" : "pastoral.MembroPastoral.Papel?",
+      "pessoaId" : "string?",
+      "versao" : "number?"
+    },
+    "pessoa.CondicaoEspecial" : {
+      "enum" : [ "SINDROME_DOWN", "TEA", "TDAH", "ANSIEDADE", "DEPRESSAO", "BORDERLINE", "OUTRA" ]
+    },
+    "pessoa.PessoaPapel" : {
+      "enum" : [ "VOLUNTARIO", "RESPONSAVEL" ]
+    },
+    "pessoa.PessoaService.Opcao" : {
+      "id" : "string?",
+      "nomeCompleto" : "string?",
+      "responsavel" : "boolean",
+      "sequencial" : "number?",
+      "voluntario" : "boolean"
+    },
+    "pessoa.PessoaService.Resumo" : {
+      "ativos" : "number",
+      "inativos" : "number",
+      "pendentes" : "number",
+      "pessoas" : "number"
+    },
+    "pessoa.dto.AniversarianteResponse" : {
+      "dia" : "number?",
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "pessoa.dto.ContatoEmailRequest" : {
+      "email" : "string?",
+      "principal" : "boolean",
+      "tipo" : "string?"
+    },
+    "pessoa.dto.ContatoEmailResponse" : {
+      "email" : "string?",
+      "id" : "string?",
+      "principal" : "boolean",
+      "tipo" : "string?"
+    },
+    "pessoa.dto.ContatoTelefoneRequest" : {
+      "numero" : "string?",
+      "principal" : "boolean",
+      "tipo" : "string?"
+    },
+    "pessoa.dto.ContatoTelefoneResponse" : {
+      "id" : "string?",
+      "numero" : "string?",
+      "principal" : "boolean",
+      "tipo" : "string?"
+    },
+    "pessoa.dto.DuplicidadeRequest" : {
+      "cpf" : "string?",
+      "dataNascimento" : "string?",
+      "ignorarId" : "string?",
+      "nomeCompleto" : "string?",
+      "nomesResponsaveis" : "string[]?",
+      "telefones" : "string[]?"
+    },
+    "pessoa.dto.DuplicidadeResponse" : {
+      "bloqueia" : "boolean",
+      "dataNascimento" : "string?",
+      "id" : "string?",
+      "motivos" : "string[]?",
+      "nomeCompleto" : "string?",
+      "sequencial" : "number?"
+    },
+    "pessoa.dto.NovaPessoaRequest" : {
+      "email" : "string?",
+      "nomeCompleto" : "string?",
+      "telefone" : "string?"
+    },
+    "pessoa.dto.PessoaRequest" : {
+      "bairro" : "string?",
+      "cep" : "string?",
+      "cidade" : "string?",
+      "complemento" : "string?",
+      "condicaoOutra" : "string?",
+      "condicoes" : "pessoa.CondicaoEspecial[]?",
+      "cpf" : "string?",
+      "cuidados" : "string?",
+      "dataNascimento" : "string?",
+      "dependentes" : "pessoa.dto.RelacaoRequest[]?",
+      "emails" : "pessoa.dto.ContatoEmailRequest[]?",
+      "logradouro" : "string?",
+      "nivelSuporteTea" : "number?",
+      "nomeCompleto" : "string?",
+      "numero" : "string?",
+      "observacoes" : "string?",
+      "papeis" : "pessoa.PessoaPapel[]?",
+      "responsaveis" : "pessoa.dto.RelacaoRequest[]?",
+      "rg" : "string?",
+      "sexo" : "string?",
+      "telefones" : "pessoa.dto.ContatoTelefoneRequest[]?",
+      "uf" : "string?",
+      "voluntario" : "pessoa.dto.VoluntarioPerfilRequest?"
+    },
+    "pessoa.dto.PessoaResponse" : {
+      "bairro" : "string?",
+      "cep" : "string?",
+      "cidade" : "string?",
+      "complemento" : "string?",
+      "condicaoOutra" : "string?",
+      "condicoes" : "pessoa.CondicaoEspecial[]?",
+      "cpf" : "string?",
+      "cuidados" : "string?",
+      "dataNascimento" : "string?",
+      "dependentes" : "pessoa.dto.RelacaoResponse[]?",
+      "emails" : "pessoa.dto.ContatoEmailResponse[]?",
+      "id" : "string?",
+      "logradouro" : "string?",
+      "nivelSuporteTea" : "number?",
+      "nomeCompleto" : "string?",
+      "numero" : "string?",
+      "observacoes" : "string?",
+      "papeis" : "pessoa.PessoaPapel[]?",
+      "responsaveis" : "pessoa.dto.RelacaoResponse[]?",
+      "rg" : "string?",
+      "sequencial" : "number?",
+      "sexo" : "string?",
+      "telefones" : "pessoa.dto.ContatoTelefoneResponse[]?",
+      "uf" : "string?",
+      "voluntario" : "pessoa.dto.VoluntarioPerfilResponse?"
+    },
+    "pessoa.dto.RelacaoRequest" : {
+      "novaPessoa" : "pessoa.dto.NovaPessoaRequest?",
+      "parentesco" : "string?",
+      "parentescoInverso" : "string?",
+      "pessoaId" : "string?",
+      "principal" : "boolean"
+    },
+    "pessoa.dto.RelacaoResponse" : {
+      "id" : "string?",
+      "nomeCompleto" : "string?",
+      "papeisOutro" : "pessoa.PessoaPapel[]?",
+      "parentesco" : "string?",
+      "parentescoInverso" : "string?",
+      "pessoaId" : "string?",
+      "principal" : "boolean"
+    },
+    "pessoa.dto.VoluntarioPerfilRequest" : {
+      "ativo" : "boolean",
+      "autorizaWhatsapp" : "boolean",
+      "crismaAno" : "string?",
+      "etapaCatequese" : "string?",
+      "eucaristiaAno" : "string?",
+      "funcoesHabilitadas" : "voluntario.FuncaoEscala[]?",
+      "horarioEstudo" : "voluntario.Voluntario.HorarioEstudo?",
+      "mandatoFim" : "string?",
+      "mandatoInicio" : "string?",
+      "tipo" : "voluntario.TipoVoluntario?"
+    },
+    "pessoa.dto.VoluntarioPerfilResponse" : {
+      "ativo" : "boolean",
+      "autorizaWhatsapp" : "boolean",
+      "crismaAno" : "string?",
+      "etapaCatequese" : "string?",
+      "eucaristiaAno" : "string?",
+      "fotoPath" : "string?",
+      "funcoesHabilitadas" : "voluntario.FuncaoEscala[]?",
+      "horarioEstudo" : "voluntario.Voluntario.HorarioEstudo?",
+      "mandatoFim" : "string?",
+      "mandatoInicio" : "string?",
+      "tipo" : "voluntario.TipoVoluntario?"
+    },
+    "pessoa.importacao.dto.ImportacaoPessoaDtos.Aba" : {
+      "indice" : "number",
+      "nome" : "string?"
+    },
+    "pessoa.importacao.dto.ImportacaoPessoaDtos.Coluna" : {
+      "indice" : "number",
+      "titulo" : "string?"
+    },
+    "pessoa.importacao.dto.ImportacaoPessoaDtos.Estrutura" : {
+      "aba" : "number",
+      "abas" : "pessoa.importacao.dto.ImportacaoPessoaDtos.Aba[]?",
+      "colunas" : "pessoa.importacao.dto.ImportacaoPessoaDtos.Coluna[]?",
+      "linhaCabecalho" : "number",
+      "sugestao" : "Record<string,number>?"
+    },
+    "pessoa.importacao.dto.ImportacaoPessoaDtos.Linha" : {
+      "cpf" : "string?",
+      "email" : "string?",
+      "erro" : "string?",
+      "linha" : "number",
+      "nome" : "string?",
+      "papel" : "string?",
+      "telefone" : "string?"
+    },
+    "pessoa.importacao.dto.ImportacaoPessoaDtos.Previa" : {
+      "hash" : "string?",
+      "linhas" : "pessoa.importacao.dto.ImportacaoPessoaDtos.Linha[]?",
+      "podeConfirmar" : "boolean",
+      "quantidade" : "number"
+    },
+    "pessoa.importacao.dto.ImportacaoPessoaDtos.Resultado" : {
+      "id" : "string?",
+      "quantidade" : "number",
+      "repetida" : "boolean"
+    },
+    "portal.AcessosDependentesController.Autorizar" : {
+      "consulta" : "boolean?",
+      "resposta" : "boolean?",
+      "versao" : "number?"
+    },
+    "portal.AcessosDependentesService.Autorizacao" : {
+      "consulta" : "boolean",
+      "nome" : "string?",
+      "pessoaId" : "string?",
+      "relacaoId" : "string?",
+      "resposta" : "boolean",
+      "versao" : "number"
+    },
+    "portal.AcessosDependentesService.Dependente" : {
+      "nome" : "string?",
+      "pessoaId" : "string?",
+      "podeResponder" : "boolean"
+    },
+    "portal.Candidatura.Situacao" : {
+      "enum" : [ "PENDENTE", "APROVADA", "RECUSADA", "DESISTIDA", "EXPIRADA" ]
+    },
+    "portal.PortalService.Compromisso" : {
+      "funcao" : "string?",
+      "id" : "string?",
+      "inicio" : "string?",
+      "local" : "string?",
+      "prazoResposta" : "string?",
+      "respondidoEm" : "string?",
+      "resposta" : "escala.RespostaParticipacao?",
+      "termino" : "string?",
+      "tipo" : "string?",
+      "titulo" : "string?",
+      "vagaId" : "string?",
+      "versao" : "number?"
+    },
+    "portal.PortalService.Resposta" : {
+      "compromissos" : "portal.PortalService.Compromisso[]?",
+      "vinculado" : "boolean"
+    },
+    "portal.Troca.Situacao" : {
+      "enum" : [ "AGUARDANDO_ACEITE", "ACEITA", "APROVADA", "RECUSADA", "CANCELADA", "EXPIRADA" ]
+    },
+    "portal.dto.CandidaturaDtos.Decisao" : {
+      "aprovar" : "boolean?",
+      "versao" : "number?"
+    },
+    "portal.dto.CandidaturaDtos.Pagina" : {
+      "itens" : "T[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "portal.dto.CandidaturaDtos.Pedido" : {
+      "atualizadaEm" : "string?",
+      "celebracao" : "string?",
+      "criadaEm" : "string?",
+      "funcao" : "string?",
+      "id" : "string?",
+      "inicio" : "string?",
+      "pessoaNome" : "string?",
+      "situacao" : "portal.Candidatura.Situacao?",
+      "vagaId" : "string?",
+      "versao" : "number",
+      "vigente" : "boolean"
+    },
+    "portal.dto.CandidaturaDtos.Vaga" : {
+      "celebracao" : "string?",
+      "elegivel" : "boolean",
+      "funcao" : "string?",
+      "impedimento" : "string?",
+      "inicio" : "string?",
+      "vagaId" : "string?",
+      "versao" : "number"
+    },
+    "portal.dto.CandidaturaDtos.Versao" : {
+      "versao" : "number?"
+    },
+    "portal.dto.DisponibilidadeDtos.Bloqueio" : {
+      "data" : "string?",
+      "periodo" : "voluntario.Periodo?"
+    },
+    "portal.dto.DisponibilidadeDtos.Resposta" : {
+      "ano" : "number",
+      "itens" : "portal.dto.DisponibilidadeDtos.Bloqueio[]?",
+      "mes" : "number",
+      "semRestricao" : "boolean",
+      "versao" : "number"
+    },
+    "portal.dto.DisponibilidadeDtos.Salvar" : {
+      "itens" : "portal.dto.DisponibilidadeDtos.Bloqueio[]?",
+      "semRestricao" : "boolean?",
+      "versao" : "number?"
+    },
+    "portal.dto.RespostaEscalaDtos.Atual" : {
+      "respondidoEm" : "string?",
+      "resposta" : "escala.RespostaParticipacao?",
+      "versao" : "number"
+    },
+    "portal.dto.RespostaEscalaDtos.Historico" : {
+      "id" : "string?",
+      "respondidoEm" : "string?",
+      "resposta" : "escala.RespostaParticipacao?",
+      "versao" : "number"
+    },
+    "portal.dto.RespostaEscalaDtos.Item" : {
+      "celebracao" : "string?",
+      "funcao" : "string?",
+      "inicio" : "string?",
+      "pessoaNome" : "string?",
+      "respondidoEm" : "string?",
+      "resposta" : "escala.RespostaParticipacao?",
+      "vagaId" : "string?"
+    },
+    "portal.dto.RespostaEscalaDtos.Pagina" : {
+      "itens" : "T[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "portal.dto.RespostaEscalaDtos.Responder" : {
+      "resposta" : "escala.RespostaParticipacao?",
+      "versao" : "number?"
+    },
+    "portal.dto.TrocaDtos.Decisao" : {
+      "aprovar" : "boolean?",
+      "versao" : "number?"
+    },
+    "portal.dto.TrocaDtos.Pagina" : {
+      "itens" : "T[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "portal.dto.TrocaDtos.Pedido" : {
+      "atualizadaEm" : "string?",
+      "celebracao" : "string?",
+      "criadaEm" : "string?",
+      "funcao" : "string?",
+      "id" : "string?",
+      "inicio" : "string?",
+      "situacao" : "portal.Troca.Situacao?",
+      "solicitante" : "boolean",
+      "solicitanteNome" : "string?",
+      "substituto" : "boolean",
+      "substitutoNome" : "string?",
+      "vagaId" : "string?",
+      "versao" : "number",
+      "vigente" : "boolean"
+    },
+    "portal.dto.TrocaDtos.Solicitar" : {
+      "substitutoId" : "string?",
+      "versao" : "number?"
+    },
+    "portal.dto.TrocaDtos.Substituto" : {
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "portal.dto.TrocaDtos.Versao" : {
+      "versao" : "number?"
+    },
+    "privacidade.Privacidade.TipoConsentimento" : {
+      "enum" : [ "WHATSAPP", "ANIVERSARIO_EMAIL", "ANIVERSARIO_WHATSAPP" ]
+    },
+    "privacidade.PrivacidadeDtos.AtualizarRetencao" : {
+      "comunicadosDias" : "number?",
+      "versao" : "number?"
+    },
+    "privacidade.PrivacidadeDtos.ComunicacaoExport" : {
+      "assunto" : "string?",
+      "canal" : "string?",
+      "enviadoEm" : "string?",
+      "origem" : "string?",
+      "situacao" : "string?"
+    },
+    "privacidade.PrivacidadeDtos.ConsentimentoItem" : {
+      "concedido" : "boolean",
+      "fonte" : "string?",
+      "registradoEm" : "string?",
+      "tipo" : "privacidade.Privacidade.TipoConsentimento?"
+    },
+    "privacidade.PrivacidadeDtos.ContatoExport" : {
+      "principal" : "boolean",
+      "tipo" : "string?",
+      "valor" : "string?"
+    },
+    "privacidade.PrivacidadeDtos.CuidadosExport" : {
+      "condicaoOutra" : "string?",
+      "condicoes" : "string[]?",
+      "cuidados" : "string?",
+      "nivelSuporteTea" : "number?"
+    },
+    "privacidade.PrivacidadeDtos.ExecucaoItem" : {
+      "comunicadosAnonimizados" : "number",
+      "corte" : "string?",
+      "executadoEm" : "string?"
+    },
+    "privacidade.PrivacidadeDtos.ExecutarRetencao" : {
+      "versao" : "number?"
+    },
+    "privacidade.PrivacidadeDtos.Exportacao" : {
+      "comunicacoes" : "privacidade.PrivacidadeDtos.ComunicacaoExport[]?",
+      "consentimentos" : "privacidade.PrivacidadeDtos.ConsentimentoItem[]?",
+      "cpf" : "string?",
+      "cuidados" : "privacidade.PrivacidadeDtos.CuidadosExport?",
+      "dataNascimento" : "string?",
+      "dependentes" : "privacidade.PrivacidadeDtos.RelacaoExport[]?",
+      "emails" : "privacidade.PrivacidadeDtos.ContatoExport[]?",
+      "endereco" : "string?",
+      "geradaEm" : "string?",
+      "nome" : "string?",
+      "observacoes" : "string?",
+      "papeis" : "string[]?",
+      "participacoes" : "privacidade.PrivacidadeDtos.ParticipacaoExport[]?",
+      "pessoaId" : "string?",
+      "responsaveis" : "privacidade.PrivacidadeDtos.RelacaoExport[]?",
+      "rg" : "string?",
+      "sequencial" : "number?",
+      "sexo" : "string?",
+      "telefones" : "privacidade.PrivacidadeDtos.ContatoExport[]?",
+      "voluntario" : "privacidade.PrivacidadeDtos.VoluntarioExport?"
+    },
+    "privacidade.PrivacidadeDtos.PaginaConsentimentos" : {
+      "itens" : "privacidade.PrivacidadeDtos.ConsentimentoItem[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "privacidade.PrivacidadeDtos.ParticipacaoExport" : {
+      "celebracao" : "string?",
+      "data" : "string?",
+      "funcao" : "string?",
+      "horario" : "string?",
+      "presenca" : "string?",
+      "resposta" : "string?"
+    },
+    "privacidade.PrivacidadeDtos.RelacaoExport" : {
+      "parentesco" : "string?",
+      "pessoa" : "string?",
+      "principal" : "boolean"
+    },
+    "privacidade.PrivacidadeDtos.ResultadoRetencao" : {
+      "comunicadosAnonimizados" : "number",
+      "corte" : "string?"
+    },
+    "privacidade.PrivacidadeDtos.Retencao" : {
+      "comunicadosDias" : "number?",
+      "elegiveis" : "number",
+      "execucoes" : "privacidade.PrivacidadeDtos.ExecucaoItem[]?",
+      "versao" : "number"
+    },
+    "privacidade.PrivacidadeDtos.VoluntarioExport" : {
+      "ativo" : "boolean",
+      "autorizaWhatsapp" : "boolean",
+      "funcoes" : "string[]?",
+      "tipo" : "string?"
+    },
+    "relatorios.IndicadoresService.Contagens" : {
+      "alocacoes" : "number",
+      "confirmacoes" : "number",
+      "faltas" : "number",
+      "presencasPendentes" : "number",
+      "presentes" : "number",
+      "recusas" : "number"
+    },
+    "relatorios.IndicadoresService.Pagina" : {
+      "itens" : "relatorios.IndicadoresService.Pessoa[]?",
+      "pagina" : "number",
+      "resumo" : "relatorios.IndicadoresService.Contagens?",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "relatorios.IndicadoresService.Pessoa" : {
+      "contagens" : "relatorios.IndicadoresService.Contagens?",
+      "nome" : "string?",
+      "pessoaId" : "string?"
+    },
+    "relatorios.dto.ParticipacaoDtos.Linha" : {
+      "celebracao" : "string?",
+      "data" : "string?",
+      "escala" : "string?",
+      "funcao" : "voluntario.FuncaoEscala?",
+      "horario" : "string?",
+      "pessoa" : "string?",
+      "presenca" : "escala.Presenca?",
+      "resposta" : "escala.RespostaParticipacao?",
+      "vagaId" : "string?"
+    },
+    "relatorios.dto.ParticipacaoDtos.Pagina" : {
+      "itens" : "relatorios.dto.ParticipacaoDtos.Linha[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "site.dto.SiteDtos.Bloco" : {
+      "local" : "string?",
+      "quando" : "string?",
+      "texto" : "string?",
+      "tipo" : "site.dto.SiteDtos.Tipo?",
+      "titulo" : "string?"
+    },
+    "site.dto.SiteDtos.Dados" : {
+      "apresentacao" : "string?",
+      "blocos" : "site.dto.SiteDtos.Bloco[]?",
+      "contato" : "string?",
+      "endereco" : "string?",
+      "horarios" : "string?",
+      "titulo" : "string?"
+    },
+    "site.dto.SiteDtos.Estado" : {
+      "publicado" : "site.dto.SiteDtos.Dados?",
+      "publicadoEm" : "string?",
+      "rascunho" : "site.dto.SiteDtos.Dados?",
+      "slug" : "string?",
+      "versao" : "number"
+    },
+    "site.dto.SiteDtos.Publicar" : {
+      "confirmar" : "boolean?",
+      "versao" : "number?"
+    },
+    "site.dto.SiteDtos.Revisao" : {
+      "versao" : "number?"
+    },
+    "site.dto.SiteDtos.Salvar" : {
+      "dados" : "site.dto.SiteDtos.Dados?",
+      "versao" : "number?"
+    },
+    "site.dto.SiteDtos.Tipo" : {
+      "enum" : [ "AVISO", "EVENTO" ]
+    },
+    "tarefas.Tarefa.Status" : {
+      "enum" : [ "ABERTA", "EM_ANDAMENTO", "CONCLUIDA", "CANCELADA" ]
+    },
+    "tarefas.dto.TarefaDtos.Pagina" : {
+      "itens" : "tarefas.dto.TarefaDtos.Resposta[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    },
+    "tarefas.dto.TarefaDtos.Responsavel" : {
+      "id" : "string?",
+      "nome" : "string?"
+    },
+    "tarefas.dto.TarefaDtos.Resposta" : {
+      "atualizadoEm" : "string?",
+      "criadoEm" : "string?",
+      "descricao" : "string?",
+      "equipe" : "string?",
+      "id" : "string?",
+      "prazo" : "string?",
+      "responsavelNome" : "string?",
+      "responsavelUsuarioId" : "string?",
+      "status" : "tarefas.Tarefa.Status?",
+      "titulo" : "string?",
+      "versao" : "number"
+    },
+    "tarefas.dto.TarefaDtos.Salvar" : {
+      "descricao" : "string?",
+      "equipe" : "string?",
+      "prazo" : "string?",
+      "responsavelUsuarioId" : "string?",
+      "status" : "tarefas.Tarefa.Status?",
+      "titulo" : "string?",
+      "versao" : "number?"
+    },
+    "tenant.Tenant.Status" : {
+      "enum" : [ "ATIVO", "TRIAL", "BLOQUEADO", "CANCELADO" ]
+    },
+    "tenant.dto.EnderecoDto" : {
+      "bairro" : "string?",
+      "cep" : "string?",
+      "cidade" : "string?",
+      "complemento" : "string?",
+      "logradouro" : "string?",
+      "numero" : "string?",
+      "uf" : "string?"
+    },
+    "tenant.dto.TenantRequest" : {
+      "cnpj" : "string?",
+      "diocese" : "string?",
+      "emails" : "pessoa.dto.ContatoEmailRequest[]?",
+      "endereco" : "tenant.dto.EnderecoDto?",
+      "nome" : "string?",
+      "razaoSocial" : "string?",
+      "telefones" : "pessoa.dto.ContatoTelefoneRequest[]?"
+    },
+    "tenant.dto.TenantResponse" : {
+      "cnpj" : "string?",
+      "codigo" : "string?",
+      "diocese" : "string?",
+      "emails" : "pessoa.dto.ContatoEmailResponse[]?",
+      "endereco" : "tenant.dto.EnderecoDto?",
+      "id" : "string?",
+      "nome" : "string?",
+      "razaoSocial" : "string?",
+      "slug" : "string?",
+      "status" : "tenant.Tenant.Status?",
+      "telefones" : "pessoa.dto.ContatoTelefoneResponse[]?"
+    },
+    "voluntario.FuncaoEscala" : {
+      "enum" : [ "MISSAL", "CRUZ", "CREDENCIA", "VELA", "COLETA", "SINO", "OUTRO" ]
+    },
+    "voluntario.Periodo" : {
+      "enum" : [ "MANHA", "TARDE", "NOITE" ]
+    },
+    "voluntario.TipoVoluntario" : {
+      "enum" : [ "COROINHA", "ACOLITO", "AMBOS", "MESC" ]
+    },
+    "voluntario.Voluntario.HorarioEstudo" : {
+      "enum" : [ "MANHA", "TARDE", "NOITE" ]
+    },
+    "voluntario.VoluntarioOpcaoService.Opcao" : {
+      "ativo" : "boolean",
+      "funcoesHabilitadas" : "voluntario.FuncaoEscala[]?",
+      "id" : "string?",
+      "nomeCompleto" : "string?",
+      "tipo" : "voluntario.TipoVoluntario?"
+    },
+    "voluntario.VoluntarioOpcaoService.Pagina" : {
+      "itens" : "voluntario.VoluntarioOpcaoService.Opcao[]?",
+      "pagina" : "number",
+      "tamanho" : "number",
+      "temMais" : "boolean"
+    },
+    "voluntario.VoluntarioOpcaoService.Resolver" : {
+      "ids" : "string[]?"
+    },
+    "voluntario.dto.CompromissoResponse" : {
+      "celebracao" : "string?",
+      "data" : "string?",
+      "escalaId" : "string?",
+      "escalaStatus" : "escala.StatusEscala?",
+      "escalaTitulo" : "string?",
+      "funcao" : "voluntario.FuncaoEscala?",
+      "horario" : "string?",
+      "voluntarioId" : "string?"
+    },
+    "voluntario.dto.ContagemVoluntarios" : {
+      "ativos" : "number",
+      "inativos" : "number"
+    },
+    "voluntario.dto.DisponibilidadeVoluntarioRequest" : {
+      "data" : "string?",
+      "diaSemana" : "string?",
+      "observacao" : "string?",
+      "periodo" : "voluntario.Periodo?"
+    },
+    "voluntario.dto.DisponibilidadeVoluntarioResponse" : {
+      "data" : "string?",
+      "diaSemana" : "string?",
+      "id" : "string?",
+      "observacao" : "string?",
+      "periodo" : "voluntario.Periodo?",
+      "voluntarioId" : "string?"
+    },
+    "voluntario.dto.FotoUrlResponse" : {
+      "url" : "string?"
+    },
+    "voluntario.dto.PainelVoluntarios" : {
+      "acolitos" : "number",
+      "ativos" : "number",
+      "coroinhas" : "number",
+      "mandatosAVencer" : "number",
+      "mesc" : "number"
+    },
+    "voluntario.dto.VoluntarioResponse" : {
+      "ativo" : "boolean",
+      "autorizaWhatsapp" : "boolean",
+      "crismaAno" : "string?",
+      "etapaCatequese" : "string?",
+      "eucaristiaAno" : "string?",
+      "fotoPath" : "string?",
+      "funcoesHabilitadas" : "voluntario.FuncaoEscala[]?",
+      "horarioEstudo" : "voluntario.Voluntario.HorarioEstudo?",
+      "id" : "string?",
+      "mandatoFim" : "string?",
+      "mandatoInicio" : "string?",
+      "nomeCompleto" : "string?",
+      "tipo" : "voluntario.TipoVoluntario?"
+    },
+    "web.PaginaLista" : {
+      "itens" : "T[]?",
+      "pagina" : "number",
+      "paginas" : "number",
+      "tamanho" : "number",
+      "total" : "number"
+    }
+  }
+}

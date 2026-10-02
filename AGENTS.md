@@ -127,3 +127,6 @@ Dependentes exigem autorização explícita e conta ligada à pessoa; parentesco
 
 - T13/V080: docs/arquivos-ciclo-vida.md. Upload de foto em três passos curtos, UPLOAD/REMOCAO duráveis em arquivo_pendencia, nunca apagar caminho ainda referenciado; registrar pendência em transação própria só fora de transação que trave a paróquia.
 - T05: docs/seletores-escala.md. /voluntarios/painel conta no banco; grade mensal usa a projeção leve paginada.
+
+- T16: docs/papeis-banco.md. MIGRATION_DB_* separa as credenciais do Flyway; app só dados com BYPASSRLS; scripts/roles-banco.sql e adotar-papeis-banco.sql, ensaiar em staging.
+- T17: docs/contrato-api.md. Mudou rota, permissão ou DTO: atualizar docs/contrato-api.json com `mvn test -Dtest=ContratoApiTest -Dcontrato.atualizar=true`; rota nova exige @PreAuthorize.

@@ -84,3 +84,6 @@
 - [Check-in por encontro](checkin-encontro.md): F15, código aberto pela coordenação, um registro por vaga, presença manual como alternativa (V079).
 
 - [Ciclo de vida dos arquivos](arquivos-ciclo-vida.md): T13, upload fora da transação, remoção durável e job de pendências (V080).
+
+- [Papéis do banco](papeis-banco.md): T16, migrador separado da API, com roteiro e teste.
+- [Contrato da API](contrato-api.md): T17, contrato versionado gerado dos controllers e conferência do front.
