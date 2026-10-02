@@ -34,6 +34,12 @@
     </properties>
 
     <dependencies>
+        <!-- F08: leitura XLSX por eventos, após limites de ZIP/XML da aplicação. -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.5.1</version>
+        </dependency>
         <!-- Web (Spring MVC, síncrono + Virtual Threads — seção 15/68 do plano mestre) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

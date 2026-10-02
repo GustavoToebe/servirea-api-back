@@ -8,13 +8,16 @@ import br.com.servire.api.pessoa.importacao.dto.ImportacaoPessoaDtos.*;
 public class ImportacaoPessoaController {
     private final ImportacaoPessoaService service;
     public ImportacaoPessoaController(ImportacaoPessoaService service) {this.service=service;}
+    @PostMapping(value="/estrutura",consumes="multipart/form-data")
+    @PreAuthorize("hasAuthority('PERM_PESSOA') and hasAuthority('PERM_PESSOA_CRIAR')")
+    public Estrutura estrutura(@RequestPart MultipartFile arquivo,@RequestParam(defaultValue="0") int aba) {return service.estrutura(arquivo,aba);}
     @PostMapping(value="/previa",consumes="multipart/form-data")
     @PreAuthorize("hasAuthority('PERM_PESSOA') and hasAuthority('PERM_PESSOA_CRIAR')")
-    public Previa previa(@RequestPart MultipartFile arquivo) {return service.previa(arquivo);}
+    public Previa previa(@RequestPart MultipartFile arquivo,@ModelAttribute Opcoes opcoes) {return service.previa(arquivo,opcoes);}
     @PostMapping(value="/confirmar",consumes="multipart/form-data")
     @PreAuthorize("hasAuthority('PERM_PESSOA') and hasAuthority('PERM_PESSOA_CRIAR')")
-    public Resultado confirmar(@RequestPart MultipartFile arquivo,@RequestParam UUID chave,@RequestParam String hash) {
+    public Resultado confirmar(@RequestPart MultipartFile arquivo,@RequestParam UUID chave,@RequestParam String hash,@ModelAttribute Opcoes opcoes) {
         if(!hash.matches("[a-f0-9]{64}")) throw new br.com.servire.api.web.BadRequestException("Identificador do arquivo inválido.");
-        return service.confirmar(arquivo,chave,hash);
+        return service.confirmar(arquivo,chave,hash,opcoes);
     }
 }

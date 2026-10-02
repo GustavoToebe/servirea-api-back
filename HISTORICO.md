@@ -2614,3 +2614,9 @@ em 23/09/2026; `pessoa/` na V030. Ainda não existem `config/` nem
      mexe). A lista de assinatura usa a cidade no subtítulo, numera as linhas
      ("1. Nome"), tem letras maiores e o nome centralizado na linha (22 por folha).
      Campo de mês das escalas mais largo.
+
+## 02/10/2026 — F08: CSV/XLSX, abas e mapeamento
+
+Importação de até 100 pessoas com seleção de aba, mapeamento por índice, prévia normalizada, validação integral e hash de arquivo/aba/mapeamento. Duplicidades bloqueadas, sem mesclar fichas. POI por eventos e preflight ZIP/XML; sem executar fórmulas. Permissões/cotas/atomicidade/idempotência preservadas. Sem migration nova (V074). [Contrato](docs/importacao-pessoas.md).
+
+Validação local: backend Maven clean verify (593 testes); frontend npm test (473 aprovados, 1 ignorado preexistente) antes de build:prod aprovado. Documentação e diff verificados. Durante implementação, DTO de aba opcional e leitura de metadados Excel foram corrigidos a partir de testes; suites finais sem falhas. Sem IA, merge ou deploy; homologação com planilhas reais/temas/teclado em staging pendente.

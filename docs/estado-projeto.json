@@ -15,5 +15,14 @@
   "migrations": {
     "ultima": "V074__indice_ordenacao_seletores.sql",
     "quantidade": 74
+  },
+  "importacao_pessoas": {
+    "manual": "docs/importacao-pessoas.md",
+    "formatos": [
+      "CSV UTF-8",
+      "XLSX"
+    ],
+    "limite_pessoas": 100,
+    "mesclagem": false
   }
 }
