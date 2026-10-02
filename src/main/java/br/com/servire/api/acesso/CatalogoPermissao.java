@@ -52,6 +52,7 @@ public final class CatalogoPermissao {
                             new Acao("ESCALA_CANCELAR", "Cancelar"))),
                     new Modulo("VAGA", "Vagas", List.of(
                             new Acao("VAGA_ALOCAR", "Alocar voluntário"),
+                            new Acao("VAGA_DISTRIBUIR", "Distribuir por regras"),
                             new Acao("VAGA_PRESENCA", "Registrar presença"),
                             new Acao("VAGA_RESPOSTA_LER", "Consultar respostas de participação"),
                             new Acao("VAGA_CANDIDATURA_LER", "Consultar candidaturas"),

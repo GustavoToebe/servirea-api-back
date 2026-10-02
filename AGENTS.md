@@ -114,3 +114,5 @@ Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar
 
 ## Acessos pessoais
 Dependentes exigem autorização explícita e conta ligada à pessoa; parentesco não concede acesso. Coordenação própria revalida membro ativo COORDENADOR a cada operação e não autoriza nomear coordenadores. Contratos em docs/acessos-responsaveis-coordenacao.md.
+
+- F04: docs/distribuicao-escala.md. Motor determinístico, prévia sem efeito; a aplicação trava a escala, confere versão, recalcula e só grava escolhas que o motor ainda produz. VAGA_DISTRIBUIR (+ VAGA_ALOCAR para aplicar). Sem IA, sem migration.
