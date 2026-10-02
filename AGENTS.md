@@ -120,3 +120,5 @@ Dependentes exigem autorização explícita e conta ligada à pessoa; parentesco
 - F05/F13/V077: docs/notificacoes-entregas.md. notificacao/NotificacaoService só enfileira via EnvioAvulso; chave única origem+referência+versão+canal; WhatsApp só com autorização; mural só para contas com pessoa vinculada; gatilhos nascem desligados. NOTIFICACAO, NOTIFICACAO_ENVIAR, NOTIFICACAO_CONFIGURAR.
 
 - F09/V078: docs/privacidade.md. privacidade/ConsentimentoService registra só mudanças; exportação nunca traz corpo de mensagem nem destino e exige PESSOA_CUIDADOS_LER para cuidados; retenção é manual e irreversível (anonimiza comunicados concluídos). PRIVACIDADE, PRIVACIDADE_EXPORTAR, PRIVACIDADE_RETENCAO.
+
+- F15/V079: docs/checkin-encontro.md. Token aleatório só como hash, 404 genérico para qualquer código inválido, um registro por vaga, FALTOU não é sobrescrito, pessoa vem do vínculo. CHECKIN, CHECKIN_GERENCIAR.

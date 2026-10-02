@@ -50,6 +50,8 @@ public final class CatalogoPermissao {
                             new Acao("ESCALA_EXCLUIR", "Excluir"),
                             new Acao("ESCALA_FINALIZAR_REABRIR", "Finalizar/Reabrir"),
                             new Acao("ESCALA_CANCELAR", "Cancelar"))),
+                    new Modulo("CHECKIN", "Check-in por encontro", List.of(
+                            new Acao("CHECKIN_GERENCIAR", "Abrir e encerrar check-in"))),
                     new Modulo("VAGA", "Vagas", List.of(
                             new Acao("VAGA_ALOCAR", "Alocar voluntário"),
                             new Acao("VAGA_DISTRIBUIR", "Distribuir por regras"),

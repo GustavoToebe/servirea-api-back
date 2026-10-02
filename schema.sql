@@ -1,4 +1,4 @@
--- Esquema do banco, gerado das migrations (V001-V078). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V079). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
@@ -308,6 +308,36 @@ CREATE TABLE public.calendario_assinatura (
     token_hash character varying(64) NOT NULL,
     expira_em timestamp with time zone NOT NULL,
     criado_em timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: checkin_registro; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.checkin_registro (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    sessao_id uuid NOT NULL,
+    vaga_id uuid NOT NULL,
+    usuario_id uuid,
+    registrado_em timestamp with time zone NOT NULL
+);
+
+
+--
+-- Name: checkin_sessao; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.checkin_sessao (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    evento_id uuid NOT NULL,
+    token_hash character varying(64) NOT NULL,
+    criado_por uuid,
+    criado_em timestamp with time zone NOT NULL,
+    expira_em timestamp with time zone NOT NULL,
+    revogado_em timestamp with time zone
 );
 
 
@@ -1886,6 +1916,46 @@ ALTER TABLE ONLY public.calendario_assinatura
 
 
 --
+-- Name: checkin_registro checkin_registro_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_registro
+    ADD CONSTRAINT checkin_registro_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: checkin_registro checkin_registro_tenant_id_vaga_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_registro
+    ADD CONSTRAINT checkin_registro_tenant_id_vaga_id_key UNIQUE (tenant_id, vaga_id);
+
+
+--
+-- Name: checkin_sessao checkin_sessao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_sessao
+    ADD CONSTRAINT checkin_sessao_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: checkin_sessao checkin_sessao_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_sessao
+    ADD CONSTRAINT checkin_sessao_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: checkin_sessao checkin_sessao_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_sessao
+    ADD CONSTRAINT checkin_sessao_token_hash_key UNIQUE (token_hash);
+
+
+--
 -- Name: comunicado_anexo comunicado_anexo_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2837,6 +2907,13 @@ CREATE INDEX aniversario_execucao_comunicado_idx ON public.aniversario_execucao 
 
 
 --
+-- Name: checkin_sessao_evento_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX checkin_sessao_evento_idx ON public.checkin_sessao USING btree (tenant_id, evento_id, criado_em DESC);
+
+
+--
 -- Name: consentimento_historico_pessoa_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3776,6 +3853,46 @@ ALTER TABLE ONLY public.calendario_assinatura
 
 ALTER TABLE ONLY public.calendario_assinatura
     ADD CONSTRAINT calendario_assinatura_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuario(id);
+
+
+--
+-- Name: checkin_registro checkin_registro_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_registro
+    ADD CONSTRAINT checkin_registro_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: checkin_registro checkin_registro_tenant_id_sessao_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_registro
+    ADD CONSTRAINT checkin_registro_tenant_id_sessao_id_fkey FOREIGN KEY (tenant_id, sessao_id) REFERENCES public.checkin_sessao(tenant_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: checkin_registro checkin_registro_vaga_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_registro
+    ADD CONSTRAINT checkin_registro_vaga_id_fkey FOREIGN KEY (vaga_id) REFERENCES public.escala_vagas(id) ON DELETE CASCADE;
+
+
+--
+-- Name: checkin_sessao checkin_sessao_tenant_id_evento_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_sessao
+    ADD CONSTRAINT checkin_sessao_tenant_id_evento_id_fkey FOREIGN KEY (tenant_id, evento_id) REFERENCES public.escala_eventos(tenant_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: checkin_sessao checkin_sessao_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.checkin_sessao
+    ADD CONSTRAINT checkin_sessao_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -4727,6 +4844,18 @@ ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.calendario_assinatura ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: checkin_registro; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.checkin_registro ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: checkin_sessao; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.checkin_sessao ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: comunicado; Type: ROW SECURITY; Schema: public; Owner: -

@@ -80,3 +80,5 @@
 - [Centro de entregas e notificações](notificacoes-entregas.md): F05/F13, escala e mural na fila, gatilhos desligados por padrão (V077).
 
 - [Privacidade](privacidade.md): F09, histórico de consentimentos, exportação autorizada e retenção de comunicados (V078).
+
+- [Check-in por encontro](checkin-encontro.md): F15, código aberto pela coordenação, um registro por vaga, presença manual como alternativa (V079).
