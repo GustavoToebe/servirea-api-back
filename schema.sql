@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V070). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V074). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict x7Yv882hmMeSU4avdpI7SuyKdHN5gYcrpGW7FyrvfLv4KqcNxXaqzPdfCSA4uhC
+\restrict aC14krGq7DzJdxy3BUrArK8fh6S0VKGvWcxBh62s0vaLllF0HeW1VNHl3FnPZWg
 
 
 
@@ -609,6 +609,53 @@ CREATE TABLE public.escalas (
 
 
 --
+-- Name: estoque_item; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.estoque_item (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    nome character varying(160) NOT NULL,
+    codigo character varying(60) NOT NULL,
+    tipo character varying(20) NOT NULL,
+    unidade character varying(30) NOT NULL,
+    local character varying(200),
+    responsavel_usuario_id uuid,
+    ativo boolean DEFAULT true NOT NULL,
+    atualizado_em timestamp with time zone DEFAULT now() NOT NULL,
+    saldo numeric(12,3) DEFAULT 0 NOT NULL,
+    CONSTRAINT estoque_item_saldo_check CHECK ((saldo >= (0)::numeric)),
+    CONSTRAINT estoque_item_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['CONSUMIVEL'::character varying, 'PATRIMONIO'::character varying])::text[])))
+);
+
+
+--
+-- Name: estoque_movimento; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.estoque_movimento (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    item_id uuid NOT NULL,
+    chave uuid NOT NULL,
+    tipo character varying(20) NOT NULL,
+    quantidade numeric(12,3) NOT NULL,
+    saldo_antes numeric(12,3) NOT NULL,
+    saldo_depois numeric(12,3) NOT NULL,
+    motivo character varying(500) NOT NULL,
+    responsavel_usuario_id uuid,
+    registrado_por uuid,
+    registrado_em timestamp with time zone NOT NULL,
+    CONSTRAINT estoque_movimento_check CHECK (((((tipo)::text = 'ENTRADA'::text) AND (quantidade > (0)::numeric) AND (saldo_depois = (saldo_antes + quantidade))) OR (((tipo)::text = 'SAIDA'::text) AND (quantidade > (0)::numeric) AND (saldo_depois = (saldo_antes - quantidade))) OR (((tipo)::text = 'AJUSTE'::text) AND (saldo_depois = quantidade)))),
+    CONSTRAINT estoque_movimento_quantidade_check CHECK ((quantidade >= (0)::numeric)),
+    CONSTRAINT estoque_movimento_saldo_antes_check CHECK ((saldo_antes >= (0)::numeric)),
+    CONSTRAINT estoque_movimento_saldo_depois_check CHECK ((saldo_depois >= (0)::numeric)),
+    CONSTRAINT estoque_movimento_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['ENTRADA'::character varying, 'SAIDA'::character varying, 'AJUSTE'::character varying])::text[])))
+);
+
+
+--
 -- Name: evento; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1012,6 +1059,38 @@ CREATE TABLE public.layout_escala (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     descricao text,
     padrao boolean DEFAULT false NOT NULL
+);
+
+
+--
+-- Name: liturgia_referencia; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.liturgia_referencia (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    titulo character varying(160) NOT NULL,
+    fonte character varying(200) NOT NULL,
+    url character varying(1000),
+    observacao character varying(2000),
+    ativo boolean DEFAULT true NOT NULL
+);
+
+
+--
+-- Name: liturgia_roteiro; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.liturgia_roteiro (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    titulo character varying(160) NOT NULL,
+    celebracao character varying(200) NOT NULL,
+    passos text NOT NULL,
+    ativo boolean DEFAULT true NOT NULL,
+    CONSTRAINT liturgia_roteiro_passos_check CHECK ((length(passos) <= 120000))
 );
 
 
@@ -1853,6 +1932,46 @@ ALTER TABLE ONLY public.escalas
 
 
 --
+-- Name: estoque_item estoque_item_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_item
+    ADD CONSTRAINT estoque_item_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: estoque_item estoque_item_tenant_id_codigo_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_item
+    ADD CONSTRAINT estoque_item_tenant_id_codigo_key UNIQUE (tenant_id, codigo);
+
+
+--
+-- Name: estoque_item estoque_item_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_item
+    ADD CONSTRAINT estoque_item_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: estoque_movimento estoque_movimento_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_movimento
+    ADD CONSTRAINT estoque_movimento_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: estoque_movimento estoque_movimento_tenant_id_item_id_chave_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_movimento
+    ADD CONSTRAINT estoque_movimento_tenant_id_item_id_chave_key UNIQUE (tenant_id, item_id, chave);
+
+
+--
 -- Name: evento_foto evento_foto_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2106,6 +2225,30 @@ ALTER TABLE ONLY public.layout_escala
 
 ALTER TABLE ONLY public.layout_escala
     ADD CONSTRAINT layout_escala_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: liturgia_referencia liturgia_referencia_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.liturgia_referencia
+    ADD CONSTRAINT liturgia_referencia_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: liturgia_referencia liturgia_referencia_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.liturgia_referencia
+    ADD CONSTRAINT liturgia_referencia_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: liturgia_roteiro liturgia_roteiro_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.liturgia_roteiro
+    ADD CONSTRAINT liturgia_roteiro_pkey PRIMARY KEY (id);
 
 
 --
@@ -2530,6 +2673,20 @@ CREATE UNIQUE INDEX diocese_nome_lower_key ON public.diocese USING btree (lower(
 
 
 --
+-- Name: estoque_item_lista; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX estoque_item_lista ON public.estoque_item USING btree (tenant_id, lower((nome)::text), id);
+
+
+--
+-- Name: estoque_movimento_historico; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX estoque_movimento_historico ON public.estoque_movimento USING btree (tenant_id, item_id, registrado_em DESC, id DESC);
+
+
+--
 -- Name: flyway_schema_history_s_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2950,6 +3107,20 @@ CREATE INDEX ix_pastoral_membros ON public.pastoral_membro USING btree (tenant_i
 
 
 --
+-- Name: ix_pessoa_seletor_ordenacao; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_pessoa_seletor_ordenacao ON public.pessoa USING btree (tenant_id, lower(nome_completo), id);
+
+
+--
+-- Name: ix_pessoa_seletor_prefixo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_pessoa_seletor_prefixo ON public.pessoa USING btree (tenant_id, lower(nome_completo) text_pattern_ops, id);
+
+
+--
 -- Name: ix_relatorio_evento_data; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3003,6 +3174,27 @@ CREATE INDEX ix_troca_solicitante ON public.escala_troca USING btree (tenant_id,
 --
 
 CREATE INDEX ix_troca_substituto ON public.escala_troca USING btree (tenant_id, substituto_id, criada_em, id);
+
+
+--
+-- Name: ix_voluntarios_seletor_ativo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_voluntarios_seletor_ativo ON public.voluntarios USING btree (tenant_id, ativo, id);
+
+
+--
+-- Name: liturgia_referencia_lista; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX liturgia_referencia_lista ON public.liturgia_referencia USING btree (tenant_id, lower((titulo)::text), id);
+
+
+--
+-- Name: liturgia_roteiro_lista; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX liturgia_roteiro_lista ON public.liturgia_roteiro USING btree (tenant_id, lower((titulo)::text), id);
 
 
 --
@@ -3526,6 +3718,54 @@ ALTER TABLE ONLY public.escalas
 
 
 --
+-- Name: estoque_item estoque_item_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_item
+    ADD CONSTRAINT estoque_item_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: estoque_item estoque_item_tenant_id_responsavel_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_item
+    ADD CONSTRAINT estoque_item_tenant_id_responsavel_usuario_id_fkey FOREIGN KEY (tenant_id, responsavel_usuario_id) REFERENCES public.usuario_tenant(tenant_id, usuario_id) ON DELETE SET NULL (responsavel_usuario_id);
+
+
+--
+-- Name: estoque_movimento estoque_movimento_registrado_por_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_movimento
+    ADD CONSTRAINT estoque_movimento_registrado_por_fkey FOREIGN KEY (registrado_por) REFERENCES public.usuario(id) ON DELETE SET NULL;
+
+
+--
+-- Name: estoque_movimento estoque_movimento_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_movimento
+    ADD CONSTRAINT estoque_movimento_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: estoque_movimento estoque_movimento_tenant_id_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_movimento
+    ADD CONSTRAINT estoque_movimento_tenant_id_item_id_fkey FOREIGN KEY (tenant_id, item_id) REFERENCES public.estoque_item(tenant_id, id);
+
+
+--
+-- Name: estoque_movimento estoque_movimento_tenant_id_responsavel_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.estoque_movimento
+    ADD CONSTRAINT estoque_movimento_tenant_id_responsavel_usuario_id_fkey FOREIGN KEY (tenant_id, responsavel_usuario_id) REFERENCES public.usuario_tenant(tenant_id, usuario_id) ON DELETE SET NULL (responsavel_usuario_id);
+
+
+--
 -- Name: evento_foto evento_foto_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3851,6 +4091,22 @@ ALTER TABLE ONLY public.inscricoes
 
 ALTER TABLE ONLY public.layout_envio
     ADD CONSTRAINT layout_envio_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: liturgia_referencia liturgia_referencia_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.liturgia_referencia
+    ADD CONSTRAINT liturgia_referencia_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: liturgia_roteiro liturgia_roteiro_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.liturgia_roteiro
+    ADD CONSTRAINT liturgia_roteiro_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -4274,6 +4530,18 @@ ALTER TABLE public.escala_vagas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.escalas ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: estoque_item; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.estoque_item ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: estoque_movimento; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.estoque_movimento ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: evento; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4392,6 +4660,18 @@ ALTER TABLE public.layout_envio ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.layout_escala ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: liturgia_referencia; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.liturgia_referencia ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: liturgia_roteiro; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.liturgia_roteiro ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: mural_aviso; Type: ROW SECURITY; Schema: public; Owner: -
@@ -4552,5 +4832,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict x7Yv882hmMeSU4avdpI7SuyKdHN5gYcrpGW7FyrvfLv4KqcNxXaqzPdfCSA4uhC
+\unrestrict aC14krGq7DzJdxy3BUrArK8fh6S0VKGvWcxBh62s0vaLllF0HeW1VNHl3FnPZWg
 

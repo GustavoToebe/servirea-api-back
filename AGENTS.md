@@ -106,3 +106,6 @@ Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar
 - F07/V066: [Primeiros passos](docs/onboarding.md). ONBOARDING + ONBOARDING_GERENCIAR e leitura do módulo; progresso compartilhado por paróquia, versão manual sob lock da paróquia, GET sem escrita. Requisitos mínimos são conferidos pelo servidor; nenhuma configuração/envio automático. ESCALAS respeita plano; etapas sem acesso/recurso ficam fora do percentual.
 
 - Rodada 6–10: mural com público/leitura versionada, arraste com teclado, aniversário com opt-in específico e agendador desligado por padrão, página pública por snapshot explícito. Contratos em docs/mural-publico-leituras.md, docs/arraste-escala.md, docs/aniversarios.md e docs/site-publico.md. Histórico de consumo sob demanda: docs/historico-consumo.md; não gerar zeros para consultas ausentes nem gravar dados pessoais.
+
+- Rodada 11–17: docs/liturgia.md, docs/indicadores-participacao.md, docs/estoque-patrimonio.md e docs/seletores-escala.md. Nenhuma geração de conteúdo; estoque só muda por movimento com chave/versão.
+- Métricas: docs/monitoramento.md; credencial exclusiva e opcional, sem dados pessoais ou acesso de negócio. Endpoint bloqueado no proxy público; não ativar operação externa como efeito da implementação.

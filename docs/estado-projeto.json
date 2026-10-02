@@ -13,7 +13,7 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V070__site_publico_paroquia.sql",
-    "quantidade": 70
+    "ultima": "V074__indice_ordenacao_seletores.sql",
+    "quantidade": 74
   }
 }

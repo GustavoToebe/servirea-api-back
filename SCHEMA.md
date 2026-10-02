@@ -2,7 +2,7 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V070. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V074. Migration já aplicada não se edita.
 
 ## O que entrou na V066
 
@@ -98,3 +98,7 @@ mural_aviso e tarefa são entidades @TenantId, com título/descrição em texto 
 ## Rodada 6–10 — 02/10/2026
 
 V067 público/leitura do mural; V068 resumo diário de consumo; V069 aniversários autorizados/configuração/execução; V070 rascunho/publicação da paróquia. Manuais e limites no [índice](docs/README.md). Schema exportado de PostgreSQL 17 descartável após aplicação integral das migrations.
+
+## V071–V074
+
+Referências/roteiros manuais; itens e movimentos de estoque/patrimônio com saldo/versionamento, FK de responsável local, chave de repetição e histórico; índices de seletores por tenant/prefixo/ativo/ordenação. Ver docs/liturgia.md, docs/estoque-patrimonio.md e docs/seletores-escala.md. Novas tabelas com RLS e revogação.

@@ -41,6 +41,9 @@ public final class CatalogoPermissao {
                             new Acao("PESSOA_CUIDADOS_ALTERAR", "Alterar cuidado e acolhimento"),
                             new Acao("PESSOA_ATIVAR_INATIVAR", "Ativar/Inativar"))))),
             new Secao("Escalas", List.of(
+                    new Modulo("LITURGIA","Referências e roteiros",List.of(new Acao("LITURGIA_EDITAR","Cadastrar/editar"))),
+                    new Modulo("INDICADORES","Indicadores privados",List.of()),
+                    new Modulo("ESTOQUE","Estoque e patrimônio",List.of(new Acao("ESTOQUE_EDITAR","Cadastrar/editar"),new Acao("ESTOQUE_MOVIMENTAR","Movimentar"),new Acao("ESTOQUE_AJUSTAR","Ajustar inventário"))),
                     new Modulo("ESCALA", "Escala", List.of(
                             new Acao("ESCALA_CRIAR", "Criar"),
                             new Acao("ESCALA_ALTERAR", "Alterar"),

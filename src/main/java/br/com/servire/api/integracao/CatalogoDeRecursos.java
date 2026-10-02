@@ -29,6 +29,8 @@ public final class CatalogoDeRecursos {
             new RecursoDoApp("emails_mes", "E-mails da fila por mês", Tipo.LIMITE, "mensagem/mês", true),
             new RecursoDoApp("whatsapp_mes", "WhatsApp da fila por mês", Tipo.LIMITE, "mensagem/mês", true),
             new RecursoDoApp("importacoes_mes", "Lotes CSV de pessoas por mês", Tipo.LIMITE, "lote/mês", true),
+            new RecursoDoApp("LITURGIA","Referências e roteiros",Tipo.FUNCIONALIDADE,null,true),
+            new RecursoDoApp("ESTOQUE","Estoque e patrimônio",Tipo.FUNCIONALIDADE,null,true),
             new RecursoDoApp("PASTORAIS","Pastorais e equipes",Tipo.FUNCIONALIDADE,null,true),
             new RecursoDoApp("CALENDARIO","Calendário privado",Tipo.FUNCIONALIDADE,null,true),
             new RecursoDoApp("PORTAL_VOLUNTARIO","Portal de consulta do voluntário",Tipo.FUNCIONALIDADE,null,true),

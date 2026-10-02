@@ -24,3 +24,7 @@ Em 01/10/2026, `mvn -o -B -q verify` com essa propriedade passou em PostgreSQL 1
 ## Escopo da credencial na Central
 
 A Central restringe a chave de entrada ao código do produto em `id:segredoBase64:produto`. Formato legado dessa variável permanece exclusivo de SERVIREA. Se o app estiver configurado com código diferente, explicitar esse código na credencial aceita pela Central antes da publicação. A chave de saída do Servirea continua id/segredo separados; não alterar o formato da assinatura ou enviar o escopo por header/body. Consulta de direitos, envio de erros e minha-conta com chave de outro produto retornam 403, mesmo com HMAC válido. Contrato detalhado em central-api-back/docs/contrato-integracao-v1.md.
+
+## Recursos funcionais 11–17
+
+Catálogo do app anuncia LITURGIA e ESTOQUE aplicados em mutações; leituras históricas permanecem por permissão. Contagens privadas requerem INDICADORES + ESCALA, sem adicional separado. Estrutura de direitos v1 não mudou nem houve atualização de planos reais. Contrato completo em central-api-back/docs/contrato-integracao-v1.md.

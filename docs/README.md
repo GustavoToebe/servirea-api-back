@@ -60,3 +60,11 @@
 - [arraste escala ](arraste-escala.md): contrato, limites e homologação.
 - [aniversarios ](aniversarios.md): contrato, limites e homologação.
 - [site publico ](site-publico.md): contrato, limites e homologação.
+
+## Rodada 11–17 — 02/10/2026
+
+- [liturgia ](liturgia.md).
+- [indicadores-participacao ](indicadores-participacao.md).
+- [estoque-patrimonio ](estoque-patrimonio.md).
+- [seletores-escala ](seletores-escala.md).
+- [monitoramento ](monitoramento.md).

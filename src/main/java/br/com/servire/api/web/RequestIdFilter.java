@@ -47,7 +47,7 @@ public class RequestIdFilter extends GenericFilterBean {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
         String requestId = httpRequest.getHeader(REQUEST_ID_HEADER);
-        if (requestId == null || requestId.isBlank()) {
+        if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{1,64}")) {
             requestId = UUID.randomUUID().toString();
         }
 
@@ -61,7 +61,7 @@ public class RequestIdFilter extends GenericFilterBean {
             if (ms > LIMITE_LENTO_MS) {
                 Object jwt = httpRequest.getAttribute(JWT_MS);
                 log.warn("requisição lenta metodo={} caminho={} status={} ms={} jwtMs={} requestId={}",
-                        httpRequest.getMethod(), httpRequest.getRequestURI(), httpResponse.getStatus(),
+                        httpRequest.getMethod(), java.util.Objects.toString(httpRequest.getAttribute(org.springframework.web.servlet.HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE), "não mapeada"), httpResponse.getStatus(),
                         ms, jwt == null ? "-" : jwt, requestId);
             }
             // Sempre limpar o MDC ao final — threads (inclusive virtuais, que

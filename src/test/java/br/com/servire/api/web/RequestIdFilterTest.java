@@ -44,4 +44,11 @@ class RequestIdFilterTest {
 
         assertThat(response.getHeader(RequestIdFilter.REQUEST_ID_HEADER)).isEqualTo(requestIdDoCliente);
     }
+
+    @Test void headerNaoSeguroOuLongoViraUuid() throws Exception {
+        for (String valor : new String[]{"x".repeat(65),"linha\nforjada","nome com espaços"}) {
+            var req=new MockHttpServletRequest("GET","/teste");req.addHeader(RequestIdFilter.REQUEST_ID_HEADER,valor);var res=new MockHttpServletResponse();filter.doFilter(req,res,(a,b)->{});
+            assertThat(res.getHeader(RequestIdFilter.REQUEST_ID_HEADER)).matches("[0-9a-f-]{36}");assertThat(MDC.get(RequestIdFilter.MDC_KEY)).isNull();
+        }
+    }
 }

@@ -136,6 +136,7 @@ public class SecurityConfig {
                                                      IntegracaoFiltro integracaoFiltro,
                                                      CorsConfigurationSource corsConfigurationSource,
                                                      RestAuthenticationEntryPoint authenticationEntryPoint,
+                                                     @org.springframework.beans.factory.annotation.Value("${monitoramento.token:}") String monitoramentoToken,
                                                      RestAccessDeniedHandler accessDeniedHandler,
                                                      SecurityProperties properties) throws Exception {
         http
@@ -158,7 +159,8 @@ public class SecurityConfig {
                         .requestMatchers(ROTAS_PUBLICAS).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(integracaoFiltro, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new br.com.servire.api.monitoramento.MonitoramentoFilter(monitoramentoToken), JwtAuthenticationFilter.class);
 
         return http.build();
     }

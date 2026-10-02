@@ -1,0 +1,9 @@
+# Referências e roteiro litúrgico — F24
+
+Cadastro manual, V071. A equipe informa título, fonte, URL opcional http/https sem credenciais, observação e situação da referência. O sistema não acessa a URL, não copia textos e não inventa conteúdo. Roteiro possui título, celebração informada e sequência de 1 a 50 passos, com título, referência opcional e observação. Reordenar/editar exige salvar explicitamente. Não vincula automaticamente calendário, leituras ou eventos.
+
+Rotas /liturgia/referencias e /liturgia/roteiros: GET busca literal por título, páginas de 30, ordenação título/UUID; POST cria e PUT /{id} altera com versão lida. Permissões LITURGIA e LITURGIA_EDITAR para alterações; plano LITURGIA obrigatório nas mutações. Ausência do módulo contratado preserva leitura histórica. ADMIN total recebe o catálogo; perfis personalizados precisam de concessão explícita. Conflito 409 pede atualização, sem repetição automática da alteração. Formulários protegem saída com mudanças.
+
+Referências novas em roteiro devem estar ativas e pertencer à mesma paróquia. Referência arquivada continua visível no cadastro e no roteiro salvo; para salvar novamente um roteiro que a utilize, reative a referência ou substitua o passo. Arquivamento preserva registros; não há exclusão nem geração por IA. Roteiro/Referência usam @TenantId, versão, raiz da paróquia antes da leitura para escrita, auditoria na mesma transação e RLS/revogação anon/authenticated. JSON da sequência tem até 120 mil caracteres, validado antes de persistir. Referências UUID no JSON são conferidas no serviço; não são FK SQL.
+
+Homologação: duas paróquias, versão obsoleta, referência externa/inativa, URL inválida, ordem dos passos, cancelamento da saída, somente leitura, plano sem módulo e tela pequena. Revisão do conteúdo litúrgico é responsabilidade da equipe.
