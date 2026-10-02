@@ -43,3 +43,7 @@ Tabela escala_candidatura tem @TenantId, índices, @Version, RLS sem policies e 
 Testes HTTP com JWT real: duplicidade, aprovação/recusa/desistência, renovação, duas aprovações simultâneas, conflito de horário, elegibilidade/vínculo alterado, prazo, reabertura e novo ciclo, histórico após exclusão, isolamento de pessoa/paróquia, plano/permissão, DTO e paginação. Frontend verifica bodies mínimos, versões, permissões, consulta pessoal versus coordenação, resultados antigos cancelados, conflito sem retry e confirmação tardia após sair da tela.
 
 Não foi feita homologação visual/manual em ambiente implantado. Próximo módulo: troca de escala com aceite do substituto e aprovação da coordenação. Pendentes: notificações, prazo antecipado configurável, responsáveis/dependentes, filtro/relatório histórico de candidaturas e agenda com intervalos/deslocamento. Alocação manual legada continua com suas regras; a verificação de conflito aqui protege este fluxo de candidatura e não reescreve todo o editor de escalas.
+
+## Evolução V064
+
+Elegibilidade compartilhada com [trocas de escala](trocas-escala.md): função, disponibilidade, bloqueios e alocações simultâneas seguem as mesmas regras.

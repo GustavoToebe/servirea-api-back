@@ -115,6 +115,11 @@ public class EscalaService {
     }
 
     private void invalidarCandidaturas(UUID escalaId) {
+        entityManager.createQuery("update Troca t set t.situacao=:expirada,t.atualizadaEm=:agora,t.versao=t.versao+1 where t.escalaId=:escala and t.situacao in :ativas")
+                .setParameter("expirada",br.com.servire.api.portal.Troca.Situacao.EXPIRADA)
+                .setParameter("ativas",java.util.List.of(br.com.servire.api.portal.Troca.Situacao.AGUARDANDO_ACEITE,br.com.servire.api.portal.Troca.Situacao.ACEITA))
+                .setParameter("agora",java.time.Instant.now()).setParameter("escala",escalaId).executeUpdate();
+
         entityManager.createQuery("update Candidatura c set c.situacao=:expirada,c.atualizadaEm=:agora,c.versao=c.versao+1 where c.escalaId=:escala and c.situacao=:pendente")
                 .setParameter("expirada", br.com.servire.api.portal.Candidatura.Situacao.EXPIRADA)
                 .setParameter("pendente", br.com.servire.api.portal.Candidatura.Situacao.PENDENTE)

@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V063). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V064). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict drD2MhvEdfsWr3mVyT7Al1uay6VtYY42BaH5HSzK0qEMgqjTilggnqTbLehEbAT
+\restrict tIT6WA8sheFVgRPcUYS2kTtYAmdQjX4myilbLqWvbUP27TxiIUYdDPZR1kaGcin
 
 
 
@@ -464,6 +464,32 @@ CREATE TABLE public.escala_resposta_historico (
     respondido_em timestamp with time zone NOT NULL,
     versao bigint NOT NULL,
     CONSTRAINT escala_resposta_historico_resposta_check CHECK (((resposta)::text = ANY ((ARRAY['CONFIRMADA'::character varying, 'RECUSADA'::character varying])::text[])))
+);
+
+
+--
+-- Name: escala_troca; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.escala_troca (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    escala_id uuid NOT NULL,
+    vaga_id uuid NOT NULL,
+    solicitante_id uuid NOT NULL,
+    substituto_id uuid NOT NULL,
+    solicitante_usuario_id uuid NOT NULL,
+    substituto_usuario_id uuid NOT NULL,
+    vaga_versao bigint NOT NULL,
+    situacao character varying(30) NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    criada_em timestamp with time zone NOT NULL,
+    atualizada_em timestamp with time zone NOT NULL,
+    celebracao character varying(255) NOT NULL,
+    inicio timestamp without time zone NOT NULL,
+    funcao character varying(20) NOT NULL,
+    CONSTRAINT escala_troca_check CHECK ((solicitante_id <> substituto_id)),
+    CONSTRAINT escala_troca_situacao_check CHECK (((situacao)::text = ANY ((ARRAY['AGUARDANDO_ACEITE'::character varying, 'ACEITA'::character varying, 'APROVADA'::character varying, 'RECUSADA'::character varying, 'CANCELADA'::character varying, 'EXPIRADA'::character varying])::text[])))
 );
 
 
@@ -1579,6 +1605,14 @@ ALTER TABLE ONLY public.escala_resposta_historico
 
 
 --
+-- Name: escala_troca escala_troca_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.escala_troca
+    ADD CONSTRAINT escala_troca_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: escala_vagas escala_vagas_evento_id_funcao_posicao_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2627,6 +2661,27 @@ CREATE INDEX ix_tarefa_recentes ON public.tarefa USING btree (tenant_id, criado_
 
 
 --
+-- Name: ix_troca_escala; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_troca_escala ON public.escala_troca USING btree (tenant_id, escala_id, criada_em, id);
+
+
+--
+-- Name: ix_troca_solicitante; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_troca_solicitante ON public.escala_troca USING btree (tenant_id, solicitante_id, criada_em, id);
+
+
+--
+-- Name: ix_troca_substituto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_troca_substituto ON public.escala_troca USING btree (tenant_id, substituto_id, criada_em, id);
+
+
+--
 -- Name: uq_calendario_usuario; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2778,6 +2833,13 @@ CREATE UNIQUE INDEX ux_inscricao_responsavel_principal ON public.inscricao_respo
 --
 
 CREATE UNIQUE INDEX ux_pessoa_tenant_cpf ON public.pessoa USING btree (tenant_id, cpf) WHERE ((cpf IS NOT NULL) AND (cpf <> ''::text));
+
+
+--
+-- Name: ux_troca_ativa_vaga; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_troca_ativa_vaga ON public.escala_troca USING btree (tenant_id, vaga_id) WHERE ((situacao)::text = ANY ((ARRAY['AGUARDANDO_ACEITE'::character varying, 'ACEITA'::character varying])::text[]));
 
 
 --
@@ -3025,6 +3087,14 @@ ALTER TABLE ONLY public.escala_eventos
 
 ALTER TABLE ONLY public.escala_resposta_historico
     ADD CONSTRAINT escala_resposta_historico_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: escala_troca escala_troca_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.escala_troca
+    ADD CONSTRAINT escala_troca_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -3702,6 +3772,12 @@ ALTER TABLE public.escala_eventos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.escala_resposta_historico ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: escala_troca; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.escala_troca ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: escala_vagas; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3962,5 +4038,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict drD2MhvEdfsWr3mVyT7Al1uay6VtYY42BaH5HSzK0qEMgqjTilggnqTbLehEbAT
+\unrestrict tIT6WA8sheFVgRPcUYS2kTtYAmdQjX4myilbLqWvbUP27TxiIUYdDPZR1kaGcin
 

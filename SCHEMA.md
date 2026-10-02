@@ -2,7 +2,11 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V063. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V064. Migration já aplicada não se edita.
+
+## O que entrou na V064
+
+escala_troca guarda pedido de substituição versionado, participantes, ciclo e snapshot mínimo. Índice único parcial impede dois pedidos ativos por vaga; índices de listas próprias e coordenação; RLS/revogação. Referências históricas sem cascata. Contrato em docs/trocas-escala.md.
 
 ## O que entrou na V063
 

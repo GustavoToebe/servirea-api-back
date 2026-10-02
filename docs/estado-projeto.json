@@ -13,7 +13,7 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V063__candidaturas_vagas.sql",
-    "quantidade": 63
+    "ultima": "V064__trocas_escala.sql",
+    "quantidade": 64
   }
 }

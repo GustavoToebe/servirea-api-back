@@ -25,12 +25,12 @@ public class CandidaturaService {
     private final PortalService portal;private final FuncionalidadesPlano plano;
     private final TenantRepository tenants;private final EscalaRepository escalas;
     private final VoluntarioRepository voluntarios;private final UsuarioTenantRepository usuarios;
-    private final AuditLogService audit;
+    private final AuditLogService audit;private final ElegibilidadeEscalaService elegibilidade;
     @PersistenceContext private EntityManager em;
     public CandidaturaService(PortalService portal,FuncionalidadesPlano plano,TenantRepository tenants,
-            EscalaRepository escalas,VoluntarioRepository voluntarios,UsuarioTenantRepository usuarios,AuditLogService audit){
+            EscalaRepository escalas,VoluntarioRepository voluntarios,UsuarioTenantRepository usuarios,AuditLogService audit,ElegibilidadeEscalaService elegibilidade){
         this.portal=portal;this.plano=plano;this.tenants=tenants;this.escalas=escalas;
-        this.voluntarios=voluntarios;this.usuarios=usuarios;this.audit=audit;
+        this.voluntarios=voluntarios;this.usuarios=usuarios;this.audit=audit;this.elegibilidade=elegibilidade;
     }
 
     @Transactional(readOnly=true)
@@ -44,8 +44,8 @@ public class CandidaturaService {
         var count=em.createQuery("select count(v)"+where,Long.class);
         for(var query:List.of(q,count))query.setParameter("status",StatusEscala.FINALIZADA).setParameter("de",de).setParameter("ate",ate).setParameter("hoje",agora.toLocalDate()).setParameter("hora",agora.toLocalTime());
         var itens=q.setFirstResult(pagina*30).setMaxResults(30).getResultList();
-        var contexto=contexto(pessoa,de,ate);
-        return new Pagina<>(itens.stream().map(v->{String motivo=impedimento(v,contexto);return new Vaga(v.getId(),v.getEvento().getCelebracao(),inicio(v),v.getFuncao().name(),v.getRespostaVersao(),motivo==null,motivo);}).toList(),count.getSingleResult(),pagina,30);
+        var contexto=elegibilidade.contexto(pessoa,de,ate);
+        return new Pagina<>(itens.stream().map(v->{String motivo=elegibilidade.impedimento(v,contexto);return new Vaga(v.getId(),v.getEvento().getCelebracao(),inicio(v),v.getFuncao().name(),v.getRespostaVersao(),motivo==null,motivo);}).toList(),count.getSingleResult(),pagina,30);
     }
 
     @Transactional
@@ -53,7 +53,7 @@ public class CandidaturaService {
         plano.exigir("PORTAL_VOLUNTARIO");bloquearTenant();UUID pessoa=pessoa();
         var vaga=bloquearVaga(vagaId);validarLivre(vaga);
         if(req.versao()!=vaga.getRespostaVersao())throw mudou();
-        String motivo=impedimento(vaga,contexto(pessoa,vaga.getEvento().getData(),vaga.getEvento().getData()));
+        String motivo=elegibilidade.impedimento(vaga,elegibilidade.contexto(pessoa,vaga.getEvento().getData(),vaga.getEvento().getData()));
         if(motivo!=null)throw new ConflictException(motivo);
         var existente=em.createQuery("select c from Candidatura c where c.vagaId=:vaga and c.pessoaId=:pessoa and c.vagaVersao=:versao",Candidatura.class)
                 .setParameter("vaga",vagaId).setParameter("pessoa",pessoa).setParameter("versao",vaga.getRespostaVersao()).getResultStream().findFirst();
@@ -95,9 +95,9 @@ public class CandidaturaService {
         if(req.aprovar()){
             var vinculo=usuarios.findByUsuario_IdAndTenant_Id(c.usuarioId,TenantContext.get()).orElseThrow(CandidaturaService::naoEncontrada);
             if(vinculo.getStatus()!=UsuarioTenant.Status.ATIVO||!c.pessoaId.equals(vinculo.getPessoaId()))throw new ConflictException("O vínculo pessoal do candidato mudou.");
-            var contexto=contexto(c.pessoaId,vaga.getEvento().getData(),vaga.getEvento().getData());
+            var contexto=elegibilidade.contexto(c.pessoaId,vaga.getEvento().getData(),vaga.getEvento().getData());
             if(contexto.voluntario()!=null)em.lock(contexto.voluntario(),LockModeType.PESSIMISTIC_WRITE);
-            String motivo=impedimento(vaga,contexto);if(motivo!=null)throw new ConflictException(motivo);
+            String motivo=elegibilidade.impedimento(vaga,contexto);if(motivo!=null)throw new ConflictException(motivo);
             vaga.setVoluntario(contexto.voluntario());vaga.setPresenca(Presenca.PENDENTE);
             c.situacao=Situacao.APROVADA;
             // Só uma alocação; os demais pedidos deixam de poder ser aprovados.
@@ -131,25 +131,6 @@ public class CandidaturaService {
         return new Pagina<>(itens.stream().map(c->pedido(c,pessoas.get(c.pessoaId),vagas.get(c.vagaId))).toList(),total,pagina,30);
     }
 
-    /** Quatro consultas por pessoa/período, reaproveitadas para as 30 vagas da página. */
-    private Contexto contexto(UUID pessoa,LocalDate de,LocalDate ate){
-        var vol=voluntarios.findById(pessoa).orElse(null);
-        var disponiveis=em.createQuery("select d from DisponibilidadeVoluntario d where d.voluntario.id=:pessoa",DisponibilidadeVoluntario.class).setParameter("pessoa",pessoa).getResultList();
-        var bloqueios=em.createQuery("select i from Indisponibilidade i where i.voluntarioId=:pessoa and i.data between :de and :ate",Indisponibilidade.class).setParameter("pessoa",pessoa).setParameter("de",de).setParameter("ate",ate).getResultList();
-        var ocupados=em.createQuery("select e.data,e.horario,e.id from EscalaVaga v join v.evento e where v.voluntario.id=:pessoa and e.referencia=false and e.escala.status=:status and e.data between :de and :ate",Object[].class)
-                .setParameter("pessoa",pessoa).setParameter("status",StatusEscala.FINALIZADA).setParameter("de",de).setParameter("ate",ate).getResultList();
-        return new Contexto(vol,disponiveis,bloqueios,ocupados);
-    }
-    private String impedimento(EscalaVaga vaga,Contexto ctx){
-        var vol=ctx.voluntario();if(vol==null||!vol.isAtivo())return "É necessário um voluntário ativo.";
-        if(vol.getFuncoesHabilitadas()==null||!Arrays.asList(vol.getFuncoesHabilitadas()).contains(vaga.getFuncao()))return "Sua pessoa não está habilitada para esta função.";
-        var e=vaga.getEvento();var periodo=periodo(e.getHorario());
-        if(!ctx.disponiveis().isEmpty()&&ctx.disponiveis().stream().noneMatch(d->d.getPeriodo()==periodo&&(e.getData().equals(d.getData())||e.getData().getDayOfWeek()==d.getDiaSemana())))return "Horário fora da disponibilidade cadastrada.";
-        if(ctx.bloqueios().stream().anyMatch(i->i.getData().equals(e.getData())&&(i.getPeriodo()==null||i.getPeriodo()==periodo)))return "Você está indisponível neste período.";
-        if(ctx.ocupados().stream().anyMatch(v->v[2].equals(e.getId())||v[0].equals(e.getData())&&v[1].equals(e.getHorario())))return "Você já está alocado nesta celebração ou em outra no mesmo horário.";
-        return null;
-    }
-    private record Contexto(Voluntario voluntario,List<DisponibilidadeVoluntario> disponiveis,List<Indisponibilidade> bloqueios,List<Object[]> ocupados) {}
     private Pedido pedido(Candidatura c,String nome,EscalaVaga vaga){
         boolean vigente=c.situacao==Situacao.PENDENTE&&livre(vaga)&&vaga.getRespostaVersao()==c.vagaVersao;
         var situacao=c.situacao==Situacao.PENDENTE&&!vigente?Situacao.EXPIRADA:c.situacao;
