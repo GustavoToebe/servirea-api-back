@@ -2693,7 +2693,7 @@
       "enum" : [ "MANUAL", "AUTOMATICO" ]
     },
     "notificacao.OrigemNotificacao" : {
-      "enum" : [ "ESCALA", "MURAL" ]
+      "enum" : [ "ESCALA", "MURAL", "ESCALA_LEMBRETE" ]
     },
     "onboarding.EtapaOnboarding" : {
       "enum" : [ "PAROQUIA", "CONVITE", "PESSOAS", "VOLUNTARIOS", "ESCALA" ]

@@ -21,3 +21,6 @@ Desligados por padrão, por origem (ESCALA, MURAL) e canal (EMAIL, WHATSAPP). Es
 
 ## Limites
 Sem preferências por pessoa além da autorização de WhatsApp, sem horário silencioso, sem lembrete antes da celebração e sem notificação de troca/candidatura. O texto é fixo (não usa layouts). Perfis existentes precisam dos novos códigos; ADMIN já tem o catálogo. Homologar com provedor real e opt-in verificado antes de ligar gatilhos.
+
+## Lembrete de escala (V081)
+Origem `ESCALA_LEMBRETE`, gatilho por canal, desligado por padrão. Um job (`LembretesDeEscala`, de hora em hora das 8h às 20h de Brasília, `servire.notificacoes.lembretes-ativo`) avisa quem está escalado em celebrações de escala FINALIZADA que começam nas **próximas 24 horas**, exceto quem recusou a participação, só com contato e, no WhatsApp, autorização. Um aviso por celebração e canal (chave com versão 0); rodar de novo não repete. Linhas de referência, escalas em rascunho e celebrações passadas ficam de fora. A entrega aparece no centro de entregas com o nome e a data da celebração.

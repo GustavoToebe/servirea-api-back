@@ -74,6 +74,8 @@ public class InscricaoService {
     private EntityManager entityManager;
 
     private final br.com.servire.api.privacidade.ConsentimentoService consentimentos;
+    @org.springframework.beans.factory.annotation.Autowired
+    private br.com.servire.api.storage.ArquivoCicloService arquivos;
 
     public InscricaoService(InscricaoRepository inscricaoRepository,
                              PessoaRepository pessoaRepository,
@@ -114,17 +116,49 @@ public class InscricaoService {
 
         TenantContext.set(tenant.getId());
         MDC.put(br.com.servire.api.security.JwtAuthenticationFilter.MDC_KEY, tenant.getId().toString());
+        String caminho = null;
+        long tamanho = 0;
         try {
-            return transactionTemplate.execute(status -> gravarInscricaoPublica(request, foto));
+            if (foto != null && !foto.isEmpty()) {
+                // T13: a foto sobe fora da transação, depois de conferir plano e cota e de registrar o upload de forma durável.
+                byte[] conteudo;
+                try {
+                    conteudo = foto.getBytes();
+                } catch (IOException e) {
+                    throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
+                }
+                tamanho = conteudo.length;
+                String tipo = foto.getContentType();
+                String novo = "inscricoes/" + UUID.randomUUID() + "/foto" + ExtensaoDeFoto.de(tipo);
+                validarContatos(request.emails(), request.telefones(), request.responsaveis());
+                long bytes = tamanho;
+                transactionTemplate.executeWithoutResult(status -> {
+                    funcionalidades.exigir("INSCRICAO_PUBLICA");
+                    cotas.validarUpload(cotas.reservar(), bytes, null);
+                });
+                arquivos.registrarUpload(novo);
+                String salvo = storageService.armazenar(novo, conteudo, tipo);
+                caminho = salvo != null ? salvo : novo;
+            }
+            String fotoPath = caminho;
+            long fotoBytes = tamanho;
+            try {
+                return transactionTemplate.execute(status -> gravarInscricaoPublica(request, fotoPath, fotoBytes));
+            } catch (RuntimeException e) {
+                if (fotoPath != null) {
+                    arquivos.descartarUpload(fotoPath);
+                }
+                throw e;
+            }
         } finally {
             MDC.remove(br.com.servire.api.security.JwtAuthenticationFilter.MDC_KEY);
             TenantContext.clear();
         }
     }
 
-    private Inscricao gravarInscricaoPublica(InscricaoPublicaRequest request, MultipartFile foto) {
+    private Inscricao gravarInscricaoPublica(InscricaoPublicaRequest request, String fotoPath, long fotoBytes) {
         funcionalidades.exigir("INSCRICAO_PUBLICA");
-        var reserva=foto!=null && !foto.isEmpty() ? cotas.reservar() : null;
+        var reserva=fotoPath != null ? cotas.reservar() : null;
         validarContatos(request.emails(), request.telefones(), request.responsaveis());
         Inscricao inscricao = new Inscricao(request.nomeCompleto().trim());
         
@@ -154,18 +188,12 @@ public class InscricaoService {
         substituirResponsaveis(inscricao, request.responsaveis());
         inscricao = inscricaoRepository.save(inscricao);
 
-        if (foto != null && !foto.isEmpty()) {
-            String caminho = "inscricoes/" + inscricao.getId() + "/foto" + ExtensaoDeFoto.de(foto.getContentType());
-            byte[] conteudo;
-            try {
-                conteudo = foto.getBytes();
-            } catch (IOException e) {
-                throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
-            }
-            cotas.validarUpload(reserva,conteudo.length,null);
-            inscricao.setFotoPath(storageService.armazenar(caminho, conteudo, foto.getContentType()));
-            inscricao.setFotoTamanhoBytes((long)conteudo.length);
+        if (fotoPath != null) {
+            cotas.validarUpload(reserva, fotoBytes, null);
+            inscricao.setFotoPath(fotoPath);
+            inscricao.setFotoTamanhoBytes(fotoBytes);
             cotas.validar(reserva);
+            arquivos.aoConfirmar(fotoPath);
         }
         auditLogService.registrar("CRIACAO", "INSCRICAO", inscricao.getId(), null);
         return inscricao;

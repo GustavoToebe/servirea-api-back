@@ -70,6 +70,36 @@ class InscricaoServiceIntegrationTest extends AbstractIntegrationTest {
         org.mockito.Mockito.verify(storageService,org.mockito.Mockito.never()).armazenar(anyString(),org.mockito.ArgumentMatchers.any(),anyString());
     }
 
+    @Test void fotoPublicaSobeForaDaTransacaoELigaOCaminhoNaInscricao() {
+        Tenant tenant=criarTenant("foto-fora-da-tx");
+        var foto=new org.springframework.mock.web.MockMultipartFile("foto","foto.jpg","image/jpeg",new byte[]{1,2,3});
+        java.util.concurrent.atomic.AtomicBoolean emTransacao=new java.util.concurrent.atomic.AtomicBoolean(true);
+        org.mockito.Mockito.when(storageService.armazenar(anyString(),org.mockito.ArgumentMatchers.any(),anyString())).thenAnswer(i -> {
+            emTransacao.set(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
+            return i.getArgument(0);
+        });
+        var inscricao=inscricaoService.criarPublica(tenant.getSlug(),requestPublica("Com foto"),foto,"10.199.2.1");
+        org.assertj.core.api.Assertions.assertThat(emTransacao.get()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(inscricao.getFotoPath()).startsWith("inscricoes/").endsWith("/foto.jpg");
+        org.assertj.core.api.Assertions.assertThat(inscricao.getFotoTamanhoBytes()).isEqualTo(3L);
+    }
+
+    @Test void falhaDepoisDoUploadDescartaOArquivoEnviado() {
+        Tenant tenant=criarTenant("foto-descarte");
+        var foto=new org.springframework.mock.web.MockMultipartFile("foto","foto.jpg","image/jpeg",new byte[]{1,2,3});
+        org.mockito.Mockito.when(storageService.armazenar(anyString(),org.mockito.ArgumentMatchers.any(),anyString())).thenAnswer(i -> i.getArgument(0));
+        org.mockito.Mockito.when(storageService.excluirConfirmando(anyString())).thenReturn(true);
+        // CPF inválido só é rejeitado ao gravar a inscrição, depois do upload.
+        var base=requestPublica("Candidato");
+        var invalida=new InscricaoPublicaRequest("token-turnstile-qualquer","Candidato",null,null,"123",null,
+                TipoVoluntario.COROINHA,null,null,null,null,null,base.responsaveis(),
+                null,null,null,null,null,null,null,null,null,false,List.of(),null,null,null,null,false);
+        assertThatThrownBy(() -> inscricaoService.criarPublica(tenant.getSlug(),invalida,foto,"10.199.2.2")).isInstanceOf(RuntimeException.class);
+        org.mockito.Mockito.verify(storageService).excluirConfirmando(org.mockito.ArgumentMatchers.startsWith("inscricoes/"));
+        TenantContext.set(tenant.getId());
+        org.assertj.core.api.Assertions.assertThat(inscricaoRepository.count()).isZero();
+    }
+
     @MockitoBean
     private TurnstileService turnstileService;
 

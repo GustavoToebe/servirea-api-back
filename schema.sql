@@ -1,4 +1,4 @@
--- Esquema do banco, gerado das migrations (V001-V080). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V081). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
@@ -1220,7 +1220,7 @@ CREATE TABLE public.notificacao_config (
     ativo boolean DEFAULT false NOT NULL,
     versao bigint DEFAULT 0 NOT NULL,
     CONSTRAINT notificacao_config_canal_check CHECK (((canal)::text = ANY ((ARRAY['EMAIL'::character varying, 'WHATSAPP'::character varying])::text[]))),
-    CONSTRAINT notificacao_config_origem_check CHECK (((origem)::text = ANY ((ARRAY['ESCALA'::character varying, 'MURAL'::character varying])::text[])))
+    CONSTRAINT notificacao_config_origem_check CHECK (((origem)::text = ANY ((ARRAY['ESCALA'::character varying, 'MURAL'::character varying, 'ESCALA_LEMBRETE'::character varying])::text[])))
 );
 
 
@@ -1244,7 +1244,7 @@ CREATE TABLE public.notificacao_entrega (
     CONSTRAINT notificacao_entrega_canal_check CHECK (((canal)::text = ANY ((ARRAY['EMAIL'::character varying, 'WHATSAPP'::character varying])::text[]))),
     CONSTRAINT notificacao_entrega_gatilho_check CHECK (((gatilho)::text = ANY ((ARRAY['MANUAL'::character varying, 'AUTOMATICO'::character varying])::text[]))),
     CONSTRAINT notificacao_entrega_ignorados_check CHECK ((ignorados >= 0)),
-    CONSTRAINT notificacao_entrega_origem_check CHECK (((origem)::text = ANY ((ARRAY['ESCALA'::character varying, 'MURAL'::character varying])::text[]))),
+    CONSTRAINT notificacao_entrega_origem_check CHECK (((origem)::text = ANY ((ARRAY['ESCALA'::character varying, 'MURAL'::character varying, 'ESCALA_LEMBRETE'::character varying])::text[]))),
     CONSTRAINT notificacao_entrega_total_check CHECK ((total >= 0))
 );
 

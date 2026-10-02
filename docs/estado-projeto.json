@@ -13,8 +13,8 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V080__arquivo_pendencia.sql",
-    "quantidade": 80
+    "ultima": "V081__lembrete_escala.sql",
+    "quantidade": 81
   },
   "importacao_pessoas": {
     "manual": "docs/importacao-pessoas.md",

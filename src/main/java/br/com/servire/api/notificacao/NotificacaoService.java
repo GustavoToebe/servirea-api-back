@@ -32,7 +32,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -46,6 +49,8 @@ import java.util.stream.Collectors;
 public class NotificacaoService {
     static final int LIMITE_DESTINATARIOS = 2000;
     private static final int PAGINA = 30;
+    private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
+    static final Duration ANTECEDENCIA_LEMBRETE = Duration.ofHours(24);
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
@@ -184,6 +189,73 @@ public class NotificacaoService {
         return t.append(paroquia).toString();
     }
 
+    // ---- Lembrete de escala
+
+    /**
+     * Lembrete das celebrações de escala finalizada que começam nas próximas 24 horas (horário de Brasília), para quem está
+     * escalado e não recusou. Um aviso por celebração e canal (chave com versão 0), só com o gatilho ESCALA_LEMBRETE ligado.
+     * Rodar de novo é seguro. Devolve quantas mensagens foram para a fila.
+     */
+    @Transactional
+    public int lembretesDeEscala() {
+        if (!plano.permitida("COMUNICACAO")) {
+            return 0;
+        }
+        ZonedDateTime agora = ZonedDateTime.now(BRASILIA);
+        Instant limite = agora.toInstant().plus(ANTECEDENCIA_LEMBRETE);
+        int total = 0;
+        for (TipoEnvio canal : TipoEnvio.values()) {
+            NotificacaoConfig c = config(OrigemNotificacao.ESCALA_LEMBRETE, canal);
+            if (c == null || !c.ativo) {
+                continue;
+            }
+            List<EscalaEvento> eventos = em.createQuery("select e from EscalaEvento e where e.referencia=false and e.escala.status=:fin "
+                            + "and e.data between :de and :ate order by e.data, e.horario", EscalaEvento.class)
+                    .setParameter("fin", StatusEscala.FINALIZADA).setParameter("de", agora.toLocalDate())
+                    .setParameter("ate", agora.toLocalDate().plusDays(1)).setMaxResults(200).getResultList();
+            for (EscalaEvento ev : eventos) {
+                Instant inicio = ev.getData().atTime(ev.getHorario()).atZone(BRASILIA).toInstant();
+                if (!inicio.isAfter(agora.toInstant()) || inicio.isAfter(limite) || existe(OrigemNotificacao.ESCALA_LEMBRETE, ev.getId(), 0, canal)) {
+                    continue;
+                }
+                total += enfileirarLembrete(ev, canal);
+            }
+        }
+        return total;
+    }
+
+    private int enfileirarLembrete(EscalaEvento ev, TipoEnvio canal) {
+        String paroquia = nomeDaParoquia();
+        List<EnvioAvulso.Mensagem> whats = new ArrayList<>();
+        List<EnvioAvulso.MensagemEmail> emails = new ArrayList<>();
+        int ignorados = 0;
+        for (EscalaVaga v : ev.getVagas()) {
+            if (v.getVoluntario() == null || v.getResposta() == br.com.servire.api.escala.RespostaParticipacao.RECUSADA) {
+                continue;
+            }
+            Pessoa pessoa = v.getVoluntario().getPessoa();
+            String contato = contato(pessoa, v.getVoluntario(), canal);
+            if (contato == null) {
+                ignorados++;
+                continue;
+            }
+            String texto = "Olá " + pessoa.getNomeCompleto() + "! Lembrete: você está escalado(a) para *" + ev.getCelebracao() + "* em "
+                    + ev.getData().format(DATA) + " às " + ev.getHorario().format(HORA) + " ("
+                    + v.getFuncao().name().toLowerCase(Locale.ROOT) + ").\n" + paroquia;
+            if (canal == TipoEnvio.WHATSAPP) {
+                whats.add(new EnvioAvulso.Mensagem(pessoa.getId(), pessoa.getNomeCompleto(), contato, texto));
+            } else {
+                emails.add(new EnvioAvulso.MensagemEmail(pessoa.getId(), pessoa.getNomeCompleto(), contato, null, html(texto)));
+            }
+        }
+        String origem = "Lembrete: " + ev.getCelebracao() + " " + ev.getData().format(DATA) + " " + ev.getHorario().format(HORA);
+        EnvioAvulso.Enfileiradas f = canal == TipoEnvio.WHATSAPP
+                ? envio.enfileirarWhatsappDetalhado(origem, whats)
+                : envio.enfileirarEmailDetalhado(origem, origem, emails);
+        registrar(OrigemNotificacao.ESCALA_LEMBRETE, ev.getId(), 0, canal, NotificacaoEntrega.Gatilho.AUTOMATICO, f, ignorados);
+        return f.destinatarios().size();
+    }
+
     // ---- Mural
 
     @Transactional
@@ -304,6 +376,11 @@ public class NotificacaoService {
         if (!escalas.isEmpty()) {
             em.createQuery("select e.id, e.titulo from Escala e where e.id in :ids", Object[].class).setParameter("ids", escalas)
                     .getResultList().forEach(r -> mapa.put((UUID) r[0], (String) r[1]));
+        }
+        Set<UUID> celebracoes = linhas.stream().filter(e -> e.origem == OrigemNotificacao.ESCALA_LEMBRETE).map(e -> e.referenciaId).collect(Collectors.toSet());
+        if (!celebracoes.isEmpty()) {
+            em.createQuery("select e.id, e.celebracao, e.data, e.horario from EscalaEvento e where e.id in :ids", Object[].class).setParameter("ids", celebracoes)
+                    .getResultList().forEach(r -> mapa.put((UUID) r[0], r[1] + " " + ((java.time.LocalDate) r[2]).format(DATA) + " " + ((java.time.LocalTime) r[3]).format(HORA)));
         }
         if (!avisos.isEmpty()) {
             em.createQuery("select a.id, a.titulo from Aviso a where a.id in :ids", Object[].class).setParameter("ids", avisos)

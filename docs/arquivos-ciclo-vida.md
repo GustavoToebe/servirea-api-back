@@ -1,6 +1,6 @@
 # Ciclo de vida durável dos arquivos — T13
 
-Módulo `storage/`, V080 (`arquivo_pendencia`, com RLS sem policy). Cobre as fotos de voluntários e de eventos. Sem IA e sem varredura do bucket.
+Módulo `storage/`, V080 (`arquivo_pendencia`, com RLS sem policy). Cobre as fotos de voluntários, de eventos e da inscrição pública. Sem IA e sem varredura do bucket.
 
 ## Problema resolvido
 Antes, o upload ao Supabase e a gravação no banco ocorriam dentro da mesma transação (com a paróquia travada durante o HTTP) e a remoção era "melhor esforço": falha do provedor ou queda da API deixava arquivo órfão sem rastro, e a foto substituída de um voluntário nunca era apagada.
@@ -15,4 +15,4 @@ Antes, o upload ao Supabase e a gravação no banco ocorriam dentro da mesma tra
 Dois uploads concorrentes que juntos passariam da cota agora podem enviar os dois arquivos; o segundo é recusado com 409 COTA_EXCEDIDA e seu arquivo é descartado em seguida. A cota continua respeitada (teste de concorrência). Em troca, a trava da paróquia deixa de cobrir o HTTP.
 
 ## Limites
-Inscrição pública ainda envia a foto dentro da transação (a trava da paróquia é mantida e registrar a pendência em transação própria causaria bloqueio); orfãos por rollback nesse fluxo e arquivos anteriores a V080 não são encontrados. Não há listagem do bucket para reconciliar o que está no armazenamento mas não no banco; isso exige uma operação separada, com lista paginada do provedor e janela de segurança. Pendência que falha para sempre não gera alerta ainda (consultar `arquivo_pendencia` por `tentativas` alto).
+Na inscrição pública a foto também sobe fora da transação (nome do arquivo com UUID próprio, pré-validação de contatos, plano e cota antes do envio); falha ao gravar descarta o arquivo. Arquivos anteriores a V080 não são encontrados. Não há listagem do bucket para reconciliar o que está no armazenamento mas não no banco; isso exige uma operação separada, com lista paginada do provedor e janela de segurança. Pendência que falha para sempre não gera alerta ainda (consultar `arquivo_pendencia` por `tentativas` alto).
