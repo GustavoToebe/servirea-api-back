@@ -14,6 +14,12 @@ import java.util.UUID;
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
 
     Optional<RefreshToken> findByTokenHash(String tokenHash);
+    @Query("select rt.usuario.id from RefreshToken rt where rt.tokenHash=:hash")
+    Optional<UUID> usuarioDoToken(String hash);
+    @Modifying
+    @Query("UPDATE RefreshToken rt SET rt.revokedAt=:agora WHERE rt.usuario.id=:id AND rt.revokedAt IS NULL")
+    int revogarNaTransacao(UUID id, Instant agora);
+
 
     /**
      * Usado na detecção de reuso de token (seção 36): quando um refresh

@@ -35,6 +35,7 @@ public class AuthService {
     private final SecurityProperties properties;
     private final String frontendBaseUrl;
     private final AcessoParoquia acessoParoquia;
+    private final MfaService mfa;
 
     public AuthService(UsuarioRepository usuarioRepository,
                         UsuarioTenantRepository usuarioTenantRepository,
@@ -45,7 +46,7 @@ public class AuthService {
                         EmailSender emailSender,
                         SecurityProperties properties,
                         @Value("${servire.frontend.base-url}") String frontendBaseUrl,
-                        AcessoParoquia acessoParoquia) {
+                        AcessoParoquia acessoParoquia, MfaService mfa) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
         this.refreshTokenService = refreshTokenService;
@@ -56,6 +57,7 @@ public class AuthService {
         this.properties = properties;
         this.frontendBaseUrl = frontendBaseUrl;
         this.acessoParoquia = acessoParoquia;
+        this.mfa = mfa;
     }
 
     /**
@@ -63,8 +65,12 @@ public class AuthService {
      * inativo, ou nenhuma paróquia ativa vinculada.
      */
     @Transactional
-    public LoginResultado login(String email, String senha, String ip, String userAgent) {
-        Usuario usuario = usuarioRepository.findByEmail(email)
+    public LoginResultado login(String email,String senha,String ip,String userAgent) {
+        return login(email,senha,null,ip,userAgent);
+    }
+    @Transactional
+    public LoginResultado login(String email,String senha,String codigoMfa,String ip,String userAgent) {
+        Usuario usuario = usuarioRepository.buscarParaAutenticar(email)
                 .orElseThrow(() -> new UnauthorizedException("E-mail ou senha inválidos."));
 
         // Mesma mensagem genérica para "e-mail não existe" e "senha errada"
@@ -76,6 +82,7 @@ public class AuthService {
         if (!usuario.isAtivo()) {
             throw new UnauthorizedException("Usuário inativo.");
         }
+        mfa.verificar(usuario,codigoMfa);
         List<UsuarioTenant> vinculosValidos = vinculosAtivosComTenantPermitido(usuario.getId());
         if (vinculosValidos.isEmpty()) {
             throw new UnauthorizedException("Nenhuma paróquia ativa vinculada a este usuário.");
@@ -85,7 +92,7 @@ public class AuthService {
             return LoginResultado.completo(emitirTokens(usuario, vinculosValidos.get(0), ip, userAgent));
         }
 
-        String tokenSelecao = jwtService.gerarTokenSelecaoTenant(usuario.getId());
+        String tokenSelecao = jwtService.gerarTokenSelecaoTenant(usuario.getId(),usuario.getCredenciaisVersao());
         List<TenantResumo> disponiveis = vinculosValidos.stream()
                 .map(v -> TenantResumo.de(v.getTenant()))
                 .toList();
@@ -101,10 +108,10 @@ public class AuthService {
     @Transactional
     public TokensCompletos selecionarTenant(String tokenSelecaoTenant, UUID tenantId, String ip, String userAgent) {
         UUID usuarioId = jwtService.validarTokenSelecaoTenant(tokenSelecaoTenant);
-        Usuario usuario = usuarioRepository.findById(usuarioId)
+        Usuario usuario = usuarioRepository.buscarParaAlterar(usuarioId)
                 .orElseThrow(() -> new UnauthorizedException("Usuário não encontrado."));
-        if (!usuario.isAtivo()) {
-            throw new UnauthorizedException("Usuário inativo.");
+        if (!usuario.isAtivo() || jwtService.versaoCredenciais(tokenSelecaoTenant) != usuario.getCredenciaisVersao()) {
+            throw new UnauthorizedException("Sessão inválida.");
         }
         UsuarioTenant vinculo = vinculoAtivoComTenantPermitido(usuarioId, tenantId)
                 .orElseThrow(() -> new ForbiddenException("Usuário sem acesso a esta paróquia."));
@@ -122,11 +129,11 @@ public class AuthService {
         RefreshTokenService.RotacaoResultado rotacao = refreshTokenService.rotacionar(refreshTokenBruto, ip, userAgent);
         Usuario usuario = rotacao.usuario();
         if (!usuario.isAtivo()) {
-            throw new UnauthorizedException("Usuário inativo.");
+            throw new UnauthorizedException("Sessão inválida.");
         }
         UsuarioTenant vinculo = vinculoAtivoComTenantPermitido(usuario.getId(), tenantId)
                 .orElseThrow(() -> new ForbiddenException("Usuário sem acesso a esta paróquia."));
-        String accessToken = jwtService.gerarAccessToken(usuario.getId(), tenantId, vinculo.getRole());
+        String accessToken = jwtService.gerarAccessTokenVersionado(usuario.getId(), tenantId, vinculo.getRole(),usuario.getCredenciaisVersao());
         return new TokensCompletos(
                 accessToken, properties.jwt().accessTokenTtl().toSeconds(),
                 TenantResumo.de(vinculo.getTenant()), rotacao.novoTokenBruto());
@@ -156,14 +163,20 @@ public class AuthService {
      * expirado.
      */
     @Transactional
-    public void redefinirSenha(String tokenBruto, String novaSenha) {
-        Usuario usuario = passwordResetTokenService.consumir(tokenBruto);
+    public void redefinirSenha(String tokenBruto,String novaSenha) {redefinirSenha(tokenBruto,novaSenha,null);}
+    @Transactional
+    public void redefinirSenha(String tokenBruto,String novaSenha,String codigoMfa) {
+        UUID id = passwordResetTokenService.usuarioDoToken(tokenBruto);
+        Usuario usuario = usuarioRepository.buscarParaAlterar(id).orElseThrow(() -> new UnauthorizedException("Token inválido."));
+        mfa.verificar(usuario,codigoMfa);
+        passwordResetTokenService.consumir(tokenBruto);
+        usuario.invalidarCredenciais();
         usuario.setSenhaHash(passwordEncoder.encode(novaSenha));
         usuarioRepository.save(usuario);
         // Trocar a senha é um evento de segurança - mesma reação usada
         // para reuso de refresh token detectado (seção 36): encerra todas
         // as sessões ativas, forçando novo login em todos os dispositivos.
-        refreshTokenService.revogarTodosDoUsuario(usuario.getId());
+        refreshTokenService.revogarNaTransacao(usuario.getId());
     }
 
     private List<UsuarioTenant> vinculosAtivosComTenantPermitido(UUID usuarioId) {
@@ -191,7 +204,7 @@ public class AuthService {
     }
 
     private TokensCompletos emitirTokens(Usuario usuario, UsuarioTenant vinculo, String ip, String userAgent) {
-        String accessToken = jwtService.gerarAccessToken(usuario.getId(), vinculo.getTenant().getId(), vinculo.getRole());
+        String accessToken = jwtService.gerarAccessTokenVersionado(usuario.getId(), vinculo.getTenant().getId(), vinculo.getRole(),usuario.getCredenciaisVersao());
         String refreshToken = refreshTokenService.emitir(usuario, ip, userAgent);
         return new TokensCompletos(
                 accessToken, properties.jwt().accessTokenTtl().toSeconds(),

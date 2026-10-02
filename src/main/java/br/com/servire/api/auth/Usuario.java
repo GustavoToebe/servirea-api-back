@@ -15,11 +15,9 @@ import java.util.UUID;
  * estar vinculado a mais de uma paróquia via {@code usuario_tenant}
  * (seção 29). Ver migration V017.
  *
- * <p>Ainda SEM autenticação própria funcionando (isso é Fase 5, seção
- * 105/32-36) — esta entidade só espelha a tabela para não ter que
- * redesenhar o schema depois ("Isso evita refazer autenticação depois",
- * seção 103). {@code senhaHash} é nullable por enquanto pelo mesmo
- * motivo: nada nesta fase escreve ou lê essa coluna ainda.</p>
+ * <p>Autenticação própria e MFA pertencem a esta conta global. Senha
+ * nullable existe para convites ainda não aceitos. Segredos MFA são
+ * cifrados; nunca incluí-los em DTOs de cadastro ou representação textual.</p>
  *
  * <p>{@code createdAt}/{@code updatedAt} são {@code insertable=false,
  * updatable=false} porque são geridos pelo banco (DEFAULT now() /
@@ -55,6 +53,22 @@ public class Usuario {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private Instant updatedAt;
+
+    @Column(name="mfa_segredo") private String mfaSegredo;
+    @Column(name="mfa_pendente") private String mfaPendente;
+    @Column(name="mfa_pendente_ate") private Instant mfaPendenteAte;
+    @Column(name="mfa_ultimo_passo",nullable=false) private long mfaUltimoPasso=-1;
+    @Column(name="credenciais_versao",nullable=false) private long credenciaisVersao;
+    public String getMfaSegredo(){return mfaSegredo;}
+    public String getMfaPendente(){return mfaPendente;}
+    public Instant getMfaPendenteAte(){return mfaPendenteAte;}
+    public long getMfaUltimoPasso(){return mfaUltimoPasso;}
+    public long getCredenciaisVersao(){return credenciaisVersao;}
+    public void invalidarCredenciais(){credenciaisVersao++;}
+    public void prepararMfa(String segredo,Instant ate){mfaPendente=segredo;mfaPendenteAte=ate;}
+    public void ativarMfa(long passo){mfaSegredo=mfaPendente;mfaPendente=null;mfaPendenteAte=null;mfaUltimoPasso=passo;invalidarCredenciais();}
+    public void desativarMfa(){mfaSegredo=null;mfaPendente=null;mfaPendenteAte=null;mfaUltimoPasso=-1;invalidarCredenciais();}
+    public void consumirPassoMfa(long passo){mfaUltimoPasso=passo;}
 
     protected Usuario() {
         // JPA

@@ -17,7 +17,7 @@ class LimiteLoginHttpIntegrationTest extends AbstractIntegrationTest {
     @Autowired MockMvc mvc;
     @MockitoBean AuthService auth;
     @Test void limiteDeContaResponde429AntesDoServico() throws Exception {
-        when(auth.login(anyString(),anyString(),anyString(),any())).thenThrow(new UnauthorizedException("Acesso inválido."));
+        when(auth.login(anyString(),anyString(),nullable(String.class),anyString(),any())).thenThrow(new UnauthorizedException("Acesso inválido."));
         String email="a"+java.util.UUID.randomUUID()+"@teste.com";
         for(int n=0;n<3;n++) {
             var resposta=mvc.perform(post("/auth/login").contentType("application/json")
@@ -25,9 +25,9 @@ class LimiteLoginHttpIntegrationTest extends AbstractIntegrationTest {
             if(n<2)resposta.andExpect(status().isUnauthorized());
             else resposta.andExpect(status().isTooManyRequests()).andExpect(header().exists("Retry-After")).andExpect(jsonPath("$.codigo").value("LOGIN_LIMITADO"));
         }
-        verify(auth,times(2)).login(anyString(),anyString(),anyString(),any());
+        verify(auth,times(2)).login(anyString(),anyString(),nullable(String.class),anyString(),any());
     }    @Test void ipLimitaContasDiferentesMesmoComHeaderForjado() throws Exception {
-        when(auth.login(anyString(),anyString(),anyString(),any())).thenThrow(new UnauthorizedException("Acesso inválido."));
+        when(auth.login(anyString(),anyString(),nullable(String.class),anyString(),any())).thenThrow(new UnauthorizedException("Acesso inválido."));
         for(int n=0;n<4;n++) {
             String email="a"+java.util.UUID.randomUUID()+"@teste.com";
             var resposta=mvc.perform(post("/auth/login").contentType("application/json")
@@ -35,7 +35,7 @@ class LimiteLoginHttpIntegrationTest extends AbstractIntegrationTest {
                 .with(req -> {req.setRemoteAddr("198.51.100.21");return req;}).header("X-Forwarded-For","203.0.113."+n));
             resposta.andExpect(n<3 ? status().isUnauthorized() : status().isTooManyRequests());
         }
-        verify(auth,times(3)).login(anyString(),anyString(),anyString(),any());
+        verify(auth,times(3)).login(anyString(),anyString(),nullable(String.class),anyString(),any());
     }
 
 }

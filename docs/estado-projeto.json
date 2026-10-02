@@ -13,8 +13,8 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V074__indice_ordenacao_seletores.sql",
-    "quantidade": 74
+    "ultima": "V075__mfa_usuario.sql",
+    "quantidade": 75
   },
   "importacao_pessoas": {
     "manual": "docs/importacao-pessoas.md",
@@ -24,5 +24,10 @@
     ],
     "limite_pessoas": 100,
     "mesclagem": false
+  },
+  "mfa": {
+    "manual": "docs/mfa-usuarios.md",
+    "conta_global": true,
+    "chaves_externas": true
   }
 }

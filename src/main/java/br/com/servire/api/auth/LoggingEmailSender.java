@@ -31,10 +31,9 @@ import org.springframework.stereotype.Component;
  * define {@code servire.email.provider: resend}, desativando este bean e
  * ativando {@link ResendEmailSender} no lugar.</p>
  *
- * <p><b>Cuidado ao usar em qualquer ambiente compartilhado:</b> o link
- * (que contém o token de reset em texto puro) só é logado em nível DEBUG
- * — nunca em INFO — porque a seção 58 do plano mestre proíbe logar token
- * em log de aplicação.</p>
+ * <p>O stub registra somente que uma entrega foi solicitada. Tokens de
+ * redefinição/convite não são registrados nem em DEBUG. Usar provedor de
+ * teste com captura de e-mail para conferir o link; nunca logs compartilhados.</p>
  */
 @Component
 @ConditionalOnProperty(prefix = "servire.email", name = "provider", havingValue = "log", matchIfMissing = true)
@@ -45,12 +44,12 @@ public class LoggingEmailSender implements EmailSender {
     @Override
     public void enviarLinkResetSenha(String destinatario, String linkComToken) {
         log.debug("[STUB — sem provedor de e-mail configurado, ver javadoc de LoggingEmailSender] "
-                + "Link de reset de senha para {}: {}", destinatario, linkComToken);
+                + "Pedido de reset de senha para {} (link omitido)", destinatario);
     }
 
     @Override
     public void enviarConvite(String destinatario, String linkComToken) {
-        log.debug("[STUB] Convite para {}: {}", destinatario, linkComToken);
+        log.debug("[STUB] Convite para {} (link omitido)", destinatario);
     }
 
     @Override

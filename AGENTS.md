@@ -109,3 +109,5 @@ Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar
 
 - Rodada 11–17: docs/liturgia.md, docs/indicadores-participacao.md, docs/estoque-patrimonio.md e docs/seletores-escala.md. Nenhuma geração de conteúdo; estoque só muda por movimento com chave/versão.
 - Métricas: docs/monitoramento.md; credencial exclusiva e opcional, sem dados pessoais ou acesso de negócio. Endpoint bloqueado no proxy público; não ativar operação externa como efeito da implementação.
+
+- [MFA da conta](docs/mfa-usuarios.md): TOTP e recuperação globais, rotas próprias sem permissão de domínio, suporte recusado, versão de credenciais nos tokens. Nunca contornar por redefinição por e-mail.

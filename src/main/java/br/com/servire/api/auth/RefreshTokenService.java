@@ -27,10 +27,12 @@ public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final SecurityProperties properties;
+    private final UsuarioRepository usuarios;
 
-    public RefreshTokenService(RefreshTokenRepository refreshTokenRepository, SecurityProperties properties) {
+    public RefreshTokenService(RefreshTokenRepository refreshTokenRepository, SecurityProperties properties, UsuarioRepository usuarios) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.properties = properties;
+        this.usuarios = usuarios;
     }
 
     @Transactional
@@ -51,6 +53,8 @@ public class RefreshTokenService {
     @Transactional
     public RotacaoResultado rotacionar(String tokenBruto, String ip, String userAgent) {
         String hash = OpaqueTokenGenerator.hash(tokenBruto);
+        UUID usuarioId = refreshTokenRepository.usuarioDoToken(hash).orElseThrow(() -> new UnauthorizedException("Refresh token desconhecido."));
+        usuarios.buscarParaAlterar(usuarioId).orElseThrow(() -> new UnauthorizedException("Usuário não encontrado."));
         RefreshToken atual = refreshTokenRepository.findByTokenHash(hash)
                 .orElseThrow(() -> new UnauthorizedException("Refresh token desconhecido."));
 
@@ -103,6 +107,9 @@ public class RefreshTokenService {
             }
         });
     }
+
+    @Transactional
+    public void revogarNaTransacao(UUID id) {refreshTokenRepository.revogarNaTransacao(id,Instant.now());}
 
     public record RotacaoResultado(Usuario usuario, String novoTokenBruto) {
     }

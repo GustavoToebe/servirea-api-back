@@ -54,6 +54,10 @@ public class PasswordResetTokenService {
      * @throws UnauthorizedException se o token for desconhecido, já usado
      * ou expirado.
      */
+    @Transactional(readOnly=true)
+    public java.util.UUID usuarioDoToken(String bruto) {
+        return repository.usuarioDoToken(OpaqueTokenGenerator.hash(bruto)).orElseThrow(() -> new UnauthorizedException("Token de redefinição inválido."));
+    }
     @Transactional
     public Usuario consumir(String tokenBruto) {
         PasswordResetToken token = repository.findByTokenHash(OpaqueTokenGenerator.hash(tokenBruto))

@@ -6,6 +6,8 @@ public record MeRequest(
         @NotBlank String nome,
         String tipoTelefone,
         String telefone,
-        String senha
+        String senha,
+        String senhaAtual,
+        @jakarta.validation.constraints.Size(max=64) String codigoMfa
 ) {
 }

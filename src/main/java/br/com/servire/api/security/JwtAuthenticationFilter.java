@@ -166,7 +166,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         Usuario usuarioEntidade = usuarioRepository.findById(claims.usuarioId()).orElse(null);
-        if (usuarioEntidade == null || !usuarioEntidade.isAtivo()) {
+        if (usuarioEntidade == null || !usuarioEntidade.isAtivo() || jwtService.versaoCredenciais(token) != usuarioEntidade.getCredenciaisVersao()) {
             return Optional.empty();
         }
 

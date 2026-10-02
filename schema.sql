@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V074). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V075). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict aC14krGq7DzJdxy3BUrArK8fh6S0VKGvWcxBh62s0vaLllF0HeW1VNHl3FnPZWg
+\restrict fqVPjbl1Ej1jwwtz2kBt0SZmCOmnwNsRFeZif71cYUCwqM0toj4BE3iDWTVygeQ
 
 
 
@@ -1598,7 +1598,12 @@ CREATE TABLE public.usuario (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     telefone text,
-    tipo_telefone text
+    tipo_telefone text,
+    mfa_segredo text,
+    mfa_pendente text,
+    mfa_pendente_ate timestamp with time zone,
+    mfa_ultimo_passo bigint DEFAULT '-1'::integer NOT NULL,
+    credenciais_versao bigint DEFAULT 0 NOT NULL
 );
 
 
@@ -1614,6 +1619,17 @@ COMMENT ON TABLE public.usuario IS 'Usuário global do SaaS (Master lógico, se�
 --
 
 COMMENT ON COLUMN public.usuario.senha_hash IS 'Hash Argon2 ou BCrypt (seção 32 do plano mestre) - nunca senha reversível. Nullable por enquanto: a Fase 5 (autenticação própria) é quem efetivamente popula/usa esta coluna; até lá a tabela existe só como parte do modelo.';
+
+
+--
+-- Name: usuario_mfa_recuperacao; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usuario_mfa_recuperacao (
+    usuario_id uuid NOT NULL,
+    codigo_hash character varying(64) NOT NULL,
+    usado_em timestamp with time zone
+);
 
 
 --
@@ -2609,6 +2625,14 @@ ALTER TABLE ONLY public.usuario_tenant
 
 ALTER TABLE ONLY public.usuario
     ADD CONSTRAINT usuario_email_key UNIQUE (email);
+
+
+--
+-- Name: usuario_mfa_recuperacao usuario_mfa_recuperacao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usuario_mfa_recuperacao
+    ADD CONSTRAINT usuario_mfa_recuperacao_pkey PRIMARY KEY (usuario_id, codigo_hash);
 
 
 --
@@ -4382,6 +4406,14 @@ ALTER TABLE ONLY public.tenant_telefone
 
 
 --
+-- Name: usuario_mfa_recuperacao usuario_mfa_recuperacao_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usuario_mfa_recuperacao
+    ADD CONSTRAINT usuario_mfa_recuperacao_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuario(id) ON DELETE CASCADE;
+
+
+--
 -- Name: usuario_tenant usuario_tenant_perfil_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4818,6 +4850,12 @@ ALTER TABLE public.tenant_telefone ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.usuario ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: usuario_mfa_recuperacao; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.usuario_mfa_recuperacao ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: usuario_tenant; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4832,5 +4870,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict aC14krGq7DzJdxy3BUrArK8fh6S0VKGvWcxBh62s0vaLllF0HeW1VNHl3FnPZWg
+\unrestrict fqVPjbl1Ej1jwwtz2kBt0SZmCOmnwNsRFeZif71cYUCwqM0toj4BE3iDWTVygeQ
 

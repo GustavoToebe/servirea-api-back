@@ -64,7 +64,7 @@ public class AuthController {
         try {limiteLogin.registrar(ip(httpRequest),request.email());}
         catch(LimiteLoginException ex){httpResponse.setHeader("Retry-After",Long.toString(ex.segundos()));throw ex;}
         AuthService.LoginResultado resultado = authService.login(
-                request.email(), request.senha(), ip(httpRequest), userAgent(httpRequest));
+                request.email(), request.senha(), request.codigoMfa(), ip(httpRequest), userAgent(httpRequest));
 
         if (resultado.precisaSelecionarTenant()) {
             return ResponseEntity.ok(LoginResponse.pendenteSelecao(
@@ -116,7 +116,8 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
+    public ResponseEntity<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request,HttpServletRequest req,HttpServletResponse res) {
+        limitarRecuperacao(request.email(),req,res);
         authService.esqueciSenha(request.email());
         // Sempre 202, exista ou não o e-mail - nunca revelar (evita
         // enumeração de e-mails cadastrados).
@@ -124,11 +125,17 @@ public class AuthController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
-        authService.redefinirSenha(request.token(), request.novaSenha());
+    public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest request,HttpServletRequest req,HttpServletResponse res) {
+        limitarRecuperacao("reset:"+ClientIp.de(req),req,res);
+        authService.redefinirSenha(request.token(), request.novaSenha(), request.codigoMfa());
         return ResponseEntity.noContent().build();
     }
 
+    private void limitarRecuperacao(String conta,HttpServletRequest req,HttpServletResponse res) {
+        res.setHeader("Cache-Control","no-store");
+        try{limiteLogin.registrar(ClientIp.de(req),conta);}
+        catch(LimiteLoginException ex){res.setHeader("Retry-After",Long.toString(ex.segundos()));throw ex;}
+    }
     private void setRefreshTokenCookie(HttpServletResponse response, String refreshTokenBruto) {
         ResponseCookie cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshTokenBruto)
                 .httpOnly(true)

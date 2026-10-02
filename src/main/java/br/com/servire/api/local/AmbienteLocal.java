@@ -115,6 +115,7 @@ public class AmbienteLocal implements ApplicationRunner {
         local.setAcessoLiberado(true);
         local.setPlanoCodigo("PAROQUIA");
         local.setPlanoNome("Paróquia");
+        local.setFuncionalidades(br.com.servire.api.integracao.FuncionalidadesPlano.CODIGOS.toArray(String[]::new));
         local.setConfirmadoEm(Instant.now());
         direitos.save(local);
         jdbc.update("""

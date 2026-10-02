@@ -28,13 +28,15 @@ public class MeController {
     private final UsuarioRepository usuarioRepository;
     private final UsuarioTenantRepository usuarioTenantRepository;
     private final PasswordEncoder passwordEncoder;
+    private final br.com.servire.api.auth.MfaService mfa;
 
     public MeController(UsuarioRepository usuarioRepository,
                         UsuarioTenantRepository usuarioTenantRepository,
-                        PasswordEncoder passwordEncoder) {
+                        PasswordEncoder passwordEncoder, br.com.servire.api.auth.MfaService mfa) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioTenantRepository = usuarioTenantRepository;
         this.passwordEncoder = passwordEncoder;
+        this.mfa = mfa;
     }
 
     @GetMapping
@@ -43,18 +45,19 @@ public class MeController {
     }
 
     @PutMapping
+    @org.springframework.transaction.annotation.Transactional
     public MeResponse atualizar(@AuthenticationPrincipal AuthenticatedUser atual,
                                 @RequestBody @Valid MeRequest request) {
         if (atual.suporte()) {
             throw new ForbiddenException("O acesso de suporte não altera o perfil de ninguém.");
         }
-        Usuario usuario = usuarioRepository.findById(atual.usuarioId())
+        Usuario usuario = usuarioRepository.buscarParaAlterar(atual.usuarioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
         usuario.setNome(request.nome().trim());
         usuario.setTelefone(Formatos.telefone(request.telefone()));
         usuario.setTipoTelefone(request.tipoTelefone());
         if (request.senha() != null && !request.senha().isBlank()) {
-            usuario.setSenhaHash(passwordEncoder.encode(request.senha()));
+            mfa.alterarSenha(atual.usuarioId(),request.senhaAtual()==null ? "" : request.senhaAtual(),request.senha(),request.codigoMfa());
         }
         usuarioRepository.save(usuario);
         return resposta(atual);
@@ -77,7 +80,7 @@ public class MeController {
         if (atual.suporte()) {
             return respostaDeSuporte(atual);
         }
-        Usuario usuario = usuarioRepository.findById(atual.usuarioId())
+        Usuario usuario = usuarioRepository.buscarParaAlterar(atual.usuarioId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado."));
         var vinculo = usuarioTenantRepository
                 .findComPerfilByUsuario_IdAndTenant_Id(atual.usuarioId(), atual.tenantId());

@@ -70,3 +70,5 @@
 - [monitoramento ](monitoramento.md).
 
 - [Importação CSV/XLSX de pessoas](importacao-pessoas.md): abas, mapeamento, prévia, atomicidade e limites (F08).
+
+- [MFA dos usuários](mfa-usuarios.md): proteção da conta global, recuperação e revogação de sessões.

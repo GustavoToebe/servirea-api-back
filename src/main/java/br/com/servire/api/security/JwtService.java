@@ -88,11 +88,18 @@ public class JwtService {
      * revalida {@code operador_saas} no banco a cada request.
      */
     public String gerarAccessToken(UUID usuarioId, UUID tenantId, UsuarioTenant.Role role, boolean suporte) {
+        return gerarAccessTokenInterno(usuarioId,tenantId,role,suporte,0);
+    }
+    public String gerarAccessTokenVersionado(UUID usuarioId,UUID tenantId,UsuarioTenant.Role role,long versao) {
+        return gerarAccessTokenInterno(usuarioId,tenantId,role,false,versao);
+    }
+    private String gerarAccessTokenInterno(UUID usuarioId,UUID tenantId,UsuarioTenant.Role role,boolean suporte,long versao) {
         Instant agora = Instant.now();
         var builder = Jwts.builder()
                 .subject(usuarioId.toString())
                 .claim(CLAIM_TENANT, tenantId.toString())
                 .claim(CLAIM_ROLES, List.of(role.name()))
+                .claim("credenciaisVersao",versao)
                 .claim(CLAIM_PURPOSE, PURPOSE_ACCESS)
                 .issuedAt(Date.from(agora))
                 .expiration(Date.from(agora.plus(config.accessTokenTtl())))
@@ -134,11 +141,13 @@ public class JwtService {
                 claims.get("motivo", String.class));
     }
 
-    public String gerarTokenSelecaoTenant(UUID usuarioId) {
+    public String gerarTokenSelecaoTenant(UUID usuarioId) {return gerarTokenSelecaoTenant(usuarioId,0);}
+    public String gerarTokenSelecaoTenant(UUID usuarioId,long versao) {
         Instant agora = Instant.now();
         return Jwts.builder()
                 .subject(usuarioId.toString())
                 .claim(CLAIM_PURPOSE, PURPOSE_TENANT_SELECTION)
+                .claim("credenciaisVersao",versao)
                 .issuedAt(Date.from(agora))
                 .expiration(Date.from(agora.plus(config.tenantSelectionTokenTtl())))
                 .signWith(key)
@@ -196,6 +205,10 @@ public class JwtService {
         return parseUuidClaim(claims.getSubject(), "sub");
     }
 
+    public long versaoCredenciais(String token) {
+        Number versao = parseClaims(token).get("credenciaisVersao",Number.class);
+        return versao==null ? 0 : versao.longValue();
+    }
     private Claims parseClaims(String token) {
         try {
             return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
