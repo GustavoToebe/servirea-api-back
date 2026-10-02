@@ -28,15 +28,15 @@ public class PortalService {
  public List<Compromisso> compromissos(UUID pessoa,LocalDate de,LocalDate ate){
   if(de==null||ate==null||ate.isBefore(de)||java.time.temporal.ChronoUnit.DAYS.between(de,ate)>366) throw new BadRequestException("Informe um período de até 366 dias.");
   List<Compromisso> itens=new ArrayList<>();
-  var vagas=em.createQuery("select v.id,e.data,e.horario,e.celebracao,v.funcao from EscalaVaga v join v.evento e join e.escala s where v.voluntario.id=:pessoa and s.status=:status and e.referencia=false and e.data between :de and :ate",Object[].class)
+  var vagas=em.createQuery("select v.id,e.data,e.horario,e.celebracao,v.funcao,v.resposta,v.respostaVersao,v.respostaEm from EscalaVaga v join v.evento e join e.escala s where v.voluntario.id=:pessoa and s.status=:status and e.referencia=false and e.data between :de and :ate",Object[].class)
    .setParameter("pessoa",pessoa).setParameter("status",StatusEscala.FINALIZADA).setParameter("de",de).setParameter("ate",ate).setMaxResults(501).getResultList();
-  for(var v:vagas){var inicio=((LocalDate)v[1]).atTime((LocalTime)v[2]);itens.add(new Compromisso("escala-"+v[0],"ESCALA",(String)v[3],inicio,inicio.plusHours(1),null,String.valueOf(v[4])));}
+  for(var v:vagas){var inicio=((LocalDate)v[1]).atTime((LocalTime)v[2]);itens.add(new Compromisso("escala-"+v[0],"ESCALA",(String)v[3],inicio,inicio.plusHours(1),null,String.valueOf(v[4]),(UUID)v[0],(br.com.servire.api.escala.RespostaParticipacao)v[5],((Number)v[6]).longValue(),(Instant)v[7],inicio.atZone(ZoneId.of("America/Sao_Paulo")).toInstant()));}
   var eventos=em.createQuery("select e.id,e.titulo,e.inicio,e.termino,e.localNome from Evento e, EventoInscricao i where i.eventoId=e.id and i.pessoa.id=:pessoa and e.situacao=:status and e.inicio>=:de and e.inicio<:ate",Object[].class)
    .setParameter("pessoa",pessoa).setParameter("status",Evento.Situacao.PUBLICADO).setParameter("de",de.atStartOfDay()).setParameter("ate",ate.plusDays(1).atStartOfDay()).setMaxResults(501).getResultList();
-  for(var e:eventos){var inicio=(LocalDateTime)e[2];itens.add(new Compromisso("evento-"+e[0],"EVENTO",(String)e[1],inicio,e[3]!=null?(LocalDateTime)e[3]:inicio.plusHours(1),(String)e[4],null));}
+  for(var e:eventos){var inicio=(LocalDateTime)e[2];itens.add(new Compromisso("evento-"+e[0],"EVENTO",(String)e[1],inicio,e[3]!=null?(LocalDateTime)e[3]:inicio.plusHours(1),(String)e[4],null,null,null,null,null,null));}
   if(itens.size()>500) throw new BadRequestException("Há muitos compromissos. Reduza o período.");
   itens.sort(Comparator.comparing(Compromisso::inicio).thenComparing(Compromisso::id));return List.copyOf(itens);
  }
- public record Compromisso(String id,String tipo,String titulo,LocalDateTime inicio,LocalDateTime termino,String local,String funcao) { }
+ public record Compromisso(String id,String tipo,String titulo,LocalDateTime inicio,LocalDateTime termino,String local,String funcao,UUID vagaId,br.com.servire.api.escala.RespostaParticipacao resposta,Long versao,Instant respondidoEm,Instant prazoResposta) { }
  public record Resposta(boolean vinculado,List<Compromisso> compromissos) { }
 }

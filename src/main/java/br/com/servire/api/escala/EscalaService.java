@@ -40,6 +40,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class EscalaService {
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
 
     private final EscalaRepository escalaRepository;
     private final EscalaVagaRepository escalaVagaRepository;
@@ -110,6 +112,11 @@ public class EscalaService {
     @Transactional(readOnly = true)
     public Escala buscarPorId(UUID id) {
         return inicializar(carregar(id));
+    }
+
+    private Escala carregarParaAlterar(UUID id) {
+        return escalaRepository.bloquear(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Escala não encontrada."));
     }
 
     private Escala carregar(UUID id) {
@@ -249,7 +256,7 @@ public class EscalaService {
      */
     @Transactional
     public Escala atualizar(UUID id, EscalaRequest request) {
-        Escala escala = carregar(id);
+        Escala escala = carregarParaAlterar(id);
         if (escala.getStatus() != StatusEscala.RASCUNHO) {
             throw new ConflictException(
                     "Só é possível editar uma escala em RASCUNHO — reabra a escala antes de editar.");
@@ -295,7 +302,7 @@ public class EscalaService {
 
     @Transactional
     public Escala finalizar(UUID id) {
-        Escala escala = carregar(id);
+        Escala escala = carregarParaAlterar(id);
         if (escala.getStatus() != StatusEscala.RASCUNHO) {
             throw new ConflictException("Só é possível finalizar uma escala em RASCUNHO.");
         }
@@ -309,7 +316,7 @@ public class EscalaService {
 
     @Transactional
     public Escala cancelar(UUID id) {
-        Escala escala = carregar(id);
+        Escala escala = carregarParaAlterar(id);
         if (escala.getStatus() == StatusEscala.CANCELADA) {
             throw new ConflictException("Esta escala já está cancelada.");
         }
@@ -321,11 +328,12 @@ public class EscalaService {
     /** Volta uma escala {@code FINALIZADA} (ou {@code CANCELADA}, para permitir corrigir um cancelamento por engano) para {@code RASCUNHO}, liberando edição de novo. */
     @Transactional
     public Escala reabrir(UUID id) {
-        Escala escala = carregar(id);
+        Escala escala = carregarParaAlterar(id);
         if (escala.getStatus() == StatusEscala.RASCUNHO) {
             throw new ConflictException("Esta escala já está em RASCUNHO.");
         }
         escala.setStatus(StatusEscala.RASCUNHO);
+        escala.getEventos().forEach(e -> e.getVagas().forEach(EscalaVaga::invalidarResposta));
         auditLogService.registrar("REABERTURA", "ESCALA", id, List.of("status"));
         return inicializar(escala);
     }
@@ -333,7 +341,7 @@ public class EscalaService {
     /** Só permite excluir de fato uma escala {@code CANCELADA} (seção 109 — regra explícita do plano mestre). */
     @Transactional
     public void excluir(UUID id) {
-        Escala escala = carregar(id);
+        Escala escala = carregarParaAlterar(id);
         if (escala.getStatus() != StatusEscala.CANCELADA) {
             throw new ConflictException("Só é possível excluir uma escala CANCELADA.");
         }
@@ -384,6 +392,10 @@ public class EscalaService {
     }
 
     private EscalaVaga alocar(UUID vagaId, UUID voluntarioId) {
+        UUID escalaId = entityManager.createQuery("select v.evento.escala.id from EscalaVaga v where v.id=:id", UUID.class)
+                .setParameter("id", vagaId).getResultStream().findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Vaga não encontrada."));
+        carregarParaAlterar(escalaId);
         EscalaVaga vaga = escalaVagaRepository.findById(vagaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaga não encontrada."));
         if (vaga.getEvento().isReferencia()) {

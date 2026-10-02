@@ -91,4 +91,6 @@ Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar
 
 - Nova rodada de produto: docs/funcionalidades-plano.md e docs/mural-tarefas.md. Recursos explícitos, leitura preservada, mutações protegidas; tabelas V060, histórico versionado, sem HTML/notificações.
 
-- Portal/calendário/pastorais: docs/portal-calendario-pastorais.md (V061). UsuarioTenant.pessoaId explícito, nunca inferido; calendario_assinatura global resolve tenant por hash secreto antes de TransactionTemplate. Portal só consulta pessoa própria; feed revalida vínculo/plano/perfil. Não registrar token/URL. Pastorais @TenantId, sem escopo de permissão por equipe.
+- Portal/calendário/pastorais: docs/portal-calendario-pastorais.md (V061). UsuarioTenant.pessoaId explícito, nunca inferido; calendario_assinatura global resolve tenant por hash secreto antes de TransactionTemplate. Portal consulta/responde somente pela pessoa própria; feed revalida vínculo/plano/perfil. Não registrar token/URL. Pastorais @TenantId, sem escopo de permissão por equipe.
+
+- V062: docs/respostas-escala.md. PORTAL_RESPONDER só para pessoa própria; prazo no início da celebração, servidor Brasília→UTC. Recusa não desaloca/presença. Reabrir/trocar pessoa invalida decisão. @Version vaga; lock paróquia→escala para resposta, escala para edição/alocação. Histórico mantém UUIDs após exclusão. VAGA_RESPOSTA_LER para consulta da coordenação.

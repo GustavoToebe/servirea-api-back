@@ -43,3 +43,5 @@ V053: eventos com layouts e lembretes em vários dias: `layout_envio.tipo_layout
 - Plano: integracao/FuncionalidadesPlano*, guards por handler e /funcionalidades-plano; consumo HMAC: ConsumoInstancia*.
 
 - V061: portal/ consulta pessoal; calendario/ assinatura privada; pastoral/ equipes/membros; acesso/VinculoPessoaService associação explícita. Contrato: ../portal-calendario-pastorais.md.
+
+- V062: portal/RespostaEscala* e portal/dto/RespostaEscalaDtos, estado/version em EscalaVaga. Locks em EscalaService/EscalaRepository. ../respostas-escala.md.

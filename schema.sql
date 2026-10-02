@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V061). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V062). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict mAqADfTIeAfghxzHUtcaFJ4e6hXe5PW0vN14dqBSP7NLQCbEVzNijkpxDnfYJMQ
+\restrict vy6prenbUZ06EZRfC4ZmMCk0TkX7RtNaLeheiXFIqfHnjUsut7sNngI7QwDpySD
 
 
 
@@ -427,6 +427,24 @@ COMMENT ON TABLE public.escala_eventos IS 'Um evento (missa) dentro de uma escal
 
 
 --
+-- Name: escala_resposta_historico; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.escala_resposta_historico (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    escala_id uuid NOT NULL,
+    vaga_id uuid NOT NULL,
+    pessoa_id uuid NOT NULL,
+    usuario_id uuid NOT NULL,
+    resposta character varying(20) NOT NULL,
+    respondido_em timestamp with time zone NOT NULL,
+    versao bigint NOT NULL,
+    CONSTRAINT escala_resposta_historico_resposta_check CHECK (((resposta)::text = ANY ((ARRAY['CONFIRMADA'::character varying, 'RECUSADA'::character varying])::text[])))
+);
+
+
+--
 -- Name: escala_vagas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -439,7 +457,11 @@ CREATE TABLE public.escala_vagas (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     tenant_id uuid NOT NULL,
     presenca public.presenca_vaga DEFAULT 'PENDENTE'::public.presenca_vaga NOT NULL,
-    CONSTRAINT escala_vagas_posicao_check CHECK ((posicao > 0))
+    resposta character varying(20) DEFAULT 'PENDENTE'::character varying NOT NULL,
+    resposta_em timestamp with time zone,
+    resposta_versao bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT escala_vagas_posicao_check CHECK ((posicao > 0)),
+    CONSTRAINT escala_vagas_resposta_check CHECK (((resposta)::text = ANY ((ARRAY['PENDENTE'::character varying, 'CONFIRMADA'::character varying, 'RECUSADA'::character varying])::text[])))
 );
 
 
@@ -1510,6 +1532,14 @@ ALTER TABLE ONLY public.escala_eventos
 
 
 --
+-- Name: escala_resposta_historico escala_resposta_historico_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.escala_resposta_historico
+    ADD CONSTRAINT escala_resposta_historico_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: escala_vagas escala_vagas_evento_id_funcao_posicao_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2516,6 +2546,13 @@ CREATE INDEX ix_pastoral_membros ON public.pastoral_membro USING btree (tenant_i
 
 
 --
+-- Name: ix_resposta_historico; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_resposta_historico ON public.escala_resposta_historico USING btree (tenant_id, vaga_id, pessoa_id, respondido_em, id);
+
+
+--
 -- Name: ix_tarefa_lista; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2912,6 +2949,14 @@ ALTER TABLE ONLY public.escala_eventos
 
 ALTER TABLE ONLY public.escala_eventos
     ADD CONSTRAINT escala_eventos_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: escala_resposta_historico escala_resposta_historico_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.escala_resposta_historico
+    ADD CONSTRAINT escala_resposta_historico_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -3577,6 +3622,12 @@ ALTER TABLE public.disponibilidade_voluntario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.escala_eventos ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: escala_resposta_historico; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.escala_resposta_historico ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: escala_vagas; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3837,5 +3888,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict mAqADfTIeAfghxzHUtcaFJ4e6hXe5PW0vN14dqBSP7NLQCbEVzNijkpxDnfYJMQ
+\unrestrict vy6prenbUZ06EZRfC4ZmMCk0TkX7RtNaLeheiXFIqfHnjUsut7sNngI7QwDpySD
 

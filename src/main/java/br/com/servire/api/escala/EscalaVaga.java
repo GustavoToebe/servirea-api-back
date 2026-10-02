@@ -82,6 +82,31 @@ public class EscalaVaga {
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RespostaParticipacao resposta = RespostaParticipacao.PENDENTE;
+
+    @Column(name = "resposta_em")
+    private Instant respostaEm;
+
+    @jakarta.persistence.Version
+    @Column(name = "resposta_versao", nullable = false)
+    private long respostaVersao;
+
+    public RespostaParticipacao getResposta() { return resposta; }
+    public Instant getRespostaEm() { return respostaEm; }
+    public long getRespostaVersao() { return respostaVersao; }
+
+    public void responder(RespostaParticipacao resposta, Instant quando) {
+        this.resposta = resposta;
+        this.respostaEm = quando;
+    }
+
+    public void invalidarResposta() {
+        resposta = RespostaParticipacao.PENDENTE;
+        respostaEm = null;
+    }
+
     protected EscalaVaga() {
         // JPA
     }
@@ -128,6 +153,9 @@ public class EscalaVaga {
     }
 
     public void setVoluntario(Voluntario voluntario) {
+        UUID anterior = this.voluntario == null ? null : this.voluntario.getId();
+        UUID proximo = voluntario == null ? null : voluntario.getId();
+        if (!java.util.Objects.equals(anterior, proximo)) invalidarResposta();
         this.voluntario = voluntario;
     }
 

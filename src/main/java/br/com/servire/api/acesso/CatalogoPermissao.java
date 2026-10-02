@@ -49,7 +49,8 @@ public final class CatalogoPermissao {
                             new Acao("ESCALA_CANCELAR", "Cancelar"))),
                     new Modulo("VAGA", "Vagas", List.of(
                             new Acao("VAGA_ALOCAR", "Alocar voluntário"),
-                            new Acao("VAGA_PRESENCA", "Registrar presença"))))),
+                            new Acao("VAGA_PRESENCA", "Registrar presença"),
+                            new Acao("VAGA_RESPOSTA_LER", "Consultar respostas de participação"))))),
             new Secao("Inscrições", List.of(
                     new Modulo("INSCRICAO", "Inscrição", List.of(
                             new Acao("INSCRICAO_ALTERAR", "Alterar"),
@@ -74,7 +75,7 @@ public final class CatalogoPermissao {
                             new Acao("FINANCEIRO_ALTERAR", "Editar e cancelar lançamento"),
                             new Acao("FINANCEIRO_BAIXAR", "Baixar e estornar"),
                             new Acao("FINANCEIRO_CONFIGURAR", "Gerenciar contas e categorias"))))),
-            new Secao("Voluntário", List.of(new Modulo("PORTAL_VOLUNTARIO","Meus compromissos",List.of()),new Modulo("CALENDARIO","Calendário privado",List.of()))),
+            new Secao("Voluntário", List.of(new Modulo("PORTAL_VOLUNTARIO","Meus compromissos",List.of(new Acao("PORTAL_RESPONDER","Confirmar ou recusar participação"))),new Modulo("CALENDARIO","Calendário privado",List.of()))),
             new Secao("Organização", List.of(
                     new Modulo("PASTORAL","Pastorais e equipes",List.of(new Acao("PASTORAL_CRIAR","Criar equipe"),new Acao("PASTORAL_ALTERAR","Alterar equipe"),new Acao("PASTORAL_GERENCIAR","Gerenciar participantes"))),
                     new Modulo("MURAL", "Mural de avisos", List.of(new Acao("MURAL_CRIAR", "Criar aviso"),new Acao("MURAL_ALTERAR", "Editar e arquivar aviso"))),

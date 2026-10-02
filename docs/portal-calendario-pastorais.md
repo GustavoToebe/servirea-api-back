@@ -40,3 +40,7 @@ Tabelas pastoral_equipe e pastoral_membro têm @TenantId, FKs compostas, índice
 Backend: portal/PortalService, calendario/CalendarioService e Icalendar, pastoral/PastoralService, acesso/VinculoPessoaService, CatalogoPermissao e integracao/FuncionalidadesPlano*. Frontend: features/voluntario, features/pastorais, app.routes e core/layout/menu. Contrato comercial em docs/funcionalidades-plano.md.
 
 Testes HTTP com JWT real verificam pessoa própria, estados publicados, plano explícito, vínculo/assinatura, rotação, revogação, expiração e perda de permissão. Pastorais verificam permissões, isolamento, versões, duplicidade e inativação. Testes do frontend verificam contrato, ausência de ações não implementadas, cancelamento de respostas antigas e token em memória. Execute os comandos do AGENTS.md. Validação automatizada local não substitui revisão visual, staging ou configuração de planos reais.
+
+## Evolução V062 — 02/10/2026
+
+Confirmação/recusa própria e histórico agora implementados conforme [respostas de escala](respostas-escala.md). Referências acima à ausência de confirmação descrevem a entrega V061; candidatura/troca/dependentes permanecem pendentes.

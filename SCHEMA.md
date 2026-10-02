@@ -2,7 +2,11 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V061. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V062. Migration já aplicada não se edita.
+
+## O que entrou na V062
+
+escala_vagas ganha resposta PENDENTE/CONFIRMADA/RECUSADA, resposta_em e resposta_versao (@Version). escala_resposta_historico guarda decisões pessoais com @TenantId, índice, RLS/revogação e UUIDs históricos sem cascata do domínio. Uso em docs/respostas-escala.md.
 
 ## O que entrou na V060–V061
 
@@ -46,7 +50,7 @@ Globais (sem `@TenantId`): `usuario`, `tenant`, `diocese`, `perfil`, `perfil_per
 
 `tenant_sequencial` não tem entidade. O gatilho da V038 grava o número curto.
 
-Da paróquia (`@TenantId`): `pessoa`, `pessoa_email`, `pessoa_telefone`, `pessoa_relacao`, `voluntarios`, `disponibilidade_voluntario`, `indisponibilidade_voluntario`, `resposta_indisponibilidade`, `inscricoes`, `inscricao_email`, `inscricao_telefone`, `inscricao_responsaveis`, `inscricao_responsavel_email`, `inscricao_responsavel_telefone`, `escalas`, `escala_eventos`, `escala_vagas`, `layout_escala`, `layout_envio`, `paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`, `evento`, `evento_foto`, `evento_inscricao`, `audit_log`, `financeiro_conta`, `financeiro_categoria`, `financeiro_movimento`, `mural_aviso`, `tarefa`, `pastoral_equipe`, `pastoral_membro`.
+Da paróquia (`@TenantId`): `pessoa`, `pessoa_email`, `pessoa_telefone`, `pessoa_relacao`, `voluntarios`, `disponibilidade_voluntario`, `indisponibilidade_voluntario`, `resposta_indisponibilidade`, `inscricoes`, `inscricao_email`, `inscricao_telefone`, `inscricao_responsaveis`, `inscricao_responsavel_email`, `inscricao_responsavel_telefone`, `escalas`, `escala_eventos`, `escala_vagas`, `layout_escala`, `layout_envio`, `paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`, `evento`, `evento_foto`, `evento_inscricao`, `audit_log`, `financeiro_conta`, `financeiro_categoria`, `financeiro_movimento`, `mural_aviso`, `tarefa`, `pastoral_equipe`, `pastoral_membro`, `escala_resposta_historico`.
 
 View `vw_voluntario_compromissos` (V010) existe. A lista de compromissos é montada via JPA, não via essa view.
 

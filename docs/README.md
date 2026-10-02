@@ -40,3 +40,5 @@
 - [Consumo de instâncias](consumo-instancias.md).
 
 - [Portal, calendário e pastorais](portal-calendario-pastorais.md): configuração, identidade pessoal, assinatura privada e equipes simples.
+
+- [Respostas de participação](respostas-escala.md): confirmar/recusar, prazo, histórico e consulta da coordenação.
