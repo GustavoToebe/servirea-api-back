@@ -13,8 +13,8 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V075__mfa_usuario.sql",
-    "quantidade": 75
+    "ultima": "V076__portal_dependentes.sql",
+    "quantidade": 76
   },
   "importacao_pessoas": {
     "manual": "docs/importacao-pessoas.md",
@@ -29,5 +29,10 @@
     "manual": "docs/mfa-usuarios.md",
     "conta_global": true,
     "chaves_externas": true
+  },
+  "acessos_pessoais": {
+    "manual": "docs/acessos-responsaveis-coordenacao.md",
+    "dependentes": "autorização explícita",
+    "coordenacao": "equipes próprias"
   }
 }

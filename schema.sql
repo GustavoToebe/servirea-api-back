@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V075). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V076). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict fqVPjbl1Ej1jwwtz2kBt0SZmCOmnwNsRFeZif71cYUCwqM0toj4BE3iDWTVygeQ
+\restrict SaVpdh8N4d3mj3ivIj53c7VtQshjUFbgyGlYDsA6lfXXTtqCasbO4fcVr3XLvSr
 
 
 
@@ -1351,7 +1351,11 @@ CREATE TABLE public.pessoa_relacao (
     parentesco_inverso text,
     principal boolean DEFAULT false NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT pessoa_relacao_distintos CHECK ((responsavel_id <> voluntario_id))
+    portal_consulta boolean DEFAULT false NOT NULL,
+    portal_resposta boolean DEFAULT false NOT NULL,
+    portal_versao bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT pessoa_relacao_distintos CHECK ((responsavel_id <> voluntario_id)),
+    CONSTRAINT pessoa_relacao_portal_resposta CHECK (((NOT portal_resposta) OR portal_consulta))
 );
 
 
@@ -3131,6 +3135,13 @@ CREATE INDEX ix_pastoral_membros ON public.pastoral_membro USING btree (tenant_i
 
 
 --
+-- Name: ix_pessoa_relacao_portal; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_pessoa_relacao_portal ON public.pessoa_relacao USING btree (tenant_id, responsavel_id, voluntario_id) WHERE portal_consulta;
+
+
+--
 -- Name: ix_pessoa_seletor_ordenacao; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4870,5 +4881,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict fqVPjbl1Ej1jwwtz2kBt0SZmCOmnwNsRFeZif71cYUCwqM0toj4BE3iDWTVygeQ
+\unrestrict SaVpdh8N4d3mj3ivIj53c7VtQshjUFbgyGlYDsA6lfXXTtqCasbO4fcVr3XLvSr
 

@@ -80,11 +80,12 @@ public final class CatalogoPermissao {
                             new Acao("FINANCEIRO_ALTERAR", "Editar e cancelar lançamento"),
                             new Acao("FINANCEIRO_BAIXAR", "Baixar e estornar"),
                             new Acao("FINANCEIRO_CONFIGURAR", "Gerenciar contas e categorias"))))),
-            new Secao("Voluntário", List.of(new Modulo("PORTAL_VOLUNTARIO","Meus compromissos",List.of(new Acao("PORTAL_RESPONDER","Confirmar ou recusar participação"),new Acao("PORTAL_CANDIDATAR","Candidatar-se e desistir de vagas"),new Acao("PORTAL_TROCAR","Solicitar, responder e cancelar trocas próprias"),new Acao("PORTAL_DISPONIBILIDADE","Informar indisponibilidades próprias"))),new Modulo("CALENDARIO","Calendário privado",List.of()))),
+            new Secao("Voluntário", List.of(new Modulo("PORTAL_VOLUNTARIO","Meus compromissos",List.of(new Acao("PORTAL_DEPENDENTES","Acessar dependentes autorizados"),new Acao("PORTAL_RESPONDER","Confirmar ou recusar participação"),new Acao("PORTAL_CANDIDATAR","Candidatar-se e desistir de vagas"),new Acao("PORTAL_TROCAR","Solicitar, responder e cancelar trocas próprias"),new Acao("PORTAL_DISPONIBILIDADE","Informar indisponibilidades próprias"))),new Modulo("CALENDARIO","Calendário privado",List.of()))),
             new Secao("Organização", List.of(
                     new Modulo("ANIVERSARIO","Felicitações de aniversário",List.of(new Acao("ANIVERSARIO_CONFIGURAR","Configurar agendamento"),new Acao("ANIVERSARIO_AUTORIZAR","Registrar autorização específica"))),
                     new Modulo("SITE","Página pública",List.of(new Acao("SITE_EDITAR","Editar rascunho"),new Acao("SITE_PUBLICAR","Publicar ou retirar página"))),
                     new Modulo("ONBOARDING","Primeiros passos",List.of(new Acao("ONBOARDING_GERENCIAR","Registrar revisão das etapas"))),
+                    new Modulo("PASTORAL_COORDENACAO","Minhas pastorais",List.of(new Acao("PASTORAL_COORDENACAO_GERENCIAR","Gerenciar membros próprios"))),
                     new Modulo("PASTORAL","Pastorais e equipes",List.of(new Acao("PASTORAL_CRIAR","Criar equipe"),new Acao("PASTORAL_ALTERAR","Alterar equipe"),new Acao("PASTORAL_GERENCIAR","Gerenciar participantes"))),
                     new Modulo("MURAL", "Mural de avisos", List.of(new Acao("MURAL_CONFIRMAR","Confirmar leitura própria"),new Acao("MURAL_CRIAR", "Criar aviso"),new Acao("MURAL_ALTERAR", "Editar e arquivar aviso"))),
                     new Modulo("TAREFA", "Tarefas e solicitações", List.of(new Acao("TAREFA_CRIAR", "Criar tarefa"),new Acao("TAREFA_ALTERAR", "Editar e atualizar status"))))),

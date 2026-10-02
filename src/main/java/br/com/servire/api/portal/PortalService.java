@@ -25,6 +25,16 @@ public class PortalService {
   return v.getPessoaId();
  }
  @Transactional(readOnly=true) public Resposta consultar(LocalDate de,LocalDate ate){plano.exigir("PORTAL_VOLUNTARIO");UUID pessoa=pessoaAtual();return new Resposta(pessoa!=null,pessoa==null?List.of():compromissos(pessoa,de,ate));}
+ public UUID pessoaAutorizada(UUID dependente,boolean responder){
+  UUID atual=pessoaAtual();if(atual==null)throw new ResourceNotFoundException("Pessoa vinculada não encontrada.");
+  if(dependente==null||dependente.equals(atual))return atual;
+  var a=SecurityContextHolder.getContext().getAuthentication();
+  if(a.getAuthorities().stream().noneMatch(p->p.getAuthority().equals("PERM_PORTAL_DEPENDENTES")))throw new ForbiddenException("Sem permissão para dependentes.");
+  var relacoes=em.createQuery("select r from PessoaRelacao r where r.responsavel.id=:r and r.voluntario.id=:d and r.portalConsulta=true",br.com.servire.api.pessoa.PessoaRelacao.class).setParameter("r",atual).setParameter("d",dependente).getResultList();
+  if(relacoes.isEmpty()||(responder&&!relacoes.getFirst().isPortalResposta()))throw new ResourceNotFoundException("Dependente não autorizado.");
+  return dependente;
+ }
+ @Transactional(readOnly=true) public Resposta consultarDependente(UUID dependente,LocalDate de,LocalDate ate){plano.exigir("PORTAL_VOLUNTARIO");return new Resposta(true,compromissos(pessoaAutorizada(dependente,false),de,ate));}
  public List<Compromisso> compromissos(UUID pessoa,LocalDate de,LocalDate ate){
   if(de==null||ate==null||ate.isBefore(de)||java.time.temporal.ChronoUnit.DAYS.between(de,ate)>366) throw new BadRequestException("Informe um período de até 366 dias.");
   List<Compromisso> itens=new ArrayList<>();

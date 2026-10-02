@@ -51,6 +51,14 @@ public class PessoaRelacao {
     @Column(name = "created_at", insertable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name="portal_consulta",nullable=false) private boolean portalConsulta;
+    @Column(name="portal_resposta",nullable=false) private boolean portalResposta;
+    @jakarta.persistence.Version @Column(name="portal_versao",nullable=false) private long portalVersao;
+    public boolean isPortalConsulta(){return portalConsulta;}
+    public boolean isPortalResposta(){return portalResposta;}
+    public long getPortalVersao(){return portalVersao;}
+    public void autorizarPortal(boolean consulta,boolean resposta){portalConsulta=consulta;portalResposta=resposta;}
+
     protected PessoaRelacao() {
     }
 

@@ -2,7 +2,7 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V075. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V076. Migration já aplicada não se edita.
 
 ## O que entrou na V066
 
@@ -106,3 +106,7 @@ Referências/roteiros manuais; itens e movimentos de estoque/patrimônio com sal
 ## V075 — MFA global do usuário
 
 Segredos TOTP ativo/pendente cifrados, expiração, último passo aceito e versão de credenciais em usuario. usuario_mfa_recuperacao armazena hashes de códigos de uso único, RLS sem policies e revogação da Data API. Conta global; não vincular fator a tenant.
+
+## V076 — Portal de dependentes
+
+PessoaRelacao recebe consulta/resposta explícitas e versão otimista, sem liberar vínculos anteriores automaticamente. Índice parcial por tenant/responsável/dependente. A tabela mantém RLS e revogação existentes. Ver docs/acessos-responsaveis-coordenacao.md.

@@ -29,5 +29,20 @@ public class PastoralService {
   if(existente.isPresent()&&(req.versao()==null||req.versao()!=m.versao))throw new ConflictException("O participante já existe ou mudou. Atualize a lista.");
   m.equipeId=equipe;m.pessoaId=req.pessoaId();m.papel=req.papel();m.ativo=req.ativo();membros.saveAndFlush(m);audit.registrar("PARTICIPANTE","PASTORAL",m.id,List.of("pessoaId","papel","ativo"));}
  @Transactional(readOnly=true) public List<PessoaOpcao> pessoas(String busca){if(busca==null||busca.trim().length()<2||busca.length()>120)return List.of();return em.createQuery("select p.id,p.nomeCompleto from Pessoa p where lower(p.nomeCompleto) like :texto escape '\\' order by p.nomeCompleto,p.id",Object[].class).setParameter("texto","%"+literal(busca)+"%").setMaxResults(30).getResultList().stream().map(p->new PessoaOpcao((UUID)p[0],(String)p[1])).toList();}
+ private UUID pessoaDaCoordenacao(){
+  var a=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+  if(a==null||!(a.getPrincipal() instanceof br.com.servire.api.security.AuthenticatedUser u)||u.suporte()||!Objects.equals(u.tenantId(),br.com.servire.api.tenant.TenantContext.get()))throw new ForbiddenException("Coordenação exige conta pessoal.");
+  var v=em.createQuery("select v.pessoaId from UsuarioTenant v where v.usuario.id=:u and v.tenant.id=:t and v.status=:s",UUID.class).setParameter("u",u.usuarioId()).setParameter("t",u.tenantId()).setParameter("s",br.com.servire.api.auth.UsuarioTenant.Status.ATIVO).getResultStream().findFirst().orElse(null);
+  if(v==null)throw new ForbiddenException("Vincule a conta à pessoa da coordenação.");return v;
+ }
+ private void exigirCoordenacao(UUID equipe){var m=membros.findByEquipeIdAndPessoaId(equipe,pessoaDaCoordenacao()).orElseThrow(()->new ResourceNotFoundException("Equipe não encontrada."));
+  if(!m.ativo||m.papel!=MembroPastoral.Papel.COORDENADOR||!equipes.findById(equipe).orElseThrow().ativo)throw new ResourceNotFoundException("Equipe não encontrada.");}
+ @Transactional(readOnly=true) public List<Equipe> minhasEquipes(int pagina){if(pagina<0||pagina>100000)throw new BadRequestException("Página inválida.");plano.exigir("PASTORAIS");UUID pessoa=pessoaDaCoordenacao();
+  return em.createQuery("select e from EquipePastoral e,MembroPastoral m where m.equipeId=e.id and m.pessoaId=:p and m.papel=:papel and m.ativo=true and e.ativo=true order by e.nome,e.id",EquipePastoral.class).setParameter("p",pessoa).setParameter("papel",MembroPastoral.Papel.COORDENADOR).setFirstResult(pagina*30).setMaxResults(30).getResultList().stream().map(Equipe::de).toList();}
+ @Transactional(readOnly=true) public Pagina<Membro> membrosProprios(UUID equipe,int pagina){plano.exigir("PASTORAIS");exigirCoordenacao(equipe);return membros(equipe,pagina);}
+ @Transactional public void alterarMembroProprio(UUID equipe,UUID pessoa,boolean ativo,long versao){plano.exigir("PASTORAIS");equipes.bloquear(equipe).orElseThrow(()->new ResourceNotFoundException("Equipe não encontrada."));exigirCoordenacao(equipe);
+  var m=membros.findByEquipeIdAndPessoaId(equipe,pessoa).orElseThrow(()->new ResourceNotFoundException("Membro não encontrado."));
+  if(m.papel==MembroPastoral.Papel.COORDENADOR)throw new ForbiddenException("Somente a administração altera coordenadores.");if(m.versao!=versao)throw new ConflictException("O membro mudou. Atualize a lista.");
+  m.ativo=ativo;em.flush();audit.registrar("MEMBRO_PROPRIO_ALTERADO","PASTORAL",m.id,List.of("ativo"));}
  private static String literal(String s){return s.trim().toLowerCase(Locale.ROOT).replace("\\","\\\\").replace("%","\\%").replace("_","\\_");}
 }

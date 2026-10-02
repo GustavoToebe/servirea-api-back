@@ -111,3 +111,6 @@ Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar
 - Métricas: docs/monitoramento.md; credencial exclusiva e opcional, sem dados pessoais ou acesso de negócio. Endpoint bloqueado no proxy público; não ativar operação externa como efeito da implementação.
 
 - [MFA da conta](docs/mfa-usuarios.md): TOTP e recuperação globais, rotas próprias sem permissão de domínio, suporte recusado, versão de credenciais nos tokens. Nunca contornar por redefinição por e-mail.
+
+## Acessos pessoais
+Dependentes exigem autorização explícita e conta ligada à pessoa; parentesco não concede acesso. Coordenação própria revalida membro ativo COORDENADOR a cada operação e não autoriza nomear coordenadores. Contratos em docs/acessos-responsaveis-coordenacao.md.

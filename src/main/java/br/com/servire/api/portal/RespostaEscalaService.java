@@ -34,10 +34,13 @@ public class RespostaEscalaService {
     }
 
     @Transactional
-    public Atual responder(UUID vagaId, Responder req) {
+    public Atual responder(UUID vagaId, Responder req) {return responderInterno(vagaId,req,null);}
+    @Transactional
+    public Atual responderDependente(UUID dependente,UUID vagaId,Responder req){return responderInterno(vagaId,req,dependente);}
+    private Atual responderInterno(UUID vagaId,Responder req,UUID dependente) {
         plano.exigir("PORTAL_VOLUNTARIO");
         tenants.bloquearParaCotas(TenantContext.get()).orElseThrow();
-        UUID pessoa=portal.pessoaAtual();
+        UUID pessoa=dependente==null?portal.pessoaAtual():portal.pessoaAutorizada(dependente,true);
         if(pessoa==null) throw new ResourceNotFoundException("Compromisso não encontrado.");
         UUID escalaId=em.createQuery("select v.evento.escala.id from EscalaVaga v where v.id=:id and v.voluntario.id=:pessoa", UUID.class)
                 .setParameter("id",vagaId).setParameter("pessoa",pessoa).getResultStream().findFirst()
