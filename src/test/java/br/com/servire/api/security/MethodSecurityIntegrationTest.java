@@ -495,7 +495,7 @@ class MethodSecurityIntegrationTest extends AbstractIntegrationTest {
     void semEscalaAlterarRecebe403AoGravarIndisponibilidades() throws Exception {
         mockMvc.perform(put("/escalas/indisponibilidades").param("ano", "2026").param("mes", "10")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"itens\":[],\"semRestricao\":[]}")
+                        .content("{\"itens\":[],\"semRestricao\":[],\"versao\":0}")
                         .with(comoPerfil("ESCALA"))
                         .with(csrf()))
                 .andExpect(status().isForbidden());

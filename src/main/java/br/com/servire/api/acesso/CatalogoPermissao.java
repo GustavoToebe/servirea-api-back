@@ -77,13 +77,13 @@ public final class CatalogoPermissao {
                             new Acao("FINANCEIRO_ALTERAR", "Editar e cancelar lançamento"),
                             new Acao("FINANCEIRO_BAIXAR", "Baixar e estornar"),
                             new Acao("FINANCEIRO_CONFIGURAR", "Gerenciar contas e categorias"))))),
-            new Secao("Voluntário", List.of(new Modulo("PORTAL_VOLUNTARIO","Meus compromissos",List.of(new Acao("PORTAL_RESPONDER","Confirmar ou recusar participação"),new Acao("PORTAL_CANDIDATAR","Candidatar-se e desistir de vagas"),new Acao("PORTAL_TROCAR","Solicitar, responder e cancelar trocas próprias"))),new Modulo("CALENDARIO","Calendário privado",List.of()))),
+            new Secao("Voluntário", List.of(new Modulo("PORTAL_VOLUNTARIO","Meus compromissos",List.of(new Acao("PORTAL_RESPONDER","Confirmar ou recusar participação"),new Acao("PORTAL_CANDIDATAR","Candidatar-se e desistir de vagas"),new Acao("PORTAL_TROCAR","Solicitar, responder e cancelar trocas próprias"),new Acao("PORTAL_DISPONIBILIDADE","Informar indisponibilidades próprias"))),new Modulo("CALENDARIO","Calendário privado",List.of()))),
             new Secao("Organização", List.of(
                     new Modulo("PASTORAL","Pastorais e equipes",List.of(new Acao("PASTORAL_CRIAR","Criar equipe"),new Acao("PASTORAL_ALTERAR","Alterar equipe"),new Acao("PASTORAL_GERENCIAR","Gerenciar participantes"))),
                     new Modulo("MURAL", "Mural de avisos", List.of(new Acao("MURAL_CRIAR", "Criar aviso"),new Acao("MURAL_ALTERAR", "Editar e arquivar aviso"))),
                     new Modulo("TAREFA", "Tarefas e solicitações", List.of(new Acao("TAREFA_CRIAR", "Criar tarefa"),new Acao("TAREFA_ALTERAR", "Editar e atualizar status"))))),
             new Secao("Relatórios", List.of(
-                    new Modulo("AUDITORIA", "Auditoria", List.of())))
+                    new Modulo("AUDITORIA", "Auditoria e relatórios", List.of(new Acao("RELATORIO_EXPORTAR","Exportar participação em CSV")))))
     );
 
     private static final Set<String> CODIGOS;

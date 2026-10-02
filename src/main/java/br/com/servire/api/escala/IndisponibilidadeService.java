@@ -44,13 +44,15 @@ public class IndisponibilidadeService {
     private final PessoaRepository pessoas;
     private final EscalaRepository escalas;
     private final AuditLogService auditLogService;
+    private final IndisponibilidadeMesService meses;
 
     @PersistenceContext
     private EntityManager entityManager;
 
     public IndisponibilidadeService(IndisponibilidadeRepository indisponibilidades, RespostaIndisponibilidadeRepository respostas,
                                     VoluntarioRepository voluntarios, PessoaRepository pessoas, EscalaRepository escalas,
-                                    AuditLogService auditLogService) {
+                                    AuditLogService auditLogService, IndisponibilidadeMesService meses) {
+        this.meses=meses;
         this.indisponibilidades = indisponibilidades;
         this.respostas = respostas;
         this.voluntarios = voluntarios;
@@ -59,14 +61,14 @@ public class IndisponibilidadeService {
         this.auditLogService = auditLogService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public MesResponse buscar(int ano, int mes) {
         YearMonth ym = mesValido(ano, mes);
         List<Item> itens = indisponibilidades.findByDataBetweenOrderByDataAsc(ym.atDay(1), ym.atEndOfMonth()).stream()
                 .map(i -> new Item(i.getVoluntarioId(), i.getData(), i.getPeriodo(), i.getObservacao())).toList();
         List<UUID> sem = respostas.findByAnoAndMes(ano, mes).stream()
                 .filter(RespostaIndisponibilidade::isSemRestricao).map(RespostaIndisponibilidade::getVoluntarioId).toList();
-        return new MesResponse(ano, mes, itens, sem);
+        return new MesResponse(ano, mes, itens, sem, meses.versao(ano,mes));
     }
 
     /** Substitui o mês inteiro. Apaga, faz {@code flush} (índice único parcial) e reinsere. */
@@ -95,6 +97,7 @@ public class IndisponibilidadeService {
             throw new BadRequestException("Há voluntário que não é desta paróquia.");
         }
 
+        meses.avancar(ano,mes,req.versao());
         indisponibilidades.deleteByDataBetween(ym.atDay(1), ym.atEndOfMonth());
         respostas.deleteByAnoAndMes(ano, mes);
         entityManager.flush();

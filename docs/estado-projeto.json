@@ -13,7 +13,7 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V064__trocas_escala.sql",
-    "quantidade": 64
+    "ultima": "V065__tarefas_responsavel_indisponibilidade_mes.sql",
+    "quantidade": 65
   }
 }

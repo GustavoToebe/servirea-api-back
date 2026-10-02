@@ -10,5 +10,7 @@ public interface IndisponibilidadeRepository extends JpaRepository<Indisponibili
 
     List<Indisponibilidade> findByDataBetweenOrderByDataAsc(LocalDate de, LocalDate ate);
 
+    List<Indisponibilidade> findByVoluntarioIdAndDataBetweenOrderByDataAsc(UUID voluntarioId,LocalDate de,LocalDate ate);
+    void deleteByVoluntarioIdAndDataBetween(UUID voluntarioId,LocalDate de,LocalDate ate);
     void deleteByDataBetween(LocalDate de, LocalDate ate);
 }

@@ -54,14 +54,14 @@ class IndisponibilidadeIntegrationTest extends AbstractIntegrationTest {
     void gravaLeESubstituiOMes() {
         service.salvar(2026, 10, new MesRequest(List.of(
                 new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, "viagem"),
-                new Item(ana.getId(), LocalDate.of(2026, 10, 4), Periodo.MANHA, null)), List.of(bruno.getId())));
+                new Item(ana.getId(), LocalDate.of(2026, 10, 4), Periodo.MANHA, null)), List.of(bruno.getId()), service.buscar(2026,10).versao()));
 
         MesResponse lido = service.buscar(2026, 10);
         assertThat(lido.itens()).hasSize(2);
         assertThat(lido.itens().getFirst().observacao()).isEqualTo("viagem");
         assertThat(lido.semRestricao()).containsExactly(bruno.getId());
 
-        service.salvar(2026, 10, new MesRequest(List.of(new Item(bruno.getId(), LocalDate.of(2026, 10, 17), null, null)), List.of()));
+        service.salvar(2026, 10, new MesRequest(List.of(new Item(bruno.getId(), LocalDate.of(2026, 10, 17), null, null)), List.of(), service.buscar(2026,10).versao()));
         lido = service.buscar(2026, 10);
         assertThat(lido.itens()).extracting(Item::voluntarioId).containsExactly(bruno.getId());
         assertThat(lido.semRestricao()).isEmpty();
@@ -71,24 +71,24 @@ class IndisponibilidadeIntegrationTest extends AbstractIntegrationTest {
     @Test
     void dataDeOutroMesDa400() {
         assertThatThrownBy(() -> service.salvar(2026, 10, new MesRequest(
-                List.of(new Item(ana.getId(), LocalDate.of(2026, 11, 1), null, null)), List.of())))
+                List.of(new Item(ana.getId(), LocalDate.of(2026, 11, 1), null, null)), List.of(), service.buscar(2026,10).versao())))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("não é do mês");
     }
 
     @Test
     void restricaoESemRestricaoJuntosDa400() {
         assertThatThrownBy(() -> service.salvar(2026, 10, new MesRequest(
-                List.of(new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, null)), List.of(ana.getId()))))
+                List.of(new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, null)), List.of(ana.getId()), service.buscar(2026,10).versao())))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("sem restrição");
     }
 
     @Test
     void outraParoquiaNaoVe() {
-        service.salvar(2026, 10, new MesRequest(List.of(new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, null)), List.of()));
+        service.salvar(2026, 10, new MesRequest(List.of(new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, null)), List.of(), service.buscar(2026,10).versao()));
         TenantContext.set(outroTenantId);
         assertThat(service.buscar(2026, 10).itens()).isEmpty();
         assertThatThrownBy(() -> service.salvar(2026, 10, new MesRequest(
-                List.of(new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, null)), List.of())))
+                List.of(new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, null)), List.of(), service.buscar(2026,10).versao())))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("não é desta paróquia");
     }
 }

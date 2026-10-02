@@ -75,7 +75,7 @@ class ApoioEscalaIntegrationTest extends AbstractIntegrationTest {
         Pessoa caio = filho("Caio", joana);
         Pessoa unico = filho("Único", responsavel("Rosa"));
 
-        service.salvar(2026, 10, new MesRequest(List.of(new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, null)), List.of(bruno.getId())));
+        service.salvar(2026, 10, new MesRequest(List.of(new Item(ana.getId(), LocalDate.of(2026, 10, 3), null, null)), List.of(bruno.getId()), service.buscar(2026,10).versao()));
         Escala escala = escalaService.criar(new EscalaRequest("Mensal Outubro", TipoEscala.MENSAL, 2026, 10, null, null,
                 List.of(new EscalaEventoRequest(LocalDate.of(2026, 10, 3), LocalTime.of(19, 0), "Missa",
                         List.of(new EscalaVagaRequest(FuncaoEscala.MISSAL, 1, null))))), null);

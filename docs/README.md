@@ -1,5 +1,7 @@
 # Documentos do servire-api-back
 
+- [Fontes e retomada](desenvolvimento/fontes-e-retomada.md): precedência, estado atual e histórico.
+
 Índice. `AGENTS.md` e `CLAUDE.md` ficam na raiz: as ferramentas de código leem esses nomes ali.
 
 | Arquivo | Para quê |
@@ -46,3 +48,5 @@
 - [Candidaturas a vagas](candidaturas-vagas.md): portal, decisão da coordenação, elegibilidade e concorrência.
 
 - [Trocas de escala com aceite e aprovação](trocas-escala.md).
+
+- [Tarefas, relatórios e indisponibilidade](tarefas-relatorios-disponibilidade.md): responsável, CSV autorizado e portal próprio (V065).

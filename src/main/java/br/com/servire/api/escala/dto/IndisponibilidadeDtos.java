@@ -19,10 +19,10 @@ public final class IndisponibilidadeDtos {
     public record Item(@NotNull UUID voluntarioId, @NotNull LocalDate data, Periodo periodo, @Size(max = 200) String observacao) {
     }
 
-    public record MesRequest(@NotNull List<@Valid Item> itens, @NotNull List<UUID> semRestricao) {
+    public record MesRequest(@NotNull List<@Valid Item> itens, @NotNull List<@NotNull UUID> semRestricao, @NotNull @jakarta.validation.constraints.PositiveOrZero Long versao) {
     }
 
-    public record MesResponse(int ano, int mes, List<Item> itens, List<UUID> semRestricao) {
+    public record MesResponse(int ano, int mes, List<Item> itens, List<UUID> semRestricao, long versao) {
     }
 
     public enum Situacao { COM_RESTRICAO, SEM_RESTRICAO, PENDENTE }

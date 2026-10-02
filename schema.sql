@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V064). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V065). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict tIT6WA8sheFVgRPcUYS2kTtYAmdQjX4myilbLqWvbUP27TxiIUYdDPZR1kaGcin
+\restrict CpkY1bsg7NRcGj8o6gpceP3NAgdKMU5jLbka7HeWnwnZzaUBg1gXpd2o9YvFZKX
 
 
 
@@ -723,6 +723,22 @@ CREATE TABLE public.importacao_pessoa (
 
 
 --
+-- Name: indisponibilidade_mes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.indisponibilidade_mes (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    ano integer NOT NULL,
+    mes integer NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT indisponibilidade_mes_ano_check CHECK (((ano >= 2000) AND (ano <= 2100))),
+    CONSTRAINT indisponibilidade_mes_mes_check CHECK (((mes >= 1) AND (mes <= 12))),
+    CONSTRAINT indisponibilidade_mes_versao_check CHECK ((versao >= 0))
+);
+
+
+--
 -- Name: indisponibilidade_voluntario; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1249,6 +1265,7 @@ CREATE TABLE public.tarefa (
     equipe character varying(120),
     criado_em timestamp with time zone NOT NULL,
     atualizado_em timestamp with time zone NOT NULL,
+    responsavel_usuario_id uuid,
     CONSTRAINT tarefa_status_check CHECK (((status)::text = ANY ((ARRAY['ABERTA'::character varying, 'EM_ANDAMENTO'::character varying, 'CONCLUIDA'::character varying, 'CANCELADA'::character varying])::text[])))
 );
 
@@ -1754,6 +1771,22 @@ ALTER TABLE ONLY public.importacao_pessoa
 
 ALTER TABLE ONLY public.importacao_pessoa
     ADD CONSTRAINT importacao_pessoa_tenant_id_chave_key UNIQUE (tenant_id, chave);
+
+
+--
+-- Name: indisponibilidade_mes indisponibilidade_mes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.indisponibilidade_mes
+    ADD CONSTRAINT indisponibilidade_mes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: indisponibilidade_mes indisponibilidade_mes_tenant_id_ano_mes_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.indisponibilidade_mes
+    ADD CONSTRAINT indisponibilidade_mes_tenant_id_ano_mes_key UNIQUE (tenant_id, ano, mes);
 
 
 --
@@ -2640,6 +2673,13 @@ CREATE INDEX ix_pastoral_membros ON public.pastoral_membro USING btree (tenant_i
 
 
 --
+-- Name: ix_relatorio_evento_data; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_relatorio_evento_data ON public.escala_eventos USING btree (tenant_id, data, id) WHERE (referencia = false);
+
+
+--
 -- Name: ix_resposta_historico; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2658,6 +2698,13 @@ CREATE INDEX ix_tarefa_lista ON public.tarefa USING btree (tenant_id, status, cr
 --
 
 CREATE INDEX ix_tarefa_recentes ON public.tarefa USING btree (tenant_id, criado_em DESC, id DESC);
+
+
+--
+-- Name: ix_tarefa_responsavel; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_tarefa_responsavel ON public.tarefa USING btree (tenant_id, responsavel_usuario_id, status, criado_em, id);
 
 
 --
@@ -3314,6 +3361,14 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 
 
 --
+-- Name: tarefa fk_tarefa_responsavel; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarefa
+    ADD CONSTRAINT fk_tarefa_responsavel FOREIGN KEY (responsavel_usuario_id, tenant_id) REFERENCES public.usuario_tenant(usuario_id, tenant_id) ON DELETE SET NULL (responsavel_usuario_id);
+
+
+--
 -- Name: usuario_tenant fk_usuario_pessoa_tenant; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3327,6 +3382,14 @@ ALTER TABLE ONLY public.usuario_tenant
 
 ALTER TABLE ONLY public.importacao_pessoa
     ADD CONSTRAINT importacao_pessoa_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: indisponibilidade_mes indisponibilidade_mes_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.indisponibilidade_mes
+    ADD CONSTRAINT indisponibilidade_mes_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -3838,6 +3901,12 @@ ALTER TABLE public.financeiro_movimento ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.importacao_pessoa ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: indisponibilidade_mes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.indisponibilidade_mes ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: indisponibilidade_voluntario; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4038,5 +4107,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict tIT6WA8sheFVgRPcUYS2kTtYAmdQjX4myilbLqWvbUP27TxiIUYdDPZR1kaGcin
+\unrestrict CpkY1bsg7NRcGj8o6gpceP3NAgdKMU5jLbka7HeWnwnZzaUBg1gXpd2o9YvFZKX
 

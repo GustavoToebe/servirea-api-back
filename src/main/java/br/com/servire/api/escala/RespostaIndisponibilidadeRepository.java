@@ -9,5 +9,7 @@ public interface RespostaIndisponibilidadeRepository extends JpaRepository<Respo
 
     List<RespostaIndisponibilidade> findByAnoAndMes(int ano, int mes);
 
+    List<RespostaIndisponibilidade> findByVoluntarioIdAndAnoAndMes(UUID voluntarioId,int ano,int mes);
+    void deleteByVoluntarioIdAndAnoAndMes(UUID voluntarioId,int ano,int mes);
     void deleteByAnoAndMes(int ano, int mes);
 }

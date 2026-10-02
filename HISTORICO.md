@@ -1,5 +1,7 @@
 # Histórico do Servirea API
 
+> Arquivo histórico: descreve a situação de cada época. Para regras e contratos atuais, consulte [fontes e retomada](docs/desenvolvimento/fontes-e-retomada.md) e [índice vigente](docs/README.md).
+
 Estado atual, contrato do front e como rodar: **`README.md`**.
 Instruções para agentes: **`AGENTS.md`**. Este arquivo guarda o diário
 das fases, bugs reais e confirmações de build — não use como fonte do

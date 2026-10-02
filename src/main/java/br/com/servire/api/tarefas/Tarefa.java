@@ -8,6 +8,7 @@ import java.util.UUID;
 public class Tarefa {
  @Id @GeneratedValue(strategy=GenerationType.UUID) public UUID id;
  @TenantId @Column(name="tenant_id",nullable=false) public UUID tenantId;
+ @Column(name="responsavel_usuario_id") public UUID responsavelUsuarioId;
  @Version public long versao;
  @Column(nullable=false,length=160) public String titulo;
  @Column(nullable=false,length=4000) public String descricao;

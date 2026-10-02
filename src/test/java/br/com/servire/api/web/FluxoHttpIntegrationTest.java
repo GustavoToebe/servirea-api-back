@@ -569,7 +569,7 @@ class FluxoHttpIntegrationTest extends AbstractIntegrationTest {
     @Test
     void indisponibilidadesEApoioDaMensalViaHttp() throws Exception {
         mockMvc.perform(json(put("/escalas/indisponibilidades").param("ano", "2026").param("mes", "10"),
-                        "{\"itens\":[],\"semRestricao\":[]}"))
+                        "{\"itens\":[],\"semRestricao\":[],\"versao\":0}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mes").value(10));
         mockMvc.perform(autenticado(get("/escalas/indisponibilidades").param("ano", "2026").param("mes", "10")))

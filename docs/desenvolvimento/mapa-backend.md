@@ -47,3 +47,6 @@ V053: eventos com layouts e lembretes em vários dias: `layout_envio.tipo_layout
 - V062: portal/RespostaEscala* e portal/dto/RespostaEscalaDtos, estado/version em EscalaVaga. Locks em EscalaService/EscalaRepository. ../respostas-escala.md.
 
 - V063: portal/Candidatura*, portal/dto/CandidaturaDtos; EscalaService invalida pedidos e avança ciclo ao reabrir. ../candidaturas-vagas.md.
+
+- V064: portal/Troca* e escala/ElegibilidadeEscalaService. [Trocas](../trocas-escala.md).
+- V065: tarefas/TarefaService (responsável e diretório mínimo), relatorios/Participacao* (projeção/CSV), portal/DisponibilidadePortal* e escala/IndisponibilidadeMesService (versão compartilhada). [Contratos atuais](../tarefas-relatorios-disponibilidade.md).

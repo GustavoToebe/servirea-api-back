@@ -44,3 +44,7 @@ Testes HTTP com JWT real verificam pessoa própria, estados publicados, plano ex
 ## Evolução V062 — 02/10/2026
 
 Confirmação/recusa própria e histórico agora implementados conforme [respostas de escala](respostas-escala.md). Referências acima à ausência de confirmação descrevem a entrega V061; candidatura/troca/dependentes permanecem pendentes.
+
+## Indisponibilidade própria — V065
+
+O portal permite informar datas/períodos e sem restrição para a própria pessoa, com PORTAL_DISPONIBILIDADE. Versão mensal compartilhada protege coordenação e portal contra sobrescrita. [Contrato vigente](tarefas-relatorios-disponibilidade.md). Atualizar API/frontend juntos; PUT administrativo mensal também exige versao.
