@@ -78,6 +78,21 @@ public class VoluntarioService {
     }
 
     @Transactional(readOnly = true)
+    public br.com.servire.api.voluntario.dto.PainelVoluntarios painel() {
+        long ativos = 0, coroinhas = 0, acolitos = 0, mesc = 0;
+        for (Object[] linha : voluntarioRepository.contarAtivosPorTipo()) {
+            TipoVoluntario tipo = (TipoVoluntario) linha[0];
+            long n = (Long) linha[1];
+            ativos += n;
+            if (tipo == TipoVoluntario.COROINHA || tipo == TipoVoluntario.AMBOS) coroinhas += n;
+            if (tipo == TipoVoluntario.ACOLITO || tipo == TipoVoluntario.AMBOS) acolitos += n;
+            if (tipo == TipoVoluntario.MESC) mesc += n;
+        }
+        java.time.LocalDate limite = java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")).plusDays(90);
+        return new br.com.servire.api.voluntario.dto.PainelVoluntarios(ativos, coroinhas, acolitos, mesc, voluntarioRepository.contarMandatosAte(limite));
+    }
+
+    @Transactional(readOnly = true)
     public ContagemVoluntarios contarAtivosEInativos() {
         long ativos = 0;
         long inativos = 0;
@@ -108,27 +123,56 @@ public class VoluntarioService {
         return voluntario;
     }
 
-    @Transactional
+    @org.springframework.beans.factory.annotation.Autowired
+    private br.com.servire.api.storage.ArquivoCicloService arquivos;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.transaction.PlatformTransactionManager transacoes;
+
+    /**
+     * Troca a foto em três passos curtos: (1) transação que confere a cota e trava a paróquia só pelo tempo da conferência,
+     * (2) upload fora de qualquer transação, com o UPLOAD registrado de forma durável antes, (3) transação que revalida a cota,
+     * grava a referência e agenda a remoção da foto anterior. Falha depois do upload deixa uma pendência que o job limpa.
+     */
     public Voluntario definirFoto(UUID id, MultipartFile foto) {
-        var reserva=cotas.reservar();
-        Voluntario voluntario = buscarPorId(id);
         if (foto == null || foto.isEmpty()) {
             throw new BadRequestException("Nenhum arquivo de foto enviado.");
         }
-        String caminho = voluntario.getId() + "/perfil-" + UUID.randomUUID() + ExtensaoDeFoto.de(foto.getContentType());
         byte[] conteudo;
         try {
             conteudo = foto.getBytes();
         } catch (IOException e) {
             throw new UncheckedIOException("Falha ao ler o arquivo de foto enviado.", e);
         }
-        cotas.validarUpload(reserva,conteudo.length,voluntario.getFotoPath());
-        String caminhoSalvo = storageService.armazenar(caminho, conteudo, foto.getContentType());
-        voluntario.setFotoPath(caminhoSalvo);
-        voluntario.setFotoTamanhoBytes((long)conteudo.length);
-        cotas.validar(reserva);
-        auditLogService.registrar("FOTO_ATUALIZADA", "VOLUNTARIO", id, List.of("fotoPath"));
-        return voluntario;
+        String tipo = foto.getContentType();
+        String caminho = id + "/perfil-" + UUID.randomUUID() + ExtensaoDeFoto.de(tipo);
+        var curta = new org.springframework.transaction.support.TransactionTemplate(transacoes);
+        curta.executeWithoutResult(tx -> {
+            var reserva = cotas.reservar();
+            cotas.validarUpload(reserva, conteudo.length, buscarPorId(id).getFotoPath());
+        });
+        arquivos.registrarUpload(caminho);
+        String retornado = storageService.armazenar(caminho, conteudo, tipo);
+        String salvo = retornado != null ? retornado : caminho;
+        try {
+            return curta.execute(tx -> {
+                var reserva = cotas.reservar();
+                Voluntario voluntario = buscarPorId(id);
+                String anterior = voluntario.getFotoPath();
+                cotas.validarUpload(reserva, conteudo.length, anterior);
+                voluntario.setFotoPath(salvo);
+                voluntario.setFotoTamanhoBytes((long) conteudo.length);
+                cotas.validar(reserva);
+                auditLogService.registrar("FOTO_ATUALIZADA", "VOLUNTARIO", id, List.of("fotoPath"));
+                if (anterior != null && !anterior.equals(salvo)) {
+                    arquivos.agendarRemocao(anterior);
+                }
+                arquivos.aoConfirmar(caminho);
+                return voluntario;
+            });
+        } catch (RuntimeException e) {
+            arquivos.descartarUpload(caminho);
+            throw e;
+        }
     }
 
     @Transactional(readOnly = true)

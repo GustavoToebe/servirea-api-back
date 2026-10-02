@@ -7,3 +7,7 @@ POST /voluntarios/opcoes/ids: até 100 UUIDs por pedido para nomes/funções de 
 Montador usa primeira página e resolve apenas IDs alocados e irmãos diretos conhecidos no apoio. Seletor fechado não consulta; aberto faz busca remota com debounce de 300 ms, tipo e paginação. Trocar busca/fechar cancela consulta. Seleção entrega a projeção antes de alterar vaga. Palette de arraste também busca páginas remotas; resposta antiga não substitui resultado atual. O painel de não escalados identifica que considera somente pessoas carregadas, sem afirmar que todos da paróquia já foram alocados.
 
 Limites restantes do backlog amplo: apoio mensal ainda traz metadados de disponibilidade/irmãos do escopo existente; outros consumidores legados de list()/active() permanecem fora desta revisão. Índices/paginação não substituem benchmark representativo com o volume de produção. Não há seleção automática nem IA.
+
+## Painel e grade sem lista completa (02/10/2026)
+
+O início não carrega mais a lista de voluntários só para contar: GET /voluntarios/painel (PESSOA, ESCALA ou VAGA) devolve ativos, coroinhas e acólitos (AMBOS conta nos dois), MESC e mandatos que vencem em até 90 dias (inclusive vencidos, data de Brasília), tudo por contagem no banco. A grade mensal de indisponibilidades usa a projeção leve paginada de `/voluntarios/opcoes` em páginas de 30 (até 60 páginas), sem ficha completa nem fotos. Os consumidores legados de `list()`/`active()` foram retirados dessas duas telas.

@@ -1,4 +1,4 @@
--- Esquema do banco, gerado das migrations (V001-V079). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V080). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
@@ -268,6 +268,27 @@ CREATE TABLE public.aniversario_execucao (
     dia date NOT NULL,
     comunicado_id uuid,
     status character varying(24) NOT NULL
+);
+
+
+--
+-- Name: arquivo_pendencia; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.arquivo_pendencia (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    caminho character varying(500) NOT NULL,
+    tipo character varying(10) NOT NULL,
+    criado_em timestamp with time zone NOT NULL,
+    tentativas integer DEFAULT 0 NOT NULL,
+    proxima_tentativa timestamp with time zone NOT NULL,
+    erro character varying(200),
+    reservado_por uuid,
+    reserva_ate timestamp with time zone,
+    CONSTRAINT arquivo_pendencia_check CHECK (((reservado_por IS NULL) = (reserva_ate IS NULL))),
+    CONSTRAINT arquivo_pendencia_tentativas_check CHECK ((tentativas >= 0)),
+    CONSTRAINT arquivo_pendencia_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['UPLOAD'::character varying, 'REMOCAO'::character varying])::text[])))
 );
 
 
@@ -1892,6 +1913,22 @@ ALTER TABLE ONLY public.aniversario_execucao
 
 
 --
+-- Name: arquivo_pendencia arquivo_pendencia_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.arquivo_pendencia
+    ADD CONSTRAINT arquivo_pendencia_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: arquivo_pendencia arquivo_pendencia_tenant_id_caminho_tipo_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.arquivo_pendencia
+    ADD CONSTRAINT arquivo_pendencia_tenant_id_caminho_tipo_key UNIQUE (tenant_id, caminho, tipo);
+
+
+--
 -- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2907,6 +2944,13 @@ CREATE INDEX aniversario_execucao_comunicado_idx ON public.aniversario_execucao 
 
 
 --
+-- Name: arquivo_pendencia_fila_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX arquivo_pendencia_fila_idx ON public.arquivo_pendencia USING btree (tenant_id, proxima_tentativa);
+
+
+--
 -- Name: checkin_sessao_evento_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3813,6 +3857,14 @@ ALTER TABLE ONLY public.aniversario_execucao
 
 ALTER TABLE ONLY public.aniversario_execucao
     ADD CONSTRAINT aniversario_execucao_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: arquivo_pendencia arquivo_pendencia_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.arquivo_pendencia
+    ADD CONSTRAINT arquivo_pendencia_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -4832,6 +4884,12 @@ ALTER TABLE public.aniversario_config ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.aniversario_execucao ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: arquivo_pendencia; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.arquivo_pendencia ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: audit_log; Type: ROW SECURITY; Schema: public; Owner: -

@@ -28,6 +28,15 @@ public interface StorageService {
     /** Remove o arquivo — usado quando uma foto é substituída ou um voluntário/inscrição é excluído. */
     void excluir(String caminho);
 
+    /**
+     * Remove e informa se o arquivo deixou de existir (sucesso ou já ausente). Falha do provedor devolve falso, para quem
+     * mantém pendência durável tentar de novo. A implementação padrão apenas delega a {@link #excluir}.
+     */
+    default boolean excluirConfirmando(String caminho) {
+        excluir(caminho);
+        return true;
+    }
+
     /** Tamanho real pelo provedor, sem baixar a imagem. Não aceitar tamanho do navegador. */
     long tamanho(String caminho);
 }

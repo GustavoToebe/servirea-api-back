@@ -148,6 +148,24 @@ public class SupabaseStorageService implements StorageService {
     }
 
     @Override
+    public boolean excluirConfirmando(String caminho) {
+        requireConfigurado();
+        try {
+            restClient.delete()
+                    .uri(properties.baseUrl() + "/storage/v1/object/" + properties.bucket() + "/" + caminho)
+                    .headers(this::aplicarAuthSupabase)
+                    .retrieve()
+                    .toBodilessEntity();
+            return true;
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+            return true; // já não existe: o objetivo (arquivo fora do bucket) foi atingido
+        } catch (RestClientException e) {
+            log.warn("Falha ao remover arquivo do Supabase Storage (ficará pendente): bucket={}", properties.bucket(), e);
+            return false;
+        }
+    }
+
+    @Override
     public long tamanho(String caminho) {
         requireConfigurado();
         try {

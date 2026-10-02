@@ -83,13 +83,16 @@ class ArmazenamentoIntegrationTest extends AbstractIntegrationTest {
         assertThat(pessoas.findById(outra.getId()).orElseThrow().getVoluntario().getFotoTamanhoBytes()).isNull();
     }
     @Test void doisUploadsConcorrentesNaoUltrapassamCota() throws Exception {
+        when(storage.excluirConfirmando(anyString())).thenReturn(true);
         var a=foto(null,null);var b=foto(null,null);limitar();var inicio=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(2)) {
             java.util.function.Function<UUID,Callable<Boolean>> tarefa=id -> () -> {TenantContext.set(tenant);try {inicio.await();voluntarios.definirFoto(id,arquivo(800000));return true;}catch(CotaException ex){return false;}finally{TenantContext.clear();}};
             var x=pool.submit(tarefa.apply(a.getId()));var y=pool.submit(tarefa.apply(b.getId()));inicio.countDown();
             assertThat(List.of(x.get(15,TimeUnit.SECONDS),y.get(15,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);
         }
-        assertThat(consumo().usado()).isEqualTo(800000); verify(storage,times(1)).armazenar(anyString(),any(),anyString());
+        assertThat(consumo().usado()).isEqualTo(800000); verify(storage,times(2)).armazenar(anyString(),any(),anyString());
+        // O upload do perdedor não fica no bucket: foi descartado logo após a recusa por cota.
+        verify(storage,times(1)).excluirConfirmando(anyString());
     }
     @Test void anexosLiberadosNaoContamMasMetadadosDoHistoricoPermanecem() {
         var l=layouts.saveAndFlush(new Layout("Teste",TipoLayout.TODOS,TipoEnvio.EMAIL,"Assunto","Conteúdo",true));

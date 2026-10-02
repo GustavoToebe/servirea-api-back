@@ -13,8 +13,8 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V079__checkin_encontro.sql",
-    "quantidade": 79
+    "ultima": "V080__arquivo_pendencia.sql",
+    "quantidade": 80
   },
   "importacao_pessoas": {
     "manual": "docs/importacao-pessoas.md",

@@ -403,26 +403,50 @@ public class EventoService {
 
     // ---- Fotos
 
-    @Transactional
+    @Autowired
+    private br.com.servire.api.storage.ArquivoCicloService arquivos;
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transacoes;
+
+    /** Mesmo desenho em três passos da foto de voluntário: conferência curta, upload fora da transação, gravação curta. */
     public EventoDetalhe enviarFoto(UUID id, MultipartFile arquivo) {
-        var reserva=cotas.reservar();
-        Evento e = buscarParaAlterar(id);
         if (arquivo == null || arquivo.isEmpty()) throw new BadRequestException("Nenhuma foto enviada.");
-        if (fotos.countByEventoId(id) >= MAX_FOTOS) throw new ConflictException("No máximo " + MAX_FOTOS + " fotos por evento.");
-        String caminho = "eventos/" + TenantContext.get() + "/" + id + "/" + UUID.randomUUID() + ExtensaoDeFoto.de(arquivo.getContentType());
         byte[] conteudo;
         try {
             conteudo = arquivo.getBytes();
         } catch (IOException ex) {
             throw new UncheckedIOException("Falha ao ler a foto enviada.", ex);
         }
-        cotas.validarUpload(reserva,conteudo.length,null);
-        String salvo = storage.armazenar(caminho, conteudo, arquivo.getContentType());
-        var foto=new EventoFoto(id, salvo, fotos.countByEventoId(id) == 0);
-        foto.setFotoTamanhoBytes((long)conteudo.length); fotos.save(foto);
-        cotas.validar(reserva);
-        audit.registrar("FOTO", "EVENTO", id, List.of("fotos"));
-        return detalhe(e);
+        String tipo = arquivo.getContentType();
+        String caminho = "eventos/" + TenantContext.get() + "/" + id + "/" + UUID.randomUUID() + ExtensaoDeFoto.de(tipo);
+        var curta = new org.springframework.transaction.support.TransactionTemplate(transacoes);
+        curta.executeWithoutResult(tx -> {
+            var reserva = cotas.reservar();
+            buscarParaAlterar(id);
+            if (fotos.countByEventoId(id) >= MAX_FOTOS) throw new ConflictException("No máximo " + MAX_FOTOS + " fotos por evento.");
+            cotas.validarUpload(reserva, conteudo.length, null);
+        });
+        arquivos.registrarUpload(caminho);
+        String retornado = storage.armazenar(caminho, conteudo, tipo);
+        String salvo = retornado != null ? retornado : caminho;
+        try {
+            return curta.execute(tx -> {
+                var reserva = cotas.reservar();
+                Evento e = buscarParaAlterar(id);
+                if (fotos.countByEventoId(id) >= MAX_FOTOS) throw new ConflictException("No máximo " + MAX_FOTOS + " fotos por evento.");
+                cotas.validarUpload(reserva, conteudo.length, null);
+                var foto = new EventoFoto(id, salvo, fotos.countByEventoId(id) == 0);
+                foto.setFotoTamanhoBytes((long) conteudo.length);
+                fotos.save(foto);
+                cotas.validar(reserva);
+                audit.registrar("FOTO", "EVENTO", id, List.of("fotos"));
+                arquivos.aoConfirmar(caminho);
+                return detalhe(e);
+            });
+        } catch (RuntimeException e) {
+            arquivos.descartarUpload(caminho);
+            throw e;
+        }
     }
 
     @Transactional
@@ -444,7 +468,7 @@ public class EventoService {
         if (foto.isCapa()) {
             fotos.findByEventoIdOrderByCapaDescCreatedAtAsc(id).stream().findFirst().ifPresent(f -> f.setCapa(true));
         }
-        storage.excluir(foto.getCaminho());
+        arquivos.agendarRemocao(foto.getCaminho());
         audit.registrar("FOTO_EXCLUIDA", "EVENTO", id, List.of("fotos"));
         return detalhe(e);
     }

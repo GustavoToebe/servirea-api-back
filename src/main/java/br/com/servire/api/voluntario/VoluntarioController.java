@@ -61,6 +61,12 @@ public class VoluntarioController {
     }
 
     @PreAuthorize("hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')")
+    @GetMapping("/painel")
+    public br.com.servire.api.voluntario.dto.PainelVoluntarios painel() {
+        return voluntarioService.painel();
+    }
+
+    @PreAuthorize("hasAnyAuthority('PERM_PESSOA','PERM_ESCALA','PERM_VAGA')")
     @GetMapping("/contagens")
     public ContagemVoluntarios contagens() {
         return voluntarioService.contarAtivosEInativos();

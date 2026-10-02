@@ -82,3 +82,5 @@
 - [Privacidade](privacidade.md): F09, histórico de consentimentos, exportação autorizada e retenção de comunicados (V078).
 
 - [Check-in por encontro](checkin-encontro.md): F15, código aberto pela coordenação, um registro por vaga, presença manual como alternativa (V079).
+
+- [Ciclo de vida dos arquivos](arquivos-ciclo-vida.md): T13, upload fora da transação, remoção durável e job de pendências (V080).

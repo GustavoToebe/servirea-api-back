@@ -124,3 +124,6 @@ Dependentes exigem autorização explícita e conta ligada à pessoa; parentesco
 - F15/V079: docs/checkin-encontro.md. Token aleatório só como hash, 404 genérico para qualquer código inválido, um registro por vaga, FALTOU não é sobrescrito, pessoa vem do vínculo. CHECKIN, CHECKIN_GERENCIAR.
 
 - T14 fila: docs/monitoramento.md. Contadores fila.envios por canal/resultado e reservas em curso, sem dado de negócio; rótulos validados no MetricasController.
+
+- T13/V080: docs/arquivos-ciclo-vida.md. Upload de foto em três passos curtos, UPLOAD/REMOCAO duráveis em arquivo_pendencia, nunca apagar caminho ainda referenciado; registrar pendência em transação própria só fora de transação que trave a paróquia.
+- T05: docs/seletores-escala.md. /voluntarios/painel conta no banco; grade mensal usa a projeção leve paginada.
