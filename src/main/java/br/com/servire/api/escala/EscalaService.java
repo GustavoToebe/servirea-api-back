@@ -114,6 +114,13 @@ public class EscalaService {
         return inicializar(carregar(id));
     }
 
+    private void invalidarCandidaturas(UUID escalaId) {
+        entityManager.createQuery("update Candidatura c set c.situacao=:expirada,c.atualizadaEm=:agora,c.versao=c.versao+1 where c.escalaId=:escala and c.situacao=:pendente")
+                .setParameter("expirada", br.com.servire.api.portal.Candidatura.Situacao.EXPIRADA)
+                .setParameter("pendente", br.com.servire.api.portal.Candidatura.Situacao.PENDENTE)
+                .setParameter("agora", java.time.Instant.now()).setParameter("escala", escalaId).executeUpdate();
+    }
+
     private Escala carregarParaAlterar(UUID id) {
         return escalaRepository.bloquear(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Escala não encontrada."));
@@ -321,6 +328,7 @@ public class EscalaService {
             throw new ConflictException("Esta escala já está cancelada.");
         }
         escala.setStatus(StatusEscala.CANCELADA);
+        invalidarCandidaturas(id);
         auditLogService.registrar("CANCELAMENTO", "ESCALA", id, List.of("status"));
         return inicializar(escala);
     }
@@ -333,7 +341,12 @@ public class EscalaService {
             throw new ConflictException("Esta escala já está em RASCUNHO.");
         }
         escala.setStatus(StatusEscala.RASCUNHO);
-        escala.getEventos().forEach(e -> e.getVagas().forEach(EscalaVaga::invalidarResposta));
+        invalidarCandidaturas(id);
+        escala.getEventos().forEach(e -> e.getVagas().forEach(v -> {
+            v.invalidarResposta();
+            // Mesmo vaga vazia/PENDENTE começa um novo ciclo de candidatura ao reabrir.
+            entityManager.lock(v, jakarta.persistence.LockModeType.OPTIMISTIC_FORCE_INCREMENT);
+        }));
         auditLogService.registrar("REABERTURA", "ESCALA", id, List.of("status"));
         return inicializar(escala);
     }

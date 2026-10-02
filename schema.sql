@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V062). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V063). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict vy6prenbUZ06EZRfC4ZmMCk0TkX7RtNaLeheiXFIqfHnjUsut7sNngI7QwDpySD
+\restrict drD2MhvEdfsWr3mVyT7Al1uay6VtYY42BaH5HSzK0qEMgqjTilggnqTbLehEbAT
 
 
 
@@ -401,6 +401,29 @@ CREATE TABLE public.disponibilidade_voluntario (
 --
 
 COMMENT ON TABLE public.disponibilidade_voluntario IS 'Dias/horários em que um voluntário pode servir — filtro adicional planejado para o picker de candidatos (seção 49), ainda não integrado (ver README.md).';
+
+
+--
+-- Name: escala_candidatura; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.escala_candidatura (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    escala_id uuid NOT NULL,
+    vaga_id uuid NOT NULL,
+    pessoa_id uuid NOT NULL,
+    usuario_id uuid NOT NULL,
+    vaga_versao bigint NOT NULL,
+    situacao character varying(20) NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    criada_em timestamp with time zone NOT NULL,
+    atualizada_em timestamp with time zone NOT NULL,
+    celebracao character varying(255) NOT NULL,
+    inicio timestamp without time zone NOT NULL,
+    funcao character varying(20) NOT NULL,
+    CONSTRAINT escala_candidatura_situacao_check CHECK (((situacao)::text = ANY ((ARRAY['PENDENTE'::character varying, 'APROVADA'::character varying, 'RECUSADA'::character varying, 'DESISTIDA'::character varying, 'EXPIRADA'::character varying])::text[])))
+);
 
 
 --
@@ -1516,6 +1539,22 @@ ALTER TABLE ONLY public.disponibilidade_voluntario
 
 
 --
+-- Name: escala_candidatura escala_candidatura_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.escala_candidatura
+    ADD CONSTRAINT escala_candidatura_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: escala_candidatura escala_candidatura_tenant_id_vaga_id_pessoa_id_vaga_versao_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.escala_candidatura
+    ADD CONSTRAINT escala_candidatura_tenant_id_vaga_id_pessoa_id_vaga_versao_key UNIQUE (tenant_id, vaga_id, pessoa_id, vaga_versao);
+
+
+--
 -- Name: escala_eventos escala_eventos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2490,6 +2529,27 @@ CREATE INDEX idx_voluntarios_tipo ON public.voluntarios USING btree (tipo);
 
 
 --
+-- Name: ix_candidatura_escala; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_candidatura_escala ON public.escala_candidatura USING btree (tenant_id, escala_id, criada_em, id);
+
+
+--
+-- Name: ix_candidatura_pessoal; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_candidatura_pessoal ON public.escala_candidatura USING btree (tenant_id, pessoa_id, criada_em, id);
+
+
+--
+-- Name: ix_candidatura_vaga; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_candidatura_vaga ON public.escala_candidatura USING btree (tenant_id, vaga_id, situacao);
+
+
+--
 -- Name: ix_destinatario_pronto; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2933,6 +2993,14 @@ ALTER TABLE ONLY public.disponibilidade_voluntario
 
 ALTER TABLE ONLY public.disponibilidade_voluntario
     ADD CONSTRAINT disponibilidade_voluntario_voluntario_id_fkey FOREIGN KEY (voluntario_id) REFERENCES public.voluntarios(id) ON DELETE CASCADE;
+
+
+--
+-- Name: escala_candidatura escala_candidatura_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.escala_candidatura
+    ADD CONSTRAINT escala_candidatura_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -3616,6 +3684,12 @@ ALTER TABLE public.direitos_locais ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.disponibilidade_voluntario ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: escala_candidatura; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.escala_candidatura ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: escala_eventos; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3888,5 +3962,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict vy6prenbUZ06EZRfC4ZmMCk0TkX7RtNaLeheiXFIqfHnjUsut7sNngI7QwDpySD
+\unrestrict drD2MhvEdfsWr3mVyT7Al1uay6VtYY42BaH5HSzK0qEMgqjTilggnqTbLehEbAT
 

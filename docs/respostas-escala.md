@@ -35,3 +35,7 @@ GET /escalas/{id}/respostas?pagina=0&resposta=RECUSADA consulta alocações atua
 Testes HTTP com JWT real cobrem decisão, versão, repetição, prazo, outra pessoa/paróquia, plano/permissão, reabertura, troca, cancelamento, histórico após exclusão e duas respostas simultâneas. Frontend verifica versão no request, permissão/prazo, conflito sem retry, consulta de coordenação e cancelamento de histórico antigo. Comandos no AGENTS.md; números finais no registro de implementação.
 
 Permanecem pendentes candidatura a vagas, trocas com aprovação, responsáveis/dependentes, notificações, prazo antecipado configurável e relatórios de histórico da coordenação. Não foram implementados junto desta decisão pessoal.
+
+## Evolução V063
+
+Candidatura com aprovação agora entregue em [candidaturas-vagas.md](candidaturas-vagas.md). Referências anteriores a candidatura pendente descrevem a V062; trocas/dependentes/notificações permanecem no backlog.
