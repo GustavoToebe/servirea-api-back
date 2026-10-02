@@ -13,7 +13,7 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V066__onboarding_progresso.sql",
-    "quantidade": 66
+    "ultima": "V070__site_publico_paroquia.sql",
+    "quantidade": 70
   }
 }

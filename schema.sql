@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V066). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V070). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict aSacKVqiCF3LByFJmHoiKMaOSwbwaE714dJudC8pzPDOd4GyTNg5aY29sdcut19
+\restrict x7Yv882hmMeSU4avdpI7SuyKdHN5gYcrpGW7FyrvfLv4KqcNxXaqzPdfCSA4uhC
 
 
 
@@ -224,6 +224,54 @@ $$;
 
 
 --
+-- Name: aniversario_autorizacao; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.aniversario_autorizacao (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    pessoa_id uuid NOT NULL,
+    canal character varying(20) NOT NULL,
+    autorizado boolean DEFAULT false NOT NULL,
+    fonte character varying(200) NOT NULL,
+    registrado_em timestamp with time zone NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT aniversario_autorizacao_canal_check CHECK (((canal)::text = ANY ((ARRAY['EMAIL'::character varying, 'WHATSAPP'::character varying])::text[])))
+);
+
+
+--
+-- Name: aniversario_config; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.aniversario_config (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    canal character varying(20) NOT NULL,
+    ativo boolean DEFAULT false NOT NULL,
+    layout_id uuid,
+    versao bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT aniversario_config_canal_check CHECK (((canal)::text = ANY ((ARRAY['EMAIL'::character varying, 'WHATSAPP'::character varying])::text[])))
+);
+
+
+--
+-- Name: aniversario_execucao; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.aniversario_execucao (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    pessoa_id uuid NOT NULL,
+    canal character varying(20) NOT NULL,
+    ano integer NOT NULL,
+    dia date NOT NULL,
+    comunicado_id uuid,
+    status character varying(24) NOT NULL
+);
+
+
+--
 -- Name: audit_log; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -327,6 +375,20 @@ CREATE TABLE public.comunicado_destinatario (
     CONSTRAINT ck_comunicado_destinatario_reserva CHECK (((reservado_por IS NULL) = (reserva_ate IS NULL))),
     CONSTRAINT comunicado_destinatario_cota_competencia_check CHECK ((EXTRACT(day FROM cota_competencia) = (1)::numeric)),
     CONSTRAINT comunicado_destinatario_status_check CHECK (((status)::text = ANY ((ARRAY['PENDENTE'::character varying, 'ENVIADO'::character varying, 'FALHA'::character varying])::text[])))
+);
+
+
+--
+-- Name: consumo_historico; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.consumo_historico (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    dia date NOT NULL,
+    consultado_em timestamp with time zone NOT NULL,
+    dados text NOT NULL,
+    CONSTRAINT consumo_historico_dados_check CHECK ((length(dados) <= 32768))
 );
 
 
@@ -967,7 +1029,35 @@ CREATE TABLE public.mural_aviso (
     prazo date,
     criado_em timestamp with time zone NOT NULL,
     atualizado_em timestamp with time zone NOT NULL,
+    publico character varying(24) DEFAULT 'TODOS'::character varying NOT NULL,
+    CONSTRAINT mural_aviso_publico_check CHECK (((publico)::text = ANY ((ARRAY['TODOS'::character varying, 'SELECIONADOS'::character varying])::text[]))),
     CONSTRAINT mural_aviso_status_check CHECK (((status)::text = ANY ((ARRAY['PUBLICADO'::character varying, 'ARQUIVADO'::character varying])::text[])))
+);
+
+
+--
+-- Name: mural_destinatario; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mural_destinatario (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    aviso_id uuid NOT NULL,
+    usuario_id uuid NOT NULL
+);
+
+
+--
+-- Name: mural_leitura; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mural_leitura (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    aviso_id uuid NOT NULL,
+    usuario_id uuid NOT NULL,
+    versao_aviso bigint NOT NULL,
+    lido_em timestamp with time zone NOT NULL
 );
 
 
@@ -1256,6 +1346,22 @@ CREATE TABLE public.resposta_indisponibilidade (
 
 
 --
+-- Name: site_paroquia; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.site_paroquia (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    rascunho text NOT NULL,
+    publicado text,
+    publicado_em timestamp with time zone,
+    CONSTRAINT site_paroquia_publicado_check CHECK ((length(publicado) <= 65536)),
+    CONSTRAINT site_paroquia_rascunho_check CHECK ((length(rascunho) <= 65536))
+);
+
+
+--
 -- Name: suporte_codigo; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1523,6 +1629,54 @@ CREATE VIEW public.vw_voluntario_compromissos WITH (security_invoker='true') AS
 
 
 --
+-- Name: aniversario_autorizacao aniversario_autorizacao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_autorizacao
+    ADD CONSTRAINT aniversario_autorizacao_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aniversario_autorizacao aniversario_autorizacao_tenant_id_pessoa_id_canal_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_autorizacao
+    ADD CONSTRAINT aniversario_autorizacao_tenant_id_pessoa_id_canal_key UNIQUE (tenant_id, pessoa_id, canal);
+
+
+--
+-- Name: aniversario_config aniversario_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_config
+    ADD CONSTRAINT aniversario_config_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aniversario_config aniversario_config_tenant_id_canal_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_config
+    ADD CONSTRAINT aniversario_config_tenant_id_canal_key UNIQUE (tenant_id, canal);
+
+
+--
+-- Name: aniversario_execucao aniversario_execucao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_execucao
+    ADD CONSTRAINT aniversario_execucao_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aniversario_execucao aniversario_execucao_tenant_id_pessoa_id_canal_ano_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_execucao
+    ADD CONSTRAINT aniversario_execucao_tenant_id_pessoa_id_canal_ano_key UNIQUE (tenant_id, pessoa_id, canal, ano);
+
+
+--
 -- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1576,6 +1730,22 @@ ALTER TABLE ONLY public.comunicado
 
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT comunicado_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: consumo_historico consumo_historico_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.consumo_historico
+    ADD CONSTRAINT consumo_historico_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: consumo_historico consumo_historico_tenant_id_dia_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.consumo_historico
+    ADD CONSTRAINT consumo_historico_tenant_id_dia_key UNIQUE (tenant_id, dia);
 
 
 --
@@ -1947,6 +2117,46 @@ ALTER TABLE ONLY public.mural_aviso
 
 
 --
+-- Name: mural_destinatario mural_destinatario_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_destinatario
+    ADD CONSTRAINT mural_destinatario_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mural_destinatario mural_destinatario_tenant_id_aviso_id_usuario_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_destinatario
+    ADD CONSTRAINT mural_destinatario_tenant_id_aviso_id_usuario_id_key UNIQUE (tenant_id, aviso_id, usuario_id);
+
+
+--
+-- Name: mural_leitura mural_leitura_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_leitura
+    ADD CONSTRAINT mural_leitura_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mural_leitura mural_leitura_tenant_id_aviso_id_usuario_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_leitura
+    ADD CONSTRAINT mural_leitura_tenant_id_aviso_id_usuario_id_key UNIQUE (tenant_id, aviso_id, usuario_id);
+
+
+--
+-- Name: mural_aviso mural_tenant_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_aviso
+    ADD CONSTRAINT mural_tenant_id_unique UNIQUE (tenant_id, id);
+
+
+--
 -- Name: onboarding_progresso onboarding_progresso_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2123,6 +2333,22 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 
 
 --
+-- Name: site_paroquia site_paroquia_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site_paroquia
+    ADD CONSTRAINT site_paroquia_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: site_paroquia site_paroquia_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site_paroquia
+    ADD CONSTRAINT site_paroquia_tenant_id_key UNIQUE (tenant_id);
+
+
+--
 -- Name: suporte_codigo suporte_codigo_hash_codigo_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2280,6 +2506,20 @@ ALTER TABLE ONLY public.voluntarios
 
 ALTER TABLE ONLY public.voluntarios
     ADD CONSTRAINT voluntarios_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: aniversario_execucao_comunicado_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX aniversario_execucao_comunicado_idx ON public.aniversario_execucao USING btree (tenant_id, comunicado_id);
+
+
+--
+-- Name: consumo_historico_dia_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX consumo_historico_dia_idx ON public.consumo_historico USING btree (dia);
 
 
 --
@@ -3046,6 +3286,54 @@ CREATE TRIGGER trg_voluntarios_updated_at BEFORE UPDATE ON public.voluntarios FO
 
 
 --
+-- Name: aniversario_autorizacao aniversario_autorizacao_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_autorizacao
+    ADD CONSTRAINT aniversario_autorizacao_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: aniversario_autorizacao aniversario_autorizacao_tenant_id_pessoa_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_autorizacao
+    ADD CONSTRAINT aniversario_autorizacao_tenant_id_pessoa_id_fkey FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: aniversario_config aniversario_config_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_config
+    ADD CONSTRAINT aniversario_config_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: aniversario_config aniversario_config_tenant_id_layout_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_config
+    ADD CONSTRAINT aniversario_config_tenant_id_layout_id_fkey FOREIGN KEY (tenant_id, layout_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (layout_id);
+
+
+--
+-- Name: aniversario_execucao aniversario_execucao_tenant_id_comunicado_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_execucao
+    ADD CONSTRAINT aniversario_execucao_tenant_id_comunicado_id_fkey FOREIGN KEY (tenant_id, comunicado_id) REFERENCES public.comunicado(tenant_id, id) ON DELETE SET NULL (comunicado_id);
+
+
+--
+-- Name: aniversario_execucao aniversario_execucao_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.aniversario_execucao
+    ADD CONSTRAINT aniversario_execucao_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
 -- Name: audit_log audit_log_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3115,6 +3403,14 @@ ALTER TABLE ONLY public.comunicado_destinatario
 
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT comunicado_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+
+--
+-- Name: consumo_historico consumo_historico_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.consumo_historico
+    ADD CONSTRAINT consumo_historico_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -3566,6 +3862,54 @@ ALTER TABLE ONLY public.mural_aviso
 
 
 --
+-- Name: mural_destinatario mural_destinatario_tenant_id_aviso_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_destinatario
+    ADD CONSTRAINT mural_destinatario_tenant_id_aviso_id_fkey FOREIGN KEY (tenant_id, aviso_id) REFERENCES public.mural_aviso(tenant_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: mural_destinatario mural_destinatario_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_destinatario
+    ADD CONSTRAINT mural_destinatario_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: mural_destinatario mural_destinatario_usuario_id_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_destinatario
+    ADD CONSTRAINT mural_destinatario_usuario_id_tenant_id_fkey FOREIGN KEY (usuario_id, tenant_id) REFERENCES public.usuario_tenant(usuario_id, tenant_id) ON DELETE CASCADE;
+
+
+--
+-- Name: mural_leitura mural_leitura_tenant_id_aviso_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_leitura
+    ADD CONSTRAINT mural_leitura_tenant_id_aviso_id_fkey FOREIGN KEY (tenant_id, aviso_id) REFERENCES public.mural_aviso(tenant_id, id) ON DELETE CASCADE;
+
+
+--
+-- Name: mural_leitura mural_leitura_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_leitura
+    ADD CONSTRAINT mural_leitura_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: mural_leitura mural_leitura_usuario_id_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_leitura
+    ADD CONSTRAINT mural_leitura_usuario_id_tenant_id_fkey FOREIGN KEY (usuario_id, tenant_id) REFERENCES public.usuario_tenant(usuario_id, tenant_id) ON DELETE CASCADE;
+
+
+--
 -- Name: onboarding_progresso onboarding_progresso_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3726,6 +4070,14 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 
 
 --
+-- Name: site_paroquia site_paroquia_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.site_paroquia
+    ADD CONSTRAINT site_paroquia_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
 -- Name: suporte_codigo suporte_codigo_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3814,6 +4166,24 @@ ALTER TABLE ONLY public.voluntarios
 
 
 --
+-- Name: aniversario_autorizacao; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.aniversario_autorizacao ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: aniversario_config; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.aniversario_config ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: aniversario_execucao; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.aniversario_execucao ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: audit_log; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3842,6 +4212,12 @@ ALTER TABLE public.comunicado_anexo ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.comunicado_destinatario ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: consumo_historico; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.consumo_historico ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: diocese; Type: ROW SECURITY; Schema: public; Owner: -
@@ -4024,6 +4400,18 @@ ALTER TABLE public.layout_escala ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mural_aviso ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: mural_destinatario; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.mural_destinatario ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: mural_leitura; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.mural_leitura ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: onboarding_progresso; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4102,6 +4490,12 @@ ALTER TABLE public.refresh_token ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.resposta_indisponibilidade ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: site_paroquia; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.site_paroquia ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: suporte_codigo; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4158,5 +4552,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict aSacKVqiCF3LByFJmHoiKMaOSwbwaE714dJudC8pzPDOd4GyTNg5aY29sdcut19
+\unrestrict x7Yv882hmMeSU4avdpI7SuyKdHN5gYcrpGW7FyrvfLv4KqcNxXaqzPdfCSA4uhC
 

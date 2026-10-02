@@ -52,3 +52,5 @@ V053: eventos com layouts e lembretes em vários dias: `layout_envio.tipo_layout
 - V065: tarefas/TarefaService (responsável e diretório mínimo), relatorios/Participacao* (projeção/CSV), portal/DisponibilidadePortal* e escala/IndisponibilidadeMesService (versão compartilhada). [Contratos atuais](../tarefas-relatorios-disponibilidade.md).
 
 - V066: onboarding/OnboardingService e OnboardingProgresso, checklist/versão por paróquia e permissões por etapa. [Contrato](../onboarding.md).
+
+- Rodada 6–10: mural/AvisoService, minhaconta/ConsumoHistoricoService, comunicacao/AniversarioService/AniversarioJob e site/SiteService. Contratos no índice.

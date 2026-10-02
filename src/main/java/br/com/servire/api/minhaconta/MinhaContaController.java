@@ -15,17 +15,21 @@ public class MinhaContaController {
 
     private final MinhaContaService minhaContaService;
     private final CotasService cotas;
+    private final ConsumoHistoricoService historico;
     private final ReconciliadorArmazenamento armazenamento;
 
-    public MinhaContaController(MinhaContaService minhaContaService, CotasService cotas, ReconciliadorArmazenamento armazenamento) {
+    public MinhaContaController(MinhaContaService minhaContaService, CotasService cotas, ReconciliadorArmazenamento armazenamento,ConsumoHistoricoService historico) {
         this.minhaContaService = minhaContaService;
-        this.cotas = cotas;
+        this.cotas = cotas;this.historico=historico;
         this.armazenamento = armazenamento;
     }
 
     @GetMapping("/consumo")
     @PreAuthorize("hasAuthority('PERM_PAROQUIA')")
-    public CotasService.Consumo consumo() {return cotas.consumo();}
+    public CotasService.Consumo consumo() {var d=cotas.consumo();historico.registrar(br.com.servire.api.tenant.TenantContext.get(),d);return d;}
+
+    @GetMapping("/consumo/historico") @PreAuthorize("hasAuthority('PERM_PAROQUIA')")
+    public java.util.List<ConsumoHistoricoService.Ponto> historico(){return historico.listar(br.com.servire.api.tenant.TenantContext.get());}
 
     @PostMapping("/armazenamento/conferir")
     @PreAuthorize("hasAuthority('PERM_PAROQUIA_ALTERAR')")

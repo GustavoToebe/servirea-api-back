@@ -20,6 +20,8 @@ management:
 # não foi configurado, em vez de a aplicação subir "funcionando" com um
 # segredo previsível.
 servire:
+  aniversarios:
+    ativo: ${SERVIRE_ANIVERSARIOS_ATIVO:false}
   security:
     jwt:
       secret: ${JWT_SECRET}

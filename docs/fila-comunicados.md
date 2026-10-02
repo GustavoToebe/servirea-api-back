@@ -13,3 +13,7 @@ HTTP tem connect timeout de 5 segundos e read timeout de 20 segundos. Resend rec
 Não registra destino, token nem corpo de resposta do provedor nas mensagens de falha. Relatos operacionais usam UUID da paróquia e classe do erro. Testes cobrem concorrência, expiração, conclusão obsoleta e HTTP fora de transação. Ainda é necessário ensaio de carga representativo para dimensionar workers, pool de banco e ritmo do provedor.
 
 Cotas mensais: [envios/importação](cotas-envios-importacao.md). Competência de unidade reservada antes do HTTP; reenvio não gasta outra unidade. Cota esgotada mantém PENDENTE e reavalia em cinco minutos.
+
+## Complemento de 02/10/2026
+
+Aniversários autorizados: [contrato](aniversarios.md), opt-in revalidado antes da reserva; agendador desligado por padrão.

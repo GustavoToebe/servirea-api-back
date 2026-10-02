@@ -116,6 +116,7 @@ public class FilaDeEnvio {
         finally { TenantContext.clear(); }
         return n;
     }
+    @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager aniversarioEm;
     private Envio reservar(Tenant tenant,TipoEnvio canal) {
         Instant agora=Instant.now(); String janela=canal==TipoEnvio.EMAIL ? "EMAIL" : "WHATSAPP:"+tenant.getId();
         var ids=destinatarios.candidatos(StatusEnvio.PENDENTE,ABERTOS,canal,agora,PageRequest.of(0,1));
@@ -130,6 +131,13 @@ public class FilaDeEnvio {
         var c=comunicados.buscarParaAlterar(comunicadoId).orElseThrow();
         var d=destinatarios.buscarParaAlterar(id).orElseThrow();
         if (!d.pronto(agora) || !ABERTOS.contains(c.getStatus())) return null;
+        var aniversarios=aniversarioEm.createQuery("select x from AniversarioExecucao x where x.comunicadoId=:id",AniversarioExecucao.class).setParameter("id",comunicadoId).setMaxResults(1).getResultList();
+        if(!aniversarios.isEmpty()){
+            var x=aniversarios.getFirst();var hoje=java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo"));
+            long autorizados=aniversarioEm.createQuery("select count(a) from AniversarioAutorizacao a where a.pessoaId=:p and a.canal=:c and a.autorizado=true",Long.class).setParameter("p",x.pessoaId).setParameter("c",canal).getSingleResult();
+            long ativos=aniversarioEm.createQuery("select count(c) from AniversarioConfig c where c.canal=:c and c.ativo=true",Long.class).setParameter("c",canal).getSingleResult();
+            if(autorizados==0||ativos==0||!x.dia.equals(hoje)){d.falhaDefinitiva("Felicitação cancelada: autorização, configuração ou data indisponível.");atualizar(c);return null;}
+        }
         if (canal==TipoEnvio.WHATSAPP && d.getPessoaId()!=null) {
             var pessoa=pessoas.findById(d.getPessoaId()).orElse(null);
             if (pessoa==null || pessoa.getVoluntario()==null || !pessoa.getVoluntario().isAutorizaWhatsapp()) {

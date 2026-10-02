@@ -2,7 +2,7 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V066. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V070. Migration já aplicada não se edita.
 
 ## O que entrou na V066
 
@@ -94,3 +94,7 @@ voluntarios, inscricoes e evento_foto recebem foto_tamanho_bytes bigint positivo
 ## Mural e tarefas (V060)
 
 mural_aviso e tarefa são entidades @TenantId, com título/descrição em texto simples, status, prazo/data de referência, timestamps e versão otimista. Tarefa tem equipe como rótulo opcional. Índices por paróquia/status/criação/id; RLS sem policies e acesso Data API revogado. Sem exclusão física ou relações globais de responsável. V058 registra competência da fila e V059 importacao_pessoa, também tenant-aware. Ver docs/mural-tarefas.md.
+
+## Rodada 6–10 — 02/10/2026
+
+V067 público/leitura do mural; V068 resumo diário de consumo; V069 aniversários autorizados/configuração/execução; V070 rascunho/publicação da paróquia. Manuais e limites no [índice](docs/README.md). Schema exportado de PostgreSQL 17 descartável após aplicação integral das migrations.

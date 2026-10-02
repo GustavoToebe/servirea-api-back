@@ -52,3 +52,11 @@
 - [Tarefas, relatórios e indisponibilidade](tarefas-relatorios-disponibilidade.md): responsável, CSV autorizado e portal próprio (V065).
 
 - [Primeiros passos](onboarding.md): checklist compartilhado, pré-requisitos, retomada e revisão versionada (F07/V066).
+
+## Rodada 6–10 — 02/10/2026
+
+- [mural publico leituras ](mural-publico-leituras.md): contrato, limites e homologação.
+- [historico consumo ](historico-consumo.md): contrato, limites e homologação.
+- [arraste escala ](arraste-escala.md): contrato, limites e homologação.
+- [aniversarios ](aniversarios.md): contrato, limites e homologação.
+- [site publico ](site-publico.md): contrato, limites e homologação.

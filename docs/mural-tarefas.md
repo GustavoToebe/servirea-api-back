@@ -21,3 +21,7 @@ API: GET /mural/avisos e /tarefas com busca (título literal), status, pagina (z
 ## Limites desta entrega
 
 Sem notificações, confirmação de leitura, anexos, publicação pública, lembretes, recorrência de tarefas, comentários ou kanban. Atribuição a usuário está disponível pela V065. Mural atende a primeira parte de F13; confirmação de leitura/notificações permanecem no backlog. Tarefas atendem o núcleo simples de F21; fluxos especializados permanecem no backlog. Sem IA.
+
+## Complemento de 02/10/2026
+
+Público e leitura: [contrato atualizado](mural-publico-leituras.md).

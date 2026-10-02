@@ -1,0 +1,15 @@
+# Aniversários autorizados — F19
+
+Código de 02/10/2026, V069. Agendador **desligado por padrão**: `SERVIRE_ANIVERSARIOS_ATIVO=false`. Esta entrega não ativou envio real nem configurou ambientes externos.
+
+Menu Aniversários: configuração por canal EMAIL/WHATSAPP e layout ativo revisado, autorização específica por pessoa/canal com referência breve da origem ou motivo da revogação. Não presumir opt-in a partir do telefone, nascimento, participação ou autorização WhatsApp geral. Esta última continua necessária para WhatsApp, junto ao consentimento específico. Primeira gravação usa versão 1; pedidos exigem a versão lida, com 409 contra sobrescrita. Revogar pode ser feito mesmo sem recurso COMUNICACAO no plano. Configurar envio exige esse recurso.
+
+Permissões ANIVERSARIO (consulta), ANIVERSARIO_CONFIGURAR (configuração), ANIVERSARIO_AUTORIZAR + PESSOA (consentimento). Diretório de pessoas retorna só ID/nome, até 30 resultados. Configuração/layouts e autorizações não mostram contatos pessoais. Texto de origem tem até 200 caracteres: registrar referência, sem anexos nem dados sensíveis. Auditoria registra alteração de campos, não texto do consentimento. Não há trilha completa de cada revisão de consentimento nesta entrega; guarda estado/último registro e auditoria existente (F09 continua parcial).
+
+Quando habilitado em ambiente homologado, job a cada minuto, a partir de 8h de Brasília, percorre paróquias em lotes de 20 e até 100 candidatos por paróquia/rodada. Configuração ativa com layout válido, paróquia liberada, plano COMUNICACAO, nascimento no dia e opt-in ainda vigente são exigidos. 29/02 corresponde a 28/02 em ano não bissexto. Unique pessoa/canal/ano impede duplicidade. Preparação cria comunicado na fila existente, sem HTTP; fila aplica cotas, janelas, reserva e retentativas existentes. Não há recuperação automática de aniversários perdidos de dias anteriores.
+
+Sem contato aplicável ou autorização geral WhatsApp, registra SEM_CONTATO sem envio e sem inventar sucesso. Com contato, registra NA_FILA; isso não significa entrega. A fila revalida consentimento/configuração e data antes de nova reserva: revogação/desativação ou saída do dia bloqueiam. Consentimento revogado não recupera mensagem já enviada ou com chamada externa iniciada. Mensagem que não foi reservada no próprio aniversário não é disparada dias depois. Falhas não geram log de contatos/texto.
+
+V069: configuração, autorização e execução por @TenantId, FKs locais, versão/unicidade, RLS/revogação. Contexto tenant é definido antes das transações do job e limpo ao terminar; lock da paróquia protege criação/cotas/deduplicação. FK de comunicado preserva o registro anual se o comunicado for removido.
+
+Homologar com fila/provedor de teste: opt-in separado por canal, layout correto, revogação antes da reserva, duas execuções, fuso/29fev, falta de contato, limite mensal, plano bloqueado e outra paróquia. Somente depois, mediante solicitação de ativação e configuração de canais reais, considerar habilitar a variável. Não existe endpoint público para executar o job nem geração de mensagens por IA.

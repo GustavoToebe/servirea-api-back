@@ -16,5 +16,7 @@ public class Aviso {
 
  @Column(name="criado_em",nullable=false) public Instant criadoEm;
  @Column(name="atualizado_em",nullable=false) public Instant atualizadoEm;
+ @Enumerated(EnumType.STRING) @Column(nullable=false) public Publico publico=Publico.TODOS;
+ public enum Publico { TODOS, SELECIONADOS }
  public enum Status { PUBLICADO, ARQUIVADO }
 }

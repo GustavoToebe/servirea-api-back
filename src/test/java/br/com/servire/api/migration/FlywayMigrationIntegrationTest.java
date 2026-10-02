@@ -118,10 +118,10 @@ class FlywayMigrationIntegrationTest extends AbstractIntegrationTest {
                 "SELECT description FROM flyway_schema_history WHERE type = 'SQL' ORDER BY installed_rank",
                 String.class);
 
-        assertThat(total).isEqualTo(66);
-        assertThat(sucesso).isEqualTo(66);
+        assertThat(total).isEqualTo(70);
+        assertThat(sucesso).isEqualTo(70);
         assertThat(descricoes.getFirst()).isEqualTo("enums");
-        assertThat(descricoes.getLast()).isEqualTo("onboarding progresso");
+        assertThat(descricoes.getLast()).isEqualTo("site publico paroquia");
 
         Integer sobras = jdbcTemplate.queryForObject("""
                 SELECT count(*) FROM information_schema.tables
