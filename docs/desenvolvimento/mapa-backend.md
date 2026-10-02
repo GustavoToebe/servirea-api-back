@@ -38,3 +38,6 @@ V051: remove o financeiro antigo que ficou no Servire (`plano`, `preco_plano`, `
 V053: eventos com layouts e lembretes em vários dias: `layout_envio.tipo_layout` aceita `EVENTO` (com layouts padrão de WhatsApp e e-mail por paróquia), `evento` ganha `whatsapp_habilitado`/`email_habilitado` e os quatro `*_layout_*_id` (FK composta com `ON DELETE SET NULL (coluna)`: excluir o layout só limpa a escolha do evento), `lembrete_dias` vira texto com a lista e as mensagens legadas ficam opcionais; `evento_inscricao` guarda os destinatários e o envio do e-mail. **Regerar `schema.sql` (`scripts/gerar-schema.ps1`) e commitar junto.**
 
 
+
+- Mural: mural/; tarefas: tarefas/. CRUD paginado/versionado, permissões no CatalogoPermissao, V060 e docs/mural-tarefas.md.
+- Plano: integracao/FuncionalidadesPlano*, guards por handler e /funcionalidades-plano; consumo HMAC: ConsumoInstancia*.

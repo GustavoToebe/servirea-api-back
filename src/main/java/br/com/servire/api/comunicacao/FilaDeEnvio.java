@@ -24,6 +24,7 @@ public class FilaDeEnvio {
     private static final Logger log=LoggerFactory.getLogger(FilaDeEnvio.class);
     static final int LOTE=30;
     private static final List<StatusComunicado> ABERTOS=List.of(StatusComunicado.NA_FILA,StatusComunicado.ENVIANDO);
+    private final br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades;
     private final br.com.servire.api.minhaconta.CotasService cotas;
     private final TenantRepository tenants;
     private final AcessoParoquia acesso;
@@ -55,10 +56,10 @@ public class FilaDeEnvio {
     public FilaDeEnvio(TenantRepository tenants,AcessoParoquia acesso,ComunicadoRepository comunicados,
         ComunicadoDestinatarioRepository destinatarios,ComunicadoAnexoRepository anexos,ParoquiaWhatsappService whatsapp,
         EmailSender email,WhatsappSender zap,WhatsappProperties properties,JanelaEnvioRepository janelas,PessoaRepository pessoas,
-        PlatformTransactionManager tm,br.com.servire.api.minhaconta.CotasService cotas,@Value("${servire.comunicado.fila-ativa:true}") boolean ativa,
+        PlatformTransactionManager tm,br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades,br.com.servire.api.minhaconta.CotasService cotas,@Value("${servire.comunicado.fila-ativa:true}") boolean ativa,
         @Value("${servire.comunicado.pausa-email-ms:600}") long pausaEmailMs,
         @Value("${servire.comunicado.retentativa-ms:60000}") long retentativaMs) {
-        this.cotas=cotas; this.tenants=tenants; this.acesso=acesso; this.comunicados=comunicados; this.destinatarios=destinatarios;
+        this.funcionalidades=funcionalidades; this.cotas=cotas; this.tenants=tenants; this.acesso=acesso; this.comunicados=comunicados; this.destinatarios=destinatarios;
         this.anexos=anexos; this.whatsapp=whatsapp; this.email=email; this.zap=zap; this.properties=properties;
         this.janelas=janelas; this.pessoas=pessoas; this.tx=new TransactionTemplate(tm); this.ativa=ativa;
         this.pausaEmailMs=Math.max(0,pausaEmailMs); this.retentativaMs=Math.max(0,retentativaMs);
@@ -120,6 +121,7 @@ public class FilaDeEnvio {
         var ids=destinatarios.candidatos(StatusEnvio.PENDENTE,ABERTOS,canal,agora,PageRequest.of(0,1));
         if (ids.isEmpty()) return null;
         cotas.travarEnvios();
+        if(!funcionalidades.permitida("COMUNICACAO")) return null;
         agora=Instant.now();
         var j=janelas.buscarParaAlterar(janela).orElse(null);
         if (j==null) { janelas.saveAndFlush(new JanelaEnvio(janela)); j=janelas.buscarParaAlterar(janela).orElseThrow(); }

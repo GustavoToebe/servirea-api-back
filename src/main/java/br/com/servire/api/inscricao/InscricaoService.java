@@ -59,6 +59,7 @@ import java.util.UUID;
 @Service
 public class InscricaoService {
 
+    private final br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades;
     private final InscricaoRepository inscricaoRepository;
     private final PessoaRepository pessoaRepository;
     private final TenantRepository tenantRepository;
@@ -79,7 +80,7 @@ public class InscricaoService {
                              TurnstileService turnstileService,
                              InscricaoRateLimiter rateLimiter,
                              AuditLogService auditLogService,
-                             PlatformTransactionManager transactionManager, br.com.servire.api.minhaconta.CotasService cotas) {
+                             PlatformTransactionManager transactionManager, br.com.servire.api.minhaconta.CotasService cotas,br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades) {
         this.inscricaoRepository = inscricaoRepository;
         this.pessoaRepository = pessoaRepository;
         this.tenantRepository = tenantRepository;
@@ -88,6 +89,7 @@ public class InscricaoService {
         this.rateLimiter = rateLimiter;
         this.auditLogService = auditLogService;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.funcionalidades=funcionalidades;
         this.cotas = cotas;
     }
 
@@ -117,6 +119,7 @@ public class InscricaoService {
     }
 
     private Inscricao gravarInscricaoPublica(InscricaoPublicaRequest request, MultipartFile foto) {
+        funcionalidades.exigir("INSCRICAO_PUBLICA");
         var reserva=foto!=null && !foto.isEmpty() ? cotas.reservar() : null;
         validarContatos(request.emails(), request.telefones(), request.responsaveis());
         Inscricao inscricao = new Inscricao(request.nomeCompleto().trim());

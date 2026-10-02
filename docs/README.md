@@ -32,3 +32,9 @@
 - [Armazenamento e cotas](armazenamento-cotas.md): bytes, fotos compartilhadas, inventário antigo e limites da medição.
 
 - [Envios mensais e CSV](cotas-envios-importacao.md): unidades, reserva, idempotência e importação de pessoas.
+
+## Quatro entregas de produto — 01/10/2026
+
+- [Funcionalidades por plano](funcionalidades-plano.md).
+- [Mural e tarefas](mural-tarefas.md).
+- [Consumo de instâncias](consumo-instancias.md).

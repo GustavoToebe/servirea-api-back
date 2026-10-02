@@ -66,6 +66,7 @@ public class EventoService {
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
+    private final br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades;
     private final EventoRepository eventos;
     private final EventoFotoRepository fotos;
     private final EventoInscricaoRepository inscricoes;
@@ -82,14 +83,14 @@ public class EventoService {
     @Autowired
     public EventoService(EventoRepository eventos, EventoFotoRepository fotos, EventoInscricaoRepository inscricoes,
                          PessoaRepository pessoas, TenantRepository tenants, StorageService storage, EnvioAvulso envio,
-                         LayoutRepository layouts, ComunicadoService comunicados, AuditLogService audit, br.com.servire.api.minhaconta.CotasService cotas) {
-        this(eventos, fotos, inscricoes, pessoas, tenants, storage, envio, layouts, comunicados, audit, cotas,
+                         LayoutRepository layouts, ComunicadoService comunicados, AuditLogService audit, br.com.servire.api.minhaconta.CotasService cotas,br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades) {
+        this(eventos, fotos, inscricoes, pessoas, tenants, storage, envio, layouts, comunicados, audit, cotas, funcionalidades,
                 Clock.system(BRASILIA));
     }
 
     EventoService(EventoRepository eventos, EventoFotoRepository fotos, EventoInscricaoRepository inscricoes,
                   PessoaRepository pessoas, TenantRepository tenants, StorageService storage, EnvioAvulso envio,
-                  LayoutRepository layouts, ComunicadoService comunicados, AuditLogService audit, br.com.servire.api.minhaconta.CotasService cotas, Clock clock) {
+                  LayoutRepository layouts, ComunicadoService comunicados, AuditLogService audit, br.com.servire.api.minhaconta.CotasService cotas,br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades, Clock clock) {
         this.eventos = eventos;
         this.fotos = fotos;
         this.inscricoes = inscricoes;
@@ -100,7 +101,7 @@ public class EventoService {
         this.layouts = layouts;
         this.comunicados = comunicados;
         this.audit = audit;
-        this.clock = clock; this.cotas = cotas;
+        this.clock = clock; this.cotas = cotas; this.funcionalidades=funcionalidades;
     }
 
     LocalDateTime agora() {
@@ -276,18 +277,18 @@ public class EventoService {
             for (EventoInscricao i : inscricoes.findByEventoIdOrderByCreatedAtAsc(id)) {
                 Pessoa pessoa = i.getPessoa();
                 String telefone = telefonePrincipal(pessoa);
-                if (e.isWhatsappHabilitado() && i.isAutorizaWhatsapp() && telefone != null) {
+                if (funcionalidades.permitida("COMUNICACAO") && e.isWhatsappHabilitado() && i.isAutorizaWhatsapp() && telefone != null) {
                     whats.add(new EnvioAvulso.Mensagem(pessoa.getId(), pessoa.getNomeCompleto(), telefone,
                             montar(e, null, TipoEnvio.WHATSAPP, Momento.CANCELAMENTO, pessoa, tenant, hoje).corpo()));
                 }
                 String email = emailPrincipal(pessoa);
-                if (e.isEmailHabilitado() && email != null) {
+                if (funcionalidades.permitida("COMUNICACAO") && e.isEmailHabilitado() && email != null) {
                     Pronta p = montar(e, null, TipoEnvio.EMAIL, Momento.CANCELAMENTO, pessoa, tenant, hoje);
                     emails.add(new EnvioAvulso.MensagemEmail(pessoa.getId(), pessoa.getNomeCompleto(), email, p.assunto(), p.corpo()));
                 }
             }
-            envio.enfileirarWhatsapp("Evento cancelado: " + e.getTitulo(), whats);
-            envio.enfileirarEmail("Evento cancelado: " + e.getTitulo(), "Evento cancelado: " + e.getTitulo(), emails);
+            if(funcionalidades.permitida("COMUNICACAO")) envio.enfileirarWhatsapp("Evento cancelado: " + e.getTitulo(), whats);
+            if(funcionalidades.permitida("COMUNICACAO")) envio.enfileirarEmail("Evento cancelado: " + e.getTitulo(), "Evento cancelado: " + e.getTitulo(), emails);
         }
         audit.registrar("CANCELAMENTO", "EVENTO", id, List.of("situacao"));
         return detalhe(e);
@@ -314,14 +315,14 @@ public class EventoService {
         Tenant tenant = tenantAtual();
         LocalDate hoje = agora().toLocalDate();
         String telefone = telefonePrincipal(pessoa);
-        if (e.isWhatsappHabilitado() && autoriza && telefone != null) {
+        if (funcionalidades.permitida("COMUNICACAO") && e.isWhatsappHabilitado() && autoriza && telefone != null) {
             Pronta p = montar(e, e.getWhatsappLayoutConfirmacaoId(), TipoEnvio.WHATSAPP, Momento.CONFIRMACAO, pessoa, tenant, hoje);
             List<UUID> ids = envio.enfileirarWhatsapp("Evento: " + e.getTitulo() + " (inscrição)",
                     List.of(new EnvioAvulso.Mensagem(pessoa.getId(), pessoa.getNomeCompleto(), telefone, p.corpo())));
             inscricao.setConfirmacaoDestinatarioId(ids.get(0));
         }
         String email = emailPrincipal(pessoa);
-        if (e.isEmailHabilitado() && email != null) {
+        if (funcionalidades.permitida("COMUNICACAO") && e.isEmailHabilitado() && email != null) {
             Pronta p = montar(e, e.getEmailLayoutConfirmacaoId(), TipoEnvio.EMAIL, Momento.CONFIRMACAO, pessoa, tenant, hoje);
             List<UUID> ids = envio.enfileirarEmail("Evento: " + e.getTitulo() + " (inscrição)", p.assunto(),
                     List.of(new EnvioAvulso.MensagemEmail(pessoa.getId(), pessoa.getNomeCompleto(), email, p.assunto(), p.corpo())));
@@ -350,6 +351,7 @@ public class EventoService {
      */
     @Transactional
     public int enviarLembretes() {
+        if(!funcionalidades.permitida("EVENTOS") || !funcionalidades.permitida("COMUNICACAO")) return 0;
         LocalDateTime agora = agora();
         LocalDate hoje = agora.toLocalDate();
         Instant quando = Instant.now(clock);
@@ -363,7 +365,7 @@ public class EventoService {
             Integer marco = dias.stream().filter(d -> diasAte <= d).min(Integer::compare).orElse(null);
             if (marco == null) continue;
             Instant desde = diaDoEvento.minusDays(marco).atStartOfDay(BRASILIA).toInstant();
-            if (e.isWhatsappHabilitado()) {
+            if (funcionalidades.permitida("COMUNICACAO") && e.isWhatsappHabilitado()) {
                 List<EventoInscricao> pendentes = inscricoes.pendentesDeLembreteWhatsapp(e.getId(), desde);
                 List<EventoInscricao> comTelefone = new ArrayList<>();
                 List<EnvioAvulso.Mensagem> mensagens = new ArrayList<>();
@@ -379,7 +381,7 @@ public class EventoService {
                 for (int k = 0; k < comTelefone.size(); k++) comTelefone.get(k).lembreteEnfileirado(ids.get(k), quando);
                 total += ids.size();
             }
-            if (e.isEmailHabilitado()) {
+            if (funcionalidades.permitida("COMUNICACAO") && e.isEmailHabilitado()) {
                 List<EventoInscricao> pendentes = inscricoes.pendentesDeLembreteEmail(e.getId(), desde);
                 List<EventoInscricao> comEmail = new ArrayList<>();
                 List<EnvioAvulso.MensagemEmail> mensagens = new ArrayList<>();

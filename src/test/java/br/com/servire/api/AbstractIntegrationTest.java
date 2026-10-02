@@ -90,6 +90,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
+    /** Testes de domínio isolam o plano comercial; a suíte FuncionalidadesPlano restaura leitura real. */
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+    protected br.com.servire.api.integracao.FuncionalidadesPlano funcionalidadesPlano;
+    @org.junit.jupiter.api.BeforeEach
+    void planoCompletoParaTestesDeDominio() {
+        org.mockito.Mockito.doReturn(br.com.servire.api.integracao.FuncionalidadesPlano.CODIGOS).when(funcionalidadesPlano).liberadas();
+    }
+
+
     private static final AtomicBoolean SUPABASE_STUB_APPLIED = new AtomicBoolean(false);
 
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine")

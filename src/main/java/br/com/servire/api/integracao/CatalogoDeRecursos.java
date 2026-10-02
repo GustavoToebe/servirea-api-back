@@ -29,8 +29,14 @@ public final class CatalogoDeRecursos {
             new RecursoDoApp("emails_mes", "E-mails da fila por mês", Tipo.LIMITE, "mensagem/mês", true),
             new RecursoDoApp("whatsapp_mes", "WhatsApp da fila por mês", Tipo.LIMITE, "mensagem/mês", true),
             new RecursoDoApp("importacoes_mes", "Lotes CSV de pessoas por mês", Tipo.LIMITE, "lote/mês", true),
-            new RecursoDoApp("ESCALAS", "Escalas", Tipo.FUNCIONALIDADE, null, false),
-            new RecursoDoApp("INSCRICAO_PUBLICA", "Inscrição pública", Tipo.FUNCIONALIDADE, null, false));
+            new RecursoDoApp("MURAL", "Mural de avisos", Tipo.FUNCIONALIDADE, null, true),
+            new RecursoDoApp("TAREFAS", "Tarefas e solicitações", Tipo.FUNCIONALIDADE, null, true),
+            new RecursoDoApp("EVENTOS", "Eventos", Tipo.FUNCIONALIDADE, null, true),
+            new RecursoDoApp("FINANCEIRO", "Financeiro paroquial", Tipo.FUNCIONALIDADE, null, true),
+            new RecursoDoApp("COMUNICACAO", "Comunicação e WhatsApp", Tipo.FUNCIONALIDADE, null, true),
+            new RecursoDoApp("IMPORTACAO_PESSOAS", "Importação CSV de pessoas", Tipo.FUNCIONALIDADE, null, true),
+            new RecursoDoApp("ESCALAS", "Escalas", Tipo.FUNCIONALIDADE, null, true),
+            new RecursoDoApp("INSCRICAO_PUBLICA", "Inscrição pública", Tipo.FUNCIONALIDADE, null, true));
 
     private CatalogoDeRecursos() {
     }

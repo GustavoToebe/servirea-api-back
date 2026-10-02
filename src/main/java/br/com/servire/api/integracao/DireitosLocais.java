@@ -132,6 +132,8 @@ public class DireitosLocais {
 
     public String getLimites() {return limites;}
 
+    public String[] getFuncionalidades() {return funcionalidades == null ? new String[0] : funcionalidades.clone();}
+
     public void setFuncionalidades(String[] funcionalidades) {
         this.funcionalidades = funcionalidades == null ? new String[0] : funcionalidades;
     }

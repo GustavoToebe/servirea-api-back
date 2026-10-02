@@ -1,0 +1,11 @@
+# Funcionalidades comerciais do plano
+
+Direitos locais contêm a lista explícita recebida da Central: ESCALAS, INSCRICAO_PUBLICA, EVENTOS, FINANCEIRO, COMUNICACAO, IMPORTACAO_PESSOAS, MURAL, TAREFAS. Recursos funcionais têm aplicado=true no catálogo HMAC. Ausência de snapshot, lista vazia ou código desconhecido não libera operações. Não há fallback de compatibilidade, conforme pedido do usuário.
+
+GET /funcionalidades-plano exige autenticação e retorna apenas códigos conhecidos da paróquia selecionada. É independente das permissões do perfil: plano comercial e permissão são ambos necessários. Funcionalidades indisponíveis aparecem como somente consulta; páginas de módulos mostram aviso e API recusa mutações com 403 FUNCIONALIDADE_NAO_CONTRATADA. Formulários de nova escala/evento/layout/importação têm guard; histórico continua consultável com a permissão normal. Catálogo de perfis e menus continuam definidos por permissões, sem esconder dados antigos no downgrade.
+
+HandlerInterceptor associa módulos ao tipo do controller resolvido, não ao texto da URL. Controllers futuros devem ser incluídos nesse mapa e ganhar teste pertinente. GET/HEAD/OPTIONS não alteram domínio e permanecem liberados pelo plano. As permissões existentes continuam obrigatórias. Nenhuma nova flag de configuração permite ignorar o plano.
+
+Fila verifica COMUNICACAO antes de reservar posse/tentativa/cota. Sem recurso, pendentes aguardam e retomam na próxima rodada após atualização dos direitos. Mensagem já reservada e em HTTP pode terminar: não há revogação atômica no provedor. Eventos sem COMUNICACAO podem ser gerenciados se EVENTOS estiver contratado, mas não geram confirmações/cancelamentos por canal. Lembretes exigem ambos. Cadastro público resolve slug, define contexto e abre transação antes de exigir INSCRICAO_PUBLICA; Turnstile e rate limit continuam ativos. E-mails técnicos de autenticação e teste direto de WhatsApp continuam fora do recurso de comunicação da fila.
+
+Cotas quantitativas mantêm as unidades/regra de omissão documentadas em cotas-plano, armazenamento-cotas e cotas-envios-importacao; essa política de omissão é diferente de liberar um módulo. Nenhum preço, contrato ou direito de produção foi alterado. Antes de implantar, configure explicitamente os recursos funcionais nos planos da Central para evitar bloquear operações de clientes.

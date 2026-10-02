@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V059). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V060). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict VxyIkZM31XdgFuZphLLHWno6fct9ubuKJdcMUUdpLEcFYQ1QAXwZirHtNoKKth7
+\restrict uGV0AxuYj1dxBH6GsbwpWDZ5U8BTM34XV6Yb3qMUQpTbgNrJaSI8eg33zJ0RoKO
 
 
 
@@ -852,6 +852,24 @@ CREATE TABLE public.layout_escala (
 
 
 --
+-- Name: mural_aviso; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mural_aviso (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    titulo character varying(160) NOT NULL,
+    descricao character varying(4000) NOT NULL,
+    status character varying(24) NOT NULL,
+    prazo date,
+    criado_em timestamp with time zone NOT NULL,
+    atualizado_em timestamp with time zone NOT NULL,
+    CONSTRAINT mural_aviso_status_check CHECK (((status)::text = ANY ((ARRAY['PUBLICADO'::character varying, 'ARQUIVADO'::character varying])::text[])))
+);
+
+
+--
 -- Name: paroquia_whatsapp; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1097,6 +1115,25 @@ CREATE TABLE public.suporte_codigo (
     motivo text NOT NULL,
     expira_em timestamp with time zone NOT NULL,
     usado_em timestamp with time zone
+);
+
+
+--
+-- Name: tarefa; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tarefa (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    titulo character varying(160) NOT NULL,
+    descricao character varying(4000) NOT NULL,
+    status character varying(24) NOT NULL,
+    prazo date,
+    equipe character varying(120),
+    criado_em timestamp with time zone NOT NULL,
+    atualizado_em timestamp with time zone NOT NULL,
+    CONSTRAINT tarefa_status_check CHECK (((status)::text = ANY ((ARRAY['ABERTA'::character varying, 'EM_ANDAMENTO'::character varying, 'CONCLUIDA'::character varying, 'CANCELADA'::character varying])::text[])))
 );
 
 
@@ -1683,6 +1720,14 @@ ALTER TABLE ONLY public.layout_escala
 
 
 --
+-- Name: mural_aviso mural_aviso_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_aviso
+    ADD CONSTRAINT mural_aviso_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: paroquia_whatsapp paroquia_whatsapp_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1824,6 +1869,14 @@ ALTER TABLE ONLY public.suporte_codigo
 
 ALTER TABLE ONLY public.suporte_codigo
     ADD CONSTRAINT suporte_codigo_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tarefa tarefa_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarefa
+    ADD CONSTRAINT tarefa_pkey PRIMARY KEY (id);
 
 
 --
@@ -2338,6 +2391,34 @@ CREATE INDEX ix_financeiro_movimento_vencimento ON public.financeiro_movimento U
 --
 
 CREATE INDEX ix_importacao_pessoa_mes ON public.importacao_pessoa USING btree (tenant_id, competencia);
+
+
+--
+-- Name: ix_mural_aviso_lista; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_mural_aviso_lista ON public.mural_aviso USING btree (tenant_id, status, criado_em DESC, id DESC);
+
+
+--
+-- Name: ix_mural_aviso_recentes; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_mural_aviso_recentes ON public.mural_aviso USING btree (tenant_id, criado_em DESC, id DESC);
+
+
+--
+-- Name: ix_tarefa_lista; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_tarefa_lista ON public.tarefa USING btree (tenant_id, status, criado_em DESC, id DESC);
+
+
+--
+-- Name: ix_tarefa_recentes; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_tarefa_recentes ON public.tarefa USING btree (tenant_id, criado_em DESC, id DESC);
 
 
 --
@@ -3040,6 +3121,14 @@ ALTER TABLE ONLY public.layout_envio
 
 
 --
+-- Name: mural_aviso mural_aviso_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mural_aviso
+    ADD CONSTRAINT mural_aviso_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
 -- Name: paroquia_whatsapp paroquia_whatsapp_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3165,6 +3254,14 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 
 ALTER TABLE ONLY public.suporte_codigo
     ADD CONSTRAINT suporte_codigo_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+
+--
+-- Name: tarefa tarefa_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tarefa
+    ADD CONSTRAINT tarefa_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
 
 
 --
@@ -3414,6 +3511,12 @@ ALTER TABLE public.layout_envio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.layout_escala ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: mural_aviso; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.mural_aviso ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: paroquia_whatsapp; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3480,6 +3583,12 @@ ALTER TABLE public.resposta_indisponibilidade ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.suporte_codigo ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: tarefa; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tarefa ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: tenant; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3524,5 +3633,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict VxyIkZM31XdgFuZphLLHWno6fct9ubuKJdcMUUdpLEcFYQ1QAXwZirHtNoKKth7
+\unrestrict uGV0AxuYj1dxBH6GsbwpWDZ5U8BTM34XV6Yb3qMUQpTbgNrJaSI8eg33zJ0RoKO
 

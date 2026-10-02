@@ -186,7 +186,7 @@ class IntegracaoHttpIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$[?(@.codigo == 'voluntarios')].tipo").value("LIMITE"))
                 .andExpect(jsonPath("$[?(@.codigo == 'voluntarios')].unidade").value("pessoa"))
                 .andExpect(jsonPath("$[?(@.codigo == 'ESCALAS')].tipo").value("FUNCIONALIDADE"))
-                .andExpect(jsonPath("$[?(@.codigo == 'ESCALAS')].aplicado").value(false))
+                .andExpect(jsonPath("$[?(@.codigo == 'ESCALAS')].aplicado").value(true))
                 .andExpect(jsonPath("$.length()").value(CatalogoDeRecursos.RECURSOS.size()));
     }
 
@@ -272,6 +272,19 @@ class IntegracaoHttpIntegrationTest extends AbstractIntegrationTest {
                 + ",\"situacao\":\"" + situacao + "\",\"acessoLiberado\":" + liberado
                 + ",\"plano\":{\"codigo\":\"PROFISSIONAL\",\"nome\":\"Profissional\"}"
                 + ",\"limites\":{\"voluntarios\":100},\"funcionalidades\":[\"ESCALAS\"]}";
+    }
+
+    @Test
+    void consumoExigeHmacValidoEDevolveApenasAgregados() throws Exception {
+        String slug="consumo-"+UUID.randomUUID();
+        String tenant=provisionar(UUID.randomUUID(),slug,slug+"@example.test");
+        String caminho="/integracao/v1/instancias/"+tenant+"/consumo";
+        mockMvc.perform(get(caminho)).andExpect(status().isUnauthorized());
+        mockMvc.perform(assinado(get(caminho),"GET",caminho,"",UUID.randomUUID().toString(),agora()))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.versaoContrato").value(1))
+          .andExpect(jsonPath("$.tenantId").value(tenant.toString()))
+          .andExpect(jsonPath("$.consumo.itens.length()").value(7))
+          .andExpect(jsonPath("$.pessoas").doesNotExist()).andExpect(jsonPath("$.administrador").doesNotExist());
     }
 
     private MockHttpServletRequestBuilder assinado(MockHttpServletRequestBuilder builder, String metodo,

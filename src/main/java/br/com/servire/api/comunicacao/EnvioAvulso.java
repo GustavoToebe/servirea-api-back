@@ -27,10 +27,12 @@ public class EnvioAvulso {
     public record MensagemEmail(UUID pessoaId, String nome, String email, String assunto, String textoHtml) {
     }
 
+    private final br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades;
     private final ComunicadoRepository comunicados;
     private final ComunicadoDestinatarioRepository destinatarios;
 
-    public EnvioAvulso(ComunicadoRepository comunicados, ComunicadoDestinatarioRepository destinatarios) {
+    public EnvioAvulso(ComunicadoRepository comunicados, ComunicadoDestinatarioRepository destinatarios,br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades) {
+        this.funcionalidades=funcionalidades;
         this.comunicados = comunicados;
         this.destinatarios = destinatarios;
     }
@@ -42,6 +44,7 @@ public class EnvioAvulso {
     @Transactional(propagation = Propagation.MANDATORY)
     public List<UUID> enfileirarWhatsapp(String origem, List<Mensagem> mensagens) {
         if (mensagens.isEmpty()) return List.of();
+        funcionalidades.exigir("COMUNICACAO");
         Comunicado comunicado = comunicados.save(new Comunicado(TipoEnvio.WHATSAPP, origem, usuarioAtual()));
         List<ComunicadoDestinatario> linhas = new ArrayList<>();
         for (Mensagem m : mensagens) {
@@ -59,6 +62,7 @@ public class EnvioAvulso {
     @Transactional(propagation = Propagation.MANDATORY)
     public List<UUID> enfileirarEmail(String origem, String assuntoPadrao, List<MensagemEmail> mensagens) {
         if (mensagens.isEmpty()) return List.of();
+        funcionalidades.exigir("COMUNICACAO");
         Comunicado comunicado = comunicados.save(new Comunicado(TipoEnvio.EMAIL, origem, usuarioAtual()));
         comunicado.setAssunto(limitar(assuntoPadrao, 200));
         List<ComunicadoDestinatario> linhas = new ArrayList<>();
