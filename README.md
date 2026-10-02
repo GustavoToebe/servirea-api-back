@@ -8,7 +8,7 @@ Este repo é o `servire-api-back`; o Angular é o irmão `servire-api-front`
 - Diário das fases, bugs e builds: [`HISTORICO.md`](HISTORICO.md)
 - Plano de produto: `plano_mestre_servire_v2_mvp_baixo_custo.md`
 
-**Validação local em 02/10/2026:** Maven clean verify, 522 testes aprovados, zero falhas/erros/ignorados; Flyway V001–V065. Não confirma implantação. Contratos e instruções atuais no [índice](docs/README.md) e [estado local](docs/estado-projeto.json).
+**Validação local em 02/10/2026:** Maven clean verify, 533 testes aprovados, zero falhas/erros/ignorados; Flyway V001–V066. Não confirma implantação. Contratos e instruções atuais no [índice](docs/README.md) e [estado local](docs/estado-projeto.json).
 
 ## Estado atual
 

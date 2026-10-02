@@ -102,3 +102,5 @@ Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar
 - [Fontes e retomada](docs/desenvolvimento/fontes-e-retomada.md): precedência, histórico e registro de evidências.
 
 - V065: docs/tarefas-relatorios-disponibilidade.md. Responsável é usuario_id com FK composta do vínculo; diretório mínimo de 30. Relatórios projetam vagas ocupadas finalizadas; CSV limitado a 5.000, AUDITORIA + RELATORIO_EXPORTAR. Portal próprio PORTAL_DISPONIBILIDADE; versão mensal sob lock da paróquia compartilhada com a coordenação. PUT mensal exige versao.
+
+- F07/V066: [Primeiros passos](docs/onboarding.md). ONBOARDING + ONBOARDING_GERENCIAR e leitura do módulo; progresso compartilhado por paróquia, versão manual sob lock da paróquia, GET sem escrita. Requisitos mínimos são conferidos pelo servidor; nenhuma configuração/envio automático. ESCALAS respeita plano; etapas sem acesso/recurso ficam fora do percentual.

@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V065). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V066). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict CpkY1bsg7NRcGj8o6gpceP3NAgdKMU5jLbka7HeWnwnZzaUBg1gXpd2o9YvFZKX
+\restrict aSacKVqiCF3LByFJmHoiKMaOSwbwaE714dJudC8pzPDOd4GyTNg5aY29sdcut19
 
 
 
@@ -972,6 +972,27 @@ CREATE TABLE public.mural_aviso (
 
 
 --
+-- Name: onboarding_progresso; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.onboarding_progresso (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    paroquia boolean DEFAULT false NOT NULL,
+    convite boolean DEFAULT false NOT NULL,
+    pessoas boolean DEFAULT false NOT NULL,
+    voluntarios boolean DEFAULT false NOT NULL,
+    escala boolean DEFAULT false NOT NULL,
+    convite_dispensado boolean DEFAULT false NOT NULL,
+    iniciado_em timestamp with time zone NOT NULL,
+    atualizado_em timestamp with time zone NOT NULL,
+    CONSTRAINT onboarding_progresso_check CHECK ((NOT (convite AND convite_dispensado))),
+    CONSTRAINT onboarding_progresso_versao_check CHECK ((versao >= 0))
+);
+
+
+--
 -- Name: paroquia_whatsapp; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1923,6 +1944,22 @@ ALTER TABLE ONLY public.layout_escala
 
 ALTER TABLE ONLY public.mural_aviso
     ADD CONSTRAINT mural_aviso_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: onboarding_progresso onboarding_progresso_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.onboarding_progresso
+    ADD CONSTRAINT onboarding_progresso_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: onboarding_progresso onboarding_progresso_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.onboarding_progresso
+    ADD CONSTRAINT onboarding_progresso_tenant_id_key UNIQUE (tenant_id);
 
 
 --
@@ -3529,6 +3566,14 @@ ALTER TABLE ONLY public.mural_aviso
 
 
 --
+-- Name: onboarding_progresso onboarding_progresso_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.onboarding_progresso
+    ADD CONSTRAINT onboarding_progresso_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
 -- Name: paroquia_whatsapp paroquia_whatsapp_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3979,6 +4024,12 @@ ALTER TABLE public.layout_escala ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mural_aviso ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: onboarding_progresso; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.onboarding_progresso ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: paroquia_whatsapp; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4107,5 +4158,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict CpkY1bsg7NRcGj8o6gpceP3NAgdKMU5jLbka7HeWnwnZzaUBg1gXpd2o9YvFZKX
+\unrestrict aSacKVqiCF3LByFJmHoiKMaOSwbwaE714dJudC8pzPDOd4GyTNg5aY29sdcut19
 

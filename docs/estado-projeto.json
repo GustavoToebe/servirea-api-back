@@ -13,7 +13,7 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V065__tarefas_responsavel_indisponibilidade_mes.sql",
-    "quantidade": 65
+    "ultima": "V066__onboarding_progresso.sql",
+    "quantidade": 66
   }
 }
