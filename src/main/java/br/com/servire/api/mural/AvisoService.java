@@ -17,9 +17,9 @@ import java.util.*;
 /** Público não concede permissão MURAL. Leituras valem para a versão exata, nunca por abertura automática. */
 @Service
 public class AvisoService {
- private final AvisoRepository repo;private final AuditLogService audit;private final FuncionalidadesPlano plano;private final TenantRepository tenants;
+ private final AvisoRepository repo;private final AuditLogService audit;private final FuncionalidadesPlano plano;private final TenantRepository tenants;private final br.com.servire.api.notificacao.NotificacaoService notificacoes;
  @PersistenceContext private EntityManager em;
- public AvisoService(AvisoRepository repo,AuditLogService audit,FuncionalidadesPlano plano,TenantRepository tenants){this.repo=repo;this.audit=audit;this.plano=plano;this.tenants=tenants;}
+ public AvisoService(AvisoRepository repo,AuditLogService audit,FuncionalidadesPlano plano,TenantRepository tenants,br.com.servire.api.notificacao.NotificacaoService notificacoes){this.repo=repo;this.audit=audit;this.plano=plano;this.tenants=tenants;this.notificacoes=notificacoes;}
  @Transactional(readOnly=true) public Pagina listar(String busca,Aviso.Status status,int pagina,int tamanho){
   if(pagina<0||pagina>100000||tamanho<1||tamanho>100||busca!=null&&busca.length()>160)throw new BadRequestException("Filtro inválido.");
   Specification<Aviso> filtro=(r,q,b)->b.conjunction();
@@ -41,7 +41,7 @@ public class AvisoService {
  }
  @Transactional public Resposta salvar(UUID id,Salvar req){
   tenants.bloquearParaCotas(TenantContext.get()).orElseThrow(()->new ResourceNotFoundException("Paróquia não encontrada."));plano.exigir("MURAL");
-  var e=id==null?new Aviso():carregar(id);
+  var e=id==null?new Aviso():carregar(id);boolean eraPublicado=id!=null&&e.status==Aviso.Status.PUBLICADO;
   if(id!=null&&(req.versao()==null||req.versao()!=e.versao))throw new ConflictException("O registro mudou. Atualize a página antes de salvar.");
   var publico=req.publico()==null?Aviso.Publico.TODOS:req.publico();var ids=req.destinatarios()==null?List.<UUID>of():req.destinatarios().stream().distinct().toList();
   if(publico==Aviso.Publico.SELECIONADOS){
@@ -52,7 +52,7 @@ public class AvisoService {
   if(id==null)e.criadoEm=Instant.now();e.titulo=req.titulo().trim();e.descricao=req.descricao().trim();e.status=req.status();e.prazo=req.prazo();e.publico=publico;e.atualizadoEm=Instant.now();repo.saveAndFlush(e);
   em.createQuery("delete from AvisoDestinatario d where d.avisoId=:id").setParameter("id",e.id).executeUpdate();
   for(var usuario:ids){var d=new AvisoDestinatario();d.avisoId=e.id;d.usuarioId=usuario;em.persist(d);}em.flush();
-  audit.registrar(id==null?"CRIAR":"ALTERAR","MURAL",e.id,List.of("titulo","descricao","status","prazo","publico","destinatarios"));return respostas(List.of(e)).getFirst();
+  audit.registrar(id==null?"CRIAR":"ALTERAR","MURAL",e.id,List.of("titulo","descricao","status","prazo","publico","destinatarios"));if(!eraPublicado)notificacoes.aoPublicarAviso(e);return respostas(List.of(e)).getFirst();
  }
  @Transactional public Resposta confirmar(UUID id,long versao){
   UUID usuario=pessoal();tenants.bloquearParaCotas(TenantContext.get()).orElseThrow(()->new ResourceNotFoundException("Paróquia não encontrada."));plano.exigir("MURAL");

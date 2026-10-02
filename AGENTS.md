@@ -116,3 +116,7 @@ Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar
 Dependentes exigem autorização explícita e conta ligada à pessoa; parentesco não concede acesso. Coordenação própria revalida membro ativo COORDENADOR a cada operação e não autoriza nomear coordenadores. Contratos em docs/acessos-responsaveis-coordenacao.md.
 
 - F04: docs/distribuicao-escala.md. Motor determinístico, prévia sem efeito; a aplicação trava a escala, confere versão, recalcula e só grava escolhas que o motor ainda produz. VAGA_DISTRIBUIR (+ VAGA_ALOCAR para aplicar). Sem IA, sem migration.
+
+- F05/F13/V077: docs/notificacoes-entregas.md. notificacao/NotificacaoService só enfileira via EnvioAvulso; chave única origem+referência+versão+canal; WhatsApp só com autorização; mural só para contas com pessoa vinculada; gatilhos nascem desligados. NOTIFICACAO, NOTIFICACAO_ENVIAR, NOTIFICACAO_CONFIGURAR.
+
+- F09/V078: docs/privacidade.md. privacidade/ConsentimentoService registra só mudanças; exportação nunca traz corpo de mensagem nem destino e exige PESSOA_CUIDADOS_LER para cuidados; retenção é manual e irreversível (anonimiza comunicados concluídos). PRIVACIDADE, PRIVACIDADE_EXPORTAR, PRIVACIDADE_RETENCAO.

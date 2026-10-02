@@ -50,6 +50,7 @@ public class EscalaService {
     private final DisponibilidadeVoluntarioRepository disponibilidadeRepository;
     private final LayoutEscalaRepository layoutEscalaRepository;
     private final AuditLogService auditLogService;
+    private final br.com.servire.api.notificacao.NotificacaoService notificacoes;
 
     static final String REFERENCIA_SEM_ALOCACAO = "Linha de referência não recebe presença nem alocação.";
 
@@ -58,7 +59,8 @@ public class EscalaService {
                           VoluntarioRepository voluntarioRepository,
                           DisponibilidadeVoluntarioRepository disponibilidadeRepository,
                           LayoutEscalaRepository layoutEscalaRepository,
-                          AuditLogService auditLogService) {
+                          AuditLogService auditLogService,
+                          br.com.servire.api.notificacao.NotificacaoService notificacoes) {
         this.escalaRepository = escalaRepository;
         this.escalaVagaRepository = escalaVagaRepository;
         this.escalaEventoRepository = escalaEventoRepository;
@@ -66,6 +68,7 @@ public class EscalaService {
         this.disponibilidadeRepository = disponibilidadeRepository;
         this.layoutEscalaRepository = layoutEscalaRepository;
         this.auditLogService = auditLogService;
+        this.notificacoes = notificacoes;
     }
 
     /** Mais recente primeiro; escala sem ano/mês vai para o fim. */
@@ -323,6 +326,7 @@ public class EscalaService {
         }
         escala.setStatus(StatusEscala.FINALIZADA);
         auditLogService.registrar("FINALIZACAO", "ESCALA", id, List.of("status"));
+        notificacoes.aoFinalizarEscala(escala);
         return inicializar(escala);
     }
 

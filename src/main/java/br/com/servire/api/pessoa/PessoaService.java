@@ -44,14 +44,17 @@ public class PessoaService {
     private final PessoaRepository pessoaRepository;
     private final AuditLogService auditLogService;
     private final br.com.servire.api.minhaconta.CotasService cotas;
+    private final br.com.servire.api.privacidade.ConsentimentoService consentimentos;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public PessoaService(PessoaRepository pessoaRepository, AuditLogService auditLogService, br.com.servire.api.minhaconta.CotasService cotas) {
+    public PessoaService(PessoaRepository pessoaRepository, AuditLogService auditLogService, br.com.servire.api.minhaconta.CotasService cotas,
+                         br.com.servire.api.privacidade.ConsentimentoService consentimentos) {
         this.pessoaRepository = pessoaRepository;
         this.auditLogService = auditLogService;
         this.cotas = cotas;
+        this.consentimentos = consentimentos;
     }
 
     @Transactional(readOnly = true)
@@ -164,6 +167,9 @@ public class PessoaService {
         pessoa = pessoaRepository.save(pessoa);
         cotas.validar(reserva);
         auditLogService.registrar("CRIACAO", "PESSOA", pessoa.getId(), null);
+        if (pessoa.isVoluntario() && pessoa.getVoluntario().isAutorizaWhatsapp()) {
+            consentimentos.registrar(pessoa.getId(), br.com.servire.api.privacidade.Privacidade.TipoConsentimento.WHATSAPP, true, "Cadastro pela coordenação");
+        }
         return buscarPorId(pessoa.getId());
     }
 
@@ -179,6 +185,7 @@ public class PessoaService {
             throw new BadRequestException("Não é possível remover o papel RESPONSAVEL.");
         }
         validarRequest(request, novos);
+        boolean whatsappAntes = pessoa.getVoluntario() != null && pessoa.getVoluntario().isAutorizaWhatsapp();
         pessoa.setPapeis(novos);
         List<String> alterados = new ArrayList<>(List.of("identidade", "contatos", "responsaveis", "dependentes", "papeis"));
         CondicaoEspecial[] antigas = pessoa.getCondicoes();
@@ -196,6 +203,10 @@ public class PessoaService {
         pessoaRepository.save(pessoa);
         cotas.validar(reserva);
         auditLogService.registrar("ATUALIZACAO", "PESSOA", id, alterados);
+        boolean whatsappDepois = pessoa.getVoluntario() != null && pessoa.getVoluntario().isAutorizaWhatsapp();
+        if (whatsappAntes != whatsappDepois) {
+            consentimentos.registrar(id, br.com.servire.api.privacidade.Privacidade.TipoConsentimento.WHATSAPP, whatsappDepois, "Edição do cadastro pela coordenação");
+        }
         return buscarPorId(id);
     }
 

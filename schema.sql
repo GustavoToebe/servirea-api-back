@@ -1,4 +1,4 @@
--- Esquema do banco, gerado das migrations (V001-V076). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V078). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
@@ -375,6 +375,23 @@ CREATE TABLE public.comunicado_destinatario (
     CONSTRAINT ck_comunicado_destinatario_reserva CHECK (((reservado_por IS NULL) = (reserva_ate IS NULL))),
     CONSTRAINT comunicado_destinatario_cota_competencia_check CHECK ((EXTRACT(day FROM cota_competencia) = (1)::numeric)),
     CONSTRAINT comunicado_destinatario_status_check CHECK (((status)::text = ANY ((ARRAY['PENDENTE'::character varying, 'ENVIADO'::character varying, 'FALHA'::character varying])::text[])))
+);
+
+
+--
+-- Name: consentimento_historico; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.consentimento_historico (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    pessoa_id uuid NOT NULL,
+    tipo character varying(24) NOT NULL,
+    concedido boolean NOT NULL,
+    fonte character varying(200) NOT NULL,
+    registrado_por uuid,
+    registrado_em timestamp with time zone NOT NULL,
+    CONSTRAINT consentimento_historico_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['WHATSAPP'::character varying, 'ANIVERSARIO_EMAIL'::character varying, 'ANIVERSARIO_WHATSAPP'::character varying])::text[])))
 );
 
 
@@ -1141,6 +1158,47 @@ CREATE TABLE public.mural_leitura (
 
 
 --
+-- Name: notificacao_config; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.notificacao_config (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    origem character varying(20) NOT NULL,
+    canal character varying(20) NOT NULL,
+    ativo boolean DEFAULT false NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT notificacao_config_canal_check CHECK (((canal)::text = ANY ((ARRAY['EMAIL'::character varying, 'WHATSAPP'::character varying])::text[]))),
+    CONSTRAINT notificacao_config_origem_check CHECK (((origem)::text = ANY ((ARRAY['ESCALA'::character varying, 'MURAL'::character varying])::text[])))
+);
+
+
+--
+-- Name: notificacao_entrega; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.notificacao_entrega (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    origem character varying(20) NOT NULL,
+    referencia_id uuid NOT NULL,
+    referencia_versao bigint NOT NULL,
+    canal character varying(20) NOT NULL,
+    gatilho character varying(12) NOT NULL,
+    total integer NOT NULL,
+    ignorados integer NOT NULL,
+    comunicado_id uuid,
+    criado_por uuid,
+    criado_em timestamp with time zone NOT NULL,
+    CONSTRAINT notificacao_entrega_canal_check CHECK (((canal)::text = ANY ((ARRAY['EMAIL'::character varying, 'WHATSAPP'::character varying])::text[]))),
+    CONSTRAINT notificacao_entrega_gatilho_check CHECK (((gatilho)::text = ANY ((ARRAY['MANUAL'::character varying, 'AUTOMATICO'::character varying])::text[]))),
+    CONSTRAINT notificacao_entrega_ignorados_check CHECK ((ignorados >= 0)),
+    CONSTRAINT notificacao_entrega_origem_check CHECK (((origem)::text = ANY ((ARRAY['ESCALA'::character varying, 'MURAL'::character varying])::text[]))),
+    CONSTRAINT notificacao_entrega_total_check CHECK ((total >= 0))
+);
+
+
+--
 -- Name: onboarding_progresso; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1425,6 +1483,34 @@ CREATE TABLE public.resposta_indisponibilidade (
     sem_restricao boolean NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT resposta_indisponibilidade_mes_check CHECK (((mes >= 1) AND (mes <= 12)))
+);
+
+
+--
+-- Name: retencao_execucao; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.retencao_execucao (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    executado_em timestamp with time zone NOT NULL,
+    executado_por uuid,
+    corte timestamp with time zone NOT NULL,
+    comunicados_anonimizados integer NOT NULL,
+    CONSTRAINT retencao_execucao_comunicados_anonimizados_check CHECK ((comunicados_anonimizados >= 0))
+);
+
+
+--
+-- Name: retencao_politica; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.retencao_politica (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    comunicados_dias integer,
+    versao bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT retencao_politica_comunicados_dias_check CHECK (((comunicados_dias IS NULL) OR ((comunicados_dias >= 30) AND (comunicados_dias <= 3650))))
 );
 
 
@@ -1829,6 +1915,14 @@ ALTER TABLE ONLY public.comunicado
 
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT comunicado_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: consentimento_historico consentimento_historico_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.consentimento_historico
+    ADD CONSTRAINT consentimento_historico_pkey PRIMARY KEY (id);
 
 
 --
@@ -2320,6 +2414,38 @@ ALTER TABLE ONLY public.mural_aviso
 
 
 --
+-- Name: notificacao_config notificacao_config_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacao_config
+    ADD CONSTRAINT notificacao_config_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notificacao_config notificacao_config_tenant_id_origem_canal_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacao_config
+    ADD CONSTRAINT notificacao_config_tenant_id_origem_canal_key UNIQUE (tenant_id, origem, canal);
+
+
+--
+-- Name: notificacao_entrega notificacao_entrega_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacao_entrega
+    ADD CONSTRAINT notificacao_entrega_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: notificacao_entrega notificacao_entrega_tenant_id_origem_referencia_id_referenc_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacao_entrega
+    ADD CONSTRAINT notificacao_entrega_tenant_id_origem_referencia_id_referenc_key UNIQUE (tenant_id, origem, referencia_id, referencia_versao, canal);
+
+
+--
 -- Name: onboarding_progresso onboarding_progresso_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2493,6 +2619,30 @@ ALTER TABLE ONLY public.refresh_token
 
 ALTER TABLE ONLY public.resposta_indisponibilidade
     ADD CONSTRAINT resposta_indisponibilidade_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: retencao_execucao retencao_execucao_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.retencao_execucao
+    ADD CONSTRAINT retencao_execucao_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: retencao_politica retencao_politica_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.retencao_politica
+    ADD CONSTRAINT retencao_politica_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: retencao_politica retencao_politica_tenant_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.retencao_politica
+    ADD CONSTRAINT retencao_politica_tenant_id_key UNIQUE (tenant_id);
 
 
 --
@@ -2684,6 +2834,13 @@ ALTER TABLE ONLY public.voluntarios
 --
 
 CREATE INDEX aniversario_execucao_comunicado_idx ON public.aniversario_execucao USING btree (tenant_id, comunicado_id);
+
+
+--
+-- Name: consentimento_historico_pessoa_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX consentimento_historico_pessoa_idx ON public.consentimento_historico USING btree (tenant_id, pessoa_id, registrado_em DESC, id);
 
 
 --
@@ -3233,6 +3390,27 @@ CREATE INDEX liturgia_roteiro_lista ON public.liturgia_roteiro USING btree (tena
 
 
 --
+-- Name: notificacao_entrega_comunicado_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX notificacao_entrega_comunicado_idx ON public.notificacao_entrega USING btree (tenant_id, comunicado_id);
+
+
+--
+-- Name: notificacao_entrega_lista_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX notificacao_entrega_lista_idx ON public.notificacao_entrega USING btree (tenant_id, criado_em DESC, id);
+
+
+--
+-- Name: retencao_execucao_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX retencao_execucao_idx ON public.retencao_execucao USING btree (tenant_id, executado_em DESC);
+
+
+--
 -- Name: uq_calendario_usuario; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3630,6 +3808,22 @@ ALTER TABLE ONLY public.comunicado_destinatario
 
 ALTER TABLE ONLY public.comunicado
     ADD CONSTRAINT comunicado_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id) ON DELETE CASCADE;
+
+
+--
+-- Name: consentimento_historico consentimento_historico_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.consentimento_historico
+    ADD CONSTRAINT consentimento_historico_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: consentimento_historico consentimento_historico_tenant_id_pessoa_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.consentimento_historico
+    ADD CONSTRAINT consentimento_historico_tenant_id_pessoa_id_fkey FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id) ON DELETE CASCADE;
 
 
 --
@@ -4201,6 +4395,30 @@ ALTER TABLE ONLY public.mural_leitura
 
 
 --
+-- Name: notificacao_config notificacao_config_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacao_config
+    ADD CONSTRAINT notificacao_config_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: notificacao_entrega notificacao_entrega_tenant_id_comunicado_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacao_entrega
+    ADD CONSTRAINT notificacao_entrega_tenant_id_comunicado_id_fkey FOREIGN KEY (tenant_id, comunicado_id) REFERENCES public.comunicado(tenant_id, id) ON DELETE SET NULL (comunicado_id);
+
+
+--
+-- Name: notificacao_entrega notificacao_entrega_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.notificacao_entrega
+    ADD CONSTRAINT notificacao_entrega_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
 -- Name: onboarding_progresso onboarding_progresso_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4361,6 +4579,22 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 
 
 --
+-- Name: retencao_execucao retencao_execucao_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.retencao_execucao
+    ADD CONSTRAINT retencao_execucao_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: retencao_politica retencao_politica_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.retencao_politica
+    ADD CONSTRAINT retencao_politica_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
 -- Name: site_paroquia site_paroquia_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -4511,6 +4745,12 @@ ALTER TABLE public.comunicado_anexo ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.comunicado_destinatario ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: consentimento_historico; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.consentimento_historico ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: consumo_historico; Type: ROW SECURITY; Schema: public; Owner: -
@@ -4735,6 +4975,18 @@ ALTER TABLE public.mural_destinatario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mural_leitura ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: notificacao_config; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.notificacao_config ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: notificacao_entrega; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.notificacao_entrega ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: onboarding_progresso; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4811,6 +5063,18 @@ ALTER TABLE public.refresh_token ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.resposta_indisponibilidade ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: retencao_execucao; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.retencao_execucao ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: retencao_politica; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.retencao_politica ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: site_paroquia; Type: ROW SECURITY; Schema: public; Owner: -

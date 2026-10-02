@@ -73,6 +73,8 @@ public class InscricaoService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    private final br.com.servire.api.privacidade.ConsentimentoService consentimentos;
+
     public InscricaoService(InscricaoRepository inscricaoRepository,
                              PessoaRepository pessoaRepository,
                              TenantRepository tenantRepository,
@@ -80,7 +82,9 @@ public class InscricaoService {
                              TurnstileService turnstileService,
                              InscricaoRateLimiter rateLimiter,
                              AuditLogService auditLogService,
-                             PlatformTransactionManager transactionManager, br.com.servire.api.minhaconta.CotasService cotas,br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades) {
+                             PlatformTransactionManager transactionManager, br.com.servire.api.minhaconta.CotasService cotas,br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades,
+                             br.com.servire.api.privacidade.ConsentimentoService consentimentos) {
+        this.consentimentos = consentimentos;
         this.inscricaoRepository = inscricaoRepository;
         this.pessoaRepository = pessoaRepository;
         this.tenantRepository = tenantRepository;
@@ -287,6 +291,10 @@ public class InscricaoService {
         voluntarioPessoa.setVoluntario(perfil);
 
         voluntarioPessoa = pessoaRepository.saveAndFlush(voluntarioPessoa);
+        if (inscricao.isAutorizaWhatsapp()) {
+            consentimentos.registrar(voluntarioPessoa.getId(), br.com.servire.api.privacidade.Privacidade.TipoConsentimento.WHATSAPP, true,
+                    "Inscrição pública aprovada");
+        }
 
         // Principal primeiro. Pai e mãe com o mesmo e-mail na mesma ficha são
         // duas pessoas: quem já foi ligado nesta aprovação não é candidato de

@@ -27,6 +27,10 @@ public class EnvioAvulso {
     public record MensagemEmail(UUID pessoaId, String nome, String email, String assunto, String textoHtml) {
     }
 
+    /** Comunicado criado e destinatários na ordem das mensagens (nulo/vazio quando não havia mensagens). */
+    public record Enfileiradas(UUID comunicadoId, List<UUID> destinatarios) {
+    }
+
     private final br.com.servire.api.integracao.FuncionalidadesPlano funcionalidades;
     private final ComunicadoRepository comunicados;
     private final ComunicadoDestinatarioRepository destinatarios;
@@ -43,7 +47,12 @@ public class EnvioAvulso {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public List<UUID> enfileirarWhatsapp(String origem, List<Mensagem> mensagens) {
-        if (mensagens.isEmpty()) return List.of();
+        return enfileirarWhatsappDetalhado(origem, mensagens).destinatarios();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Enfileiradas enfileirarWhatsappDetalhado(String origem, List<Mensagem> mensagens) {
+        if (mensagens.isEmpty()) return new Enfileiradas(null, List.of());
         funcionalidades.exigir("COMUNICACAO");
         Comunicado comunicado = comunicados.save(new Comunicado(TipoEnvio.WHATSAPP, origem, usuarioAtual()));
         List<ComunicadoDestinatario> linhas = new ArrayList<>();
@@ -53,7 +62,7 @@ public class EnvioAvulso {
         }
         destinatarios.saveAll(linhas);
         comunicado.setTotal(linhas.size());
-        return linhas.stream().map(ComunicadoDestinatario::getId).toList();
+        return new Enfileiradas(comunicado.getId(), linhas.stream().map(ComunicadoDestinatario::getId).toList());
     }
 
     /**
@@ -61,7 +70,12 @@ public class EnvioAvulso {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public List<UUID> enfileirarEmail(String origem, String assuntoPadrao, List<MensagemEmail> mensagens) {
-        if (mensagens.isEmpty()) return List.of();
+        return enfileirarEmailDetalhado(origem, assuntoPadrao, mensagens).destinatarios();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Enfileiradas enfileirarEmailDetalhado(String origem, String assuntoPadrao, List<MensagemEmail> mensagens) {
+        if (mensagens.isEmpty()) return new Enfileiradas(null, List.of());
         funcionalidades.exigir("COMUNICACAO");
         Comunicado comunicado = comunicados.save(new Comunicado(TipoEnvio.EMAIL, origem, usuarioAtual()));
         comunicado.setAssunto(limitar(assuntoPadrao, 200));
@@ -73,7 +87,7 @@ public class EnvioAvulso {
         }
         destinatarios.saveAll(linhas);
         comunicado.setTotal(linhas.size());
-        return linhas.stream().map(ComunicadoDestinatario::getId).toList();
+        return new Enfileiradas(comunicado.getId(), linhas.stream().map(ComunicadoDestinatario::getId).toList());
     }
 
     /** Situação de envio de cada destinatário (os que não existem mais ficam de fora). */

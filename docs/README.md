@@ -76,3 +76,7 @@
 - [Responsáveis e coordenação própria](acessos-responsaveis-coordenacao.md): autorização explícita, escopo e revogação.
 
 - [Distribuição por regras](distribuicao-escala.md): F04, prévia explicada, aplicação revalidada e conflitos.
+
+- [Centro de entregas e notificações](notificacoes-entregas.md): F05/F13, escala e mural na fila, gatilhos desligados por padrão (V077).
+
+- [Privacidade](privacidade.md): F09, histórico de consentimentos, exportação autorizada e retenção de comunicados (V078).

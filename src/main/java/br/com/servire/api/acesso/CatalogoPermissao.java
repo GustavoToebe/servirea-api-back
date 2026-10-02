@@ -68,7 +68,13 @@ public final class CatalogoPermissao {
                             new Acao("LAYOUT_ALTERAR", "Alterar"),
                             new Acao("LAYOUT_EXCLUIR", "Excluir"))),
                     new Modulo("COMUNICADO", "Comunicados", List.of(
-                            new Acao("COMUNICADO_ENVIAR", "Enviar"))))),
+                            new Acao("COMUNICADO_ENVIAR", "Enviar"))),
+                    new Modulo("PRIVACIDADE", "Privacidade e dados pessoais", List.of(
+                            new Acao("PRIVACIDADE_EXPORTAR", "Exportar dados de uma pessoa"),
+                            new Acao("PRIVACIDADE_RETENCAO", "Definir e aplicar retenção"))),
+                    new Modulo("NOTIFICACAO", "Notificações de escala e mural", List.of(
+                            new Acao("NOTIFICACAO_ENVIAR", "Avisar escalados e destinatários"),
+                            new Acao("NOTIFICACAO_CONFIGURAR", "Ligar ou desligar gatilhos"))))),
             new Secao("Eventos", List.of(
                     new Modulo("EVENTO", "Eventos", List.of(
                             new Acao("EVENTO_CRIAR", "Criar"),
