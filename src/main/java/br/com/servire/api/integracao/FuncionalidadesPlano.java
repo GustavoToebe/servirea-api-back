@@ -10,7 +10,7 @@ import java.util.*;
 /** Lista explícita da Central. Ausência, inclusive de snapshot, nunca libera uma função. */
 @Service
 public class FuncionalidadesPlano {
-    public static final List<String> CODIGOS=List.of("ESCALAS","INSCRICAO_PUBLICA","EVENTOS","FINANCEIRO","COMUNICACAO","IMPORTACAO_PESSOAS","MURAL","TAREFAS");
+    public static final List<String> CODIGOS=List.of("ESCALAS","INSCRICAO_PUBLICA","EVENTOS","FINANCEIRO","COMUNICACAO","IMPORTACAO_PESSOAS","MURAL","TAREFAS","PASTORAIS","PORTAL_VOLUNTARIO","CALENDARIO");
     private final DireitosLocaisRepository direitos;
     public FuncionalidadesPlano(DireitosLocaisRepository direitos) {this.direitos=direitos;}
     @Transactional(readOnly=true)

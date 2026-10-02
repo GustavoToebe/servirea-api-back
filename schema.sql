@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V060). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V061). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict uGV0AxuYj1dxBH6GsbwpWDZ5U8BTM34XV6Yb3qMUQpTbgNrJaSI8eg33zJ0RoKO
+\restrict mAqADfTIeAfghxzHUtcaFJ4e6hXe5PW0vN14dqBSP7NLQCbEVzNijkpxDnfYJMQ
 
 
 
@@ -246,6 +246,21 @@ CREATE TABLE public.audit_log (
 --
 
 COMMENT ON TABLE public.audit_log IS 'Trilha de auditoria (seção 59) — quem fez o quê, em qual entidade, sem duplicar o conteúdo pessoal em si (só os nomes dos campos alterados).';
+
+
+--
+-- Name: calendario_assinatura; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.calendario_assinatura (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    usuario_id uuid NOT NULL,
+    pessoa_id uuid NOT NULL,
+    token_hash character varying(64) NOT NULL,
+    expira_em timestamp with time zone NOT NULL,
+    criado_em timestamp with time zone NOT NULL
+);
 
 
 --
@@ -912,6 +927,36 @@ COMMENT ON COLUMN public.password_reset_token.finalidade IS 'RESET ou CONVITE. O
 
 
 --
+-- Name: pastoral_equipe; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pastoral_equipe (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    nome character varying(120) NOT NULL,
+    descricao character varying(1000),
+    ativo boolean NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL
+);
+
+
+--
+-- Name: pastoral_membro; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pastoral_membro (
+    id uuid NOT NULL,
+    tenant_id uuid NOT NULL,
+    equipe_id uuid NOT NULL,
+    pessoa_id uuid NOT NULL,
+    papel character varying(20) NOT NULL,
+    ativo boolean NOT NULL,
+    versao bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT pastoral_membro_papel_check CHECK (((papel)::text = ANY ((ARRAY['MEMBRO'::character varying, 'COORDENADOR'::character varying])::text[])))
+);
+
+
+--
 -- Name: perfil; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1289,7 +1334,8 @@ CREATE TABLE public.usuario_tenant (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     perfil_id uuid,
-    sequencial bigint NOT NULL
+    sequencial bigint NOT NULL,
+    pessoa_id uuid
 );
 
 
@@ -1373,6 +1419,22 @@ CREATE VIEW public.vw_voluntario_compromissos WITH (security_invoker='true') AS
 
 ALTER TABLE ONLY public.audit_log
     ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: calendario_assinatura calendario_assinatura_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendario_assinatura
+    ADD CONSTRAINT calendario_assinatura_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: calendario_assinatura calendario_assinatura_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendario_assinatura
+    ADD CONSTRAINT calendario_assinatura_token_hash_key UNIQUE (token_hash);
 
 
 --
@@ -1749,6 +1811,38 @@ ALTER TABLE ONLY public.password_reset_token
 
 ALTER TABLE ONLY public.password_reset_token
     ADD CONSTRAINT password_reset_token_token_hash_key UNIQUE (token_hash);
+
+
+--
+-- Name: pastoral_equipe pastoral_equipe_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pastoral_equipe
+    ADD CONSTRAINT pastoral_equipe_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pastoral_equipe pastoral_equipe_tenant_id_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pastoral_equipe
+    ADD CONSTRAINT pastoral_equipe_tenant_id_id_key UNIQUE (tenant_id, id);
+
+
+--
+-- Name: pastoral_membro pastoral_membro_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pastoral_membro
+    ADD CONSTRAINT pastoral_membro_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pastoral_membro pastoral_membro_tenant_id_equipe_id_pessoa_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pastoral_membro
+    ADD CONSTRAINT pastoral_membro_tenant_id_equipe_id_pessoa_id_key UNIQUE (tenant_id, equipe_id, pessoa_id);
 
 
 --
@@ -2408,6 +2502,20 @@ CREATE INDEX ix_mural_aviso_recentes ON public.mural_aviso USING btree (tenant_i
 
 
 --
+-- Name: ix_pastoral_lista; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_pastoral_lista ON public.pastoral_equipe USING btree (tenant_id, nome, id);
+
+
+--
+-- Name: ix_pastoral_membros; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_pastoral_membros ON public.pastoral_membro USING btree (tenant_id, equipe_id, id);
+
+
+--
 -- Name: ix_tarefa_lista; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2419,6 +2527,13 @@ CREATE INDEX ix_tarefa_lista ON public.tarefa USING btree (tenant_id, status, cr
 --
 
 CREATE INDEX ix_tarefa_recentes ON public.tarefa USING btree (tenant_id, criado_em DESC, id DESC);
+
+
+--
+-- Name: uq_calendario_usuario; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_calendario_usuario ON public.calendario_assinatura USING btree (tenant_id, usuario_id);
 
 
 --
@@ -2496,6 +2611,13 @@ CREATE UNIQUE INDEX uq_tenant_email_principal ON public.tenant_email USING btree
 --
 
 CREATE UNIQUE INDEX uq_tenant_telefone_principal ON public.tenant_telefone USING btree (tenant_id) WHERE (principal = true);
+
+
+--
+-- Name: uq_usuario_pessoa_tenant; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX uq_usuario_pessoa_tenant ON public.usuario_tenant USING btree (tenant_id, pessoa_id) WHERE (pessoa_id IS NOT NULL);
 
 
 --
@@ -2694,6 +2816,30 @@ ALTER TABLE ONLY public.audit_log
 
 ALTER TABLE ONLY public.audit_log
     ADD CONSTRAINT audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.usuario(id) ON DELETE SET NULL;
+
+
+--
+-- Name: calendario_assinatura calendario_assinatura_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendario_assinatura
+    ADD CONSTRAINT calendario_assinatura_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: calendario_assinatura calendario_assinatura_tenant_id_pessoa_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendario_assinatura
+    ADD CONSTRAINT calendario_assinatura_tenant_id_pessoa_id_fkey FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id);
+
+
+--
+-- Name: calendario_assinatura calendario_assinatura_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.calendario_assinatura
+    ADD CONSTRAINT calendario_assinatura_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuario(id);
 
 
 --
@@ -2985,6 +3131,14 @@ ALTER TABLE ONLY public.resposta_indisponibilidade
 
 
 --
+-- Name: usuario_tenant fk_usuario_pessoa_tenant; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usuario_tenant
+    ADD CONSTRAINT fk_usuario_pessoa_tenant FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id);
+
+
+--
 -- Name: importacao_pessoa importacao_pessoa_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3142,6 +3296,38 @@ ALTER TABLE ONLY public.paroquia_whatsapp
 
 ALTER TABLE ONLY public.password_reset_token
     ADD CONSTRAINT password_reset_token_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuario(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pastoral_equipe pastoral_equipe_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pastoral_equipe
+    ADD CONSTRAINT pastoral_equipe_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: pastoral_membro pastoral_membro_tenant_id_equipe_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pastoral_membro
+    ADD CONSTRAINT pastoral_membro_tenant_id_equipe_id_fkey FOREIGN KEY (tenant_id, equipe_id) REFERENCES public.pastoral_equipe(tenant_id, id);
+
+
+--
+-- Name: pastoral_membro pastoral_membro_tenant_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pastoral_membro
+    ADD CONSTRAINT pastoral_membro_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES public.tenant(id);
+
+
+--
+-- Name: pastoral_membro pastoral_membro_tenant_id_pessoa_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pastoral_membro
+    ADD CONSTRAINT pastoral_membro_tenant_id_pessoa_id_fkey FOREIGN KEY (tenant_id, pessoa_id) REFERENCES public.pessoa(tenant_id, id);
 
 
 --
@@ -3343,6 +3529,12 @@ ALTER TABLE ONLY public.voluntarios
 ALTER TABLE public.audit_log ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: calendario_assinatura; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.calendario_assinatura ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: comunicado; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3529,6 +3721,18 @@ ALTER TABLE public.paroquia_whatsapp ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.password_reset_token ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: pastoral_equipe; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.pastoral_equipe ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: pastoral_membro; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.pastoral_membro ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: perfil; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3633,5 +3837,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict uGV0AxuYj1dxBH6GsbwpWDZ5U8BTM34XV6Yb3qMUQpTbgNrJaSI8eg33zJ0RoKO
+\unrestrict mAqADfTIeAfghxzHUtcaFJ4e6hXe5PW0vN14dqBSP7NLQCbEVzNijkpxDnfYJMQ
 

@@ -18,6 +18,7 @@ public class FuncionalidadesPlanoWeb implements WebMvcConfigurer {
                 String tipo=method.getBeanType().getName();String codigo=null;
                 if(tipo.startsWith("br.com.servire.api.escala.") || tipo.endsWith("DisponibilidadeVoluntarioController")) codigo="ESCALAS";
                 else if(tipo.startsWith("br.com.servire.api.evento.")) codigo="EVENTOS";
+                else if(tipo.startsWith("br.com.servire.api.pastoral.")) codigo="PASTORAIS";
                 else if(tipo.startsWith("br.com.servire.api.mural.")) codigo="MURAL";
                 else if(tipo.startsWith("br.com.servire.api.tarefas.")) codigo="TAREFAS";
                 else if(tipo.startsWith("br.com.servire.api.financeiro.")) codigo="FINANCEIRO";

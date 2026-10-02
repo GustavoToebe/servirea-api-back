@@ -74,7 +74,9 @@ public final class CatalogoPermissao {
                             new Acao("FINANCEIRO_ALTERAR", "Editar e cancelar lançamento"),
                             new Acao("FINANCEIRO_BAIXAR", "Baixar e estornar"),
                             new Acao("FINANCEIRO_CONFIGURAR", "Gerenciar contas e categorias"))))),
+            new Secao("Voluntário", List.of(new Modulo("PORTAL_VOLUNTARIO","Meus compromissos",List.of()),new Modulo("CALENDARIO","Calendário privado",List.of()))),
             new Secao("Organização", List.of(
+                    new Modulo("PASTORAL","Pastorais e equipes",List.of(new Acao("PASTORAL_CRIAR","Criar equipe"),new Acao("PASTORAL_ALTERAR","Alterar equipe"),new Acao("PASTORAL_GERENCIAR","Gerenciar participantes"))),
                     new Modulo("MURAL", "Mural de avisos", List.of(new Acao("MURAL_CRIAR", "Criar aviso"),new Acao("MURAL_ALTERAR", "Editar e arquivar aviso"))),
                     new Modulo("TAREFA", "Tarefas e solicitações", List.of(new Acao("TAREFA_CRIAR", "Criar tarefa"),new Acao("TAREFA_ALTERAR", "Editar e atualizar status"))))),
             new Secao("Relatórios", List.of(

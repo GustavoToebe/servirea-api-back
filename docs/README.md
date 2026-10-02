@@ -38,3 +38,5 @@
 - [Funcionalidades por plano](funcionalidades-plano.md).
 - [Mural e tarefas](mural-tarefas.md).
 - [Consumo de instâncias](consumo-instancias.md).
+
+- [Portal, calendário e pastorais](portal-calendario-pastorais.md): configuração, identidade pessoal, assinatura privada e equipes simples.

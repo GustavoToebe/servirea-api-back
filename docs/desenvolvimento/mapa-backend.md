@@ -41,3 +41,5 @@ V053: eventos com layouts e lembretes em vários dias: `layout_envio.tipo_layout
 
 - Mural: mural/; tarefas: tarefas/. CRUD paginado/versionado, permissões no CatalogoPermissao, V060 e docs/mural-tarefas.md.
 - Plano: integracao/FuncionalidadesPlano*, guards por handler e /funcionalidades-plano; consumo HMAC: ConsumoInstancia*.
+
+- V061: portal/ consulta pessoal; calendario/ assinatura privada; pastoral/ equipes/membros; acesso/VinculoPessoaService associação explícita. Contrato: ../portal-calendario-pastorais.md.

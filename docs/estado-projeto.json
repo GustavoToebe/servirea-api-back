@@ -13,7 +13,7 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V060__mural_e_tarefas.sql",
-    "quantidade": 60
+    "ultima": "V061__portal_pastorais_calendario.sql",
+    "quantidade": 61
   }
 }

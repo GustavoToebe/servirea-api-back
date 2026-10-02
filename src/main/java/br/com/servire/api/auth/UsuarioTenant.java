@@ -96,6 +96,10 @@ public class UsuarioTenant {
     @Column(name = "updated_at", insertable = false, updatable = false)
     private Instant updatedAt;
 
+    @Column(name="pessoa_id") private java.util.UUID pessoaId;
+    public java.util.UUID getPessoaId() {return pessoaId;}
+    public void setPessoaId(java.util.UUID id) {pessoaId=id;}
+
     protected UsuarioTenant() {
         // JPA
     }

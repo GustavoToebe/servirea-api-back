@@ -2,7 +2,11 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V059. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V061. Migration já aplicada não se edita.
+
+## O que entrou na V060–V061
+
+V060: mural_aviso e tarefa, registros simples, versionados e paginados. V061: associação explícita usuario_tenant.pessoa_id (FK composta e unicidade por pessoa/paróquia), pastoral_equipe e pastoral_membro tenant-aware, calendario_assinatura global com hash secreto/expiração e assinatura única por usuário/paróquia. Todas as novas tabelas têm RLS sem policies e revogação anon/authenticated. Contratos em docs/mural-tarefas.md e docs/portal-calendario-pastorais.md.
 
 ## O que entrou na V058–V059
 
@@ -38,11 +42,11 @@ Enums apagados junto: `plano_periodicidade`, `forma_pagamento`, `assinatura_stat
 
 ## Tabelas que o código usa
 
-Globais (sem `@TenantId`): `usuario`, `tenant`, `diocese`, `perfil`, `perfil_permissao`, `usuario_tenant`, `refresh_token`, `password_reset_token`, `tenant_email`, `tenant_telefone`, `direitos_locais`, `integracao_operacao`, `integracao_nonce`, `suporte_codigo`, `tenant_sequencial`.
+Globais (sem `@TenantId`): `usuario`, `tenant`, `diocese`, `perfil`, `perfil_permissao`, `usuario_tenant`, `refresh_token`, `password_reset_token`, `tenant_email`, `tenant_telefone`, `direitos_locais`, `integracao_operacao`, `integracao_nonce`, `suporte_codigo`, `tenant_sequencial`, `calendario_assinatura`.
 
 `tenant_sequencial` não tem entidade. O gatilho da V038 grava o número curto.
 
-Da paróquia (`@TenantId`): `pessoa`, `pessoa_email`, `pessoa_telefone`, `pessoa_relacao`, `voluntarios`, `disponibilidade_voluntario`, `indisponibilidade_voluntario`, `resposta_indisponibilidade`, `inscricoes`, `inscricao_email`, `inscricao_telefone`, `inscricao_responsaveis`, `inscricao_responsavel_email`, `inscricao_responsavel_telefone`, `escalas`, `escala_eventos`, `escala_vagas`, `layout_escala`, `layout_envio`, `paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`, `evento`, `evento_foto`, `evento_inscricao`, `audit_log`, `financeiro_conta`, `financeiro_categoria`, `financeiro_movimento`.
+Da paróquia (`@TenantId`): `pessoa`, `pessoa_email`, `pessoa_telefone`, `pessoa_relacao`, `voluntarios`, `disponibilidade_voluntario`, `indisponibilidade_voluntario`, `resposta_indisponibilidade`, `inscricoes`, `inscricao_email`, `inscricao_telefone`, `inscricao_responsaveis`, `inscricao_responsavel_email`, `inscricao_responsavel_telefone`, `escalas`, `escala_eventos`, `escala_vagas`, `layout_escala`, `layout_envio`, `paroquia_whatsapp`, `comunicado`, `comunicado_destinatario`, `comunicado_anexo`, `evento`, `evento_foto`, `evento_inscricao`, `audit_log`, `financeiro_conta`, `financeiro_categoria`, `financeiro_movimento`, `mural_aviso`, `tarefa`, `pastoral_equipe`, `pastoral_membro`.
 
 View `vw_voluntario_compromissos` (V010) existe. A lista de compromissos é montada via JPA, não via essa view.
 

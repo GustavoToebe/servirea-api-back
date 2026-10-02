@@ -43,7 +43,7 @@ Docker precisa estar ativo nos testes. Dev local usa `application-dev-local.yml`
 - Sem `TenantContext`, o resolver devolve o sentinela `SEM_TENANT` (UUID zero): leituras vêm vazias e
   escritas falham por FK. Não "consertar" isso lançando exceção no resolver (quebra o bootstrap).
 - O Hibernate fixa o tenant **quando a sessão abre** (entrada do `@Transactional`). Código que define
-  `TenantContext` por conta própria (só `InscricaoService.criarPublica`) precisa abrir a transação
+  `TenantContext` por conta própria (`InscricaoService.criarPublica`, `CalendarioService.feed` e integração HMAC) precisa abrir a transação
   **depois** disso, com `TransactionTemplate`.
 - **Proibido SQL nativo/JDBC direto em tabela tenant-aware** (Native Query Gate, seção 81): use JPQL,
   derived queries ou Criteria/`Specification`.
@@ -90,3 +90,5 @@ Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar
 - Cotas locais: docs/cotas-plano.md. Reservar paróquia antes do domínio e validar após flush em toda criação/promoção de pessoa, aprovação e ativação de vínculo. Armazenamento de arquivos vinculados: docs/armazenamento-cotas.md (V057); NULL é inventário pendente, HEAD fora da transação. Envios mensais e CSV de pessoas: docs/cotas-envios-importacao.md (V058–V059). Reserva da fila trava paróquia antes de janela/comunicado/destinatário; competência nunca é apagada em reenvio. Importação atômica, chave por tenant, sem guardar CSV. XLSX/documentos gerais pendentes.
 
 - Nova rodada de produto: docs/funcionalidades-plano.md e docs/mural-tarefas.md. Recursos explícitos, leitura preservada, mutações protegidas; tabelas V060, histórico versionado, sem HTML/notificações.
+
+- Portal/calendário/pastorais: docs/portal-calendario-pastorais.md (V061). UsuarioTenant.pessoaId explícito, nunca inferido; calendario_assinatura global resolve tenant por hash secreto antes de TransactionTemplate. Portal só consulta pessoa própria; feed revalida vínculo/plano/perfil. Não registrar token/URL. Pastorais @TenantId, sem escopo de permissão por equipe.
