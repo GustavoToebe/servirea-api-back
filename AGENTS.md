@@ -83,6 +83,7 @@ Cada módulo tem um documento com contrato, limites e homologação em `docs/`. 
 | Módulo | Documento | Regra que não pode ser quebrada |
 |---|---|---|
 | Integração com a Central | [integracao-limites](docs/integracao-limites.md) | HMAC antes de ler o corpo, 1 MiB, nonce; `/integracao` nunca é `permitAll` |
+| Cópias com a Central | `central-api-back/scripts/verificar-copias.py` | `HmacAssinatura`, `IntegracaoNonceService`, `Totp`, `LimiteLogin`, `Contador*` e `MonitoramentoFilter` são idênticos nos dois back; mudou um, mude o outro e rode o script na pasta da Central |
 | Financeiro paroquial | [financeiro](docs/financeiro.md) | Permissões próprias, baixa/estorno com versão, isolamento por paróquia |
 | Cuidados e credenciais | [seguranca-cuidados-credenciais](docs/seguranca-cuidados-credenciais.md) | DTO de resposta autorizada, AES-GCM com rotação, nunca devolver token |
 | Fila de comunicados | [fila-comunicados](docs/fila-comunicados.md) | HTTP fora da transação; ordem de lock janela → comunicado → destinatário |
