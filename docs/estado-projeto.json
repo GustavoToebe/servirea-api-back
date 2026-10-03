@@ -13,8 +13,8 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V083__plano_de_contas.sql",
-    "quantidade": 83
+    "ultima": "V084__conta_bancaria_detalhes.sql",
+    "quantidade": 84
   },
   "importacao_pessoas": {
     "manual": "docs/importacao-pessoas.md",

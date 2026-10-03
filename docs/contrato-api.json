@@ -2298,6 +2298,17 @@
     "evento.EventoDtos.SituacaoTela" : {
       "enum" : [ "RASCUNHO", "PUBLICADO", "ENCERRADO", "CANCELADO" ]
     },
+    "financeiro.ChavePixDto" : {
+      "chave" : "string?",
+      "principal" : "boolean",
+      "tipo" : "financeiro.ChavePixDto.TipoChavePix?"
+    },
+    "financeiro.ChavePixDto.TipoChavePix" : {
+      "enum" : [ "CPF", "CNPJ", "EMAIL", "TELEFONE", "ALEATORIA" ]
+    },
+    "financeiro.ContaFinanceira.TipoConta" : {
+      "enum" : [ "CORRENTE", "POUPANCA", "CAIXA", "OUTRA" ]
+    },
     "financeiro.FinanceiroDtos.BaixaRequest" : {
       "dataPagamento" : "string?",
       "versao" : "number?"
@@ -2317,17 +2328,33 @@
       "tipo" : "financeiro.MovimentoFinanceiro.Tipo?"
     },
     "financeiro.FinanceiroDtos.ContaRequest" : {
+      "agencia" : "string?",
       "ativo" : "boolean",
+      "banco" : "string?",
+      "chavesPix" : "financeiro.ChavePixDto[]?",
+      "dataAbertura" : "string?",
+      "dataEncerramento" : "string?",
       "dataSaldoInicial" : "string?",
       "nome" : "string?",
-      "saldoInicial" : "number?"
+      "numeroConta" : "string?",
+      "saldoInicial" : "number?",
+      "tipoConta" : "financeiro.ContaFinanceira.TipoConta?",
+      "titular" : "string?"
     },
     "financeiro.FinanceiroDtos.ContaResponse" : {
+      "agencia" : "string?",
       "ativo" : "boolean",
+      "banco" : "string?",
+      "chavesPix" : "financeiro.ChavePixDto[]?",
+      "dataAbertura" : "string?",
+      "dataEncerramento" : "string?",
       "dataSaldoInicial" : "string?",
       "id" : "string?",
       "nome" : "string?",
-      "saldoInicial" : "number?"
+      "numeroConta" : "string?",
+      "saldoInicial" : "number?",
+      "tipoConta" : "financeiro.ContaFinanceira.TipoConta?",
+      "titular" : "string?"
     },
     "financeiro.FinanceiroDtos.MovimentoRequest" : {
       "categoriaId" : "string?",

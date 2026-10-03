@@ -32,3 +32,7 @@ Baixa/estorno/cancelamento travam o lançamento e conferem a versão enviada pel
 Migration aditiva **V054**, após V053. Testada em PostgreSQL 17 descartável e incluída no `schema.sql` gerado. Aplicação em produção ocorre pelo Flyway durante o deploy da versão; esta implementação não executou o deploy.
 
 Escopo manual: sem conciliação bancária, conexão com bancos, emissão fiscal, contabilidade de partidas dobradas ou processamento de pagamentos. Não registrar números completos de cartões, senhas bancárias ou segredos em observações.
+
+## Conta bancária (V084)
+
+A conta (ou caixa) guarda também: tipo (`CORRENTE`, `POUPANCA`, `CAIXA`, `OUTRA`), banco, agência, número da conta, titular, abertura, encerramento e até 10 chaves PIX (`CPF`, `CNPJ`, `EMAIL`, `TELEFONE`, `ALEATORIA`), no máximo uma principal. Em conta corrente ou poupança, banco, agência, conta e titular são obrigatórios; caixa e `OUTRA` (tipo das contas anteriores à V084) não exigem. O encerramento não pode ser anterior à abertura. As chaves são normalizadas (CPF/CNPJ/telefone só dígitos, e-mail em minúsculas), não podem repetir e ficam numa coluna JSON da própria conta. Nenhuma chave é validada junto ao banco: o sistema só as guarda para consulta. Sem integração bancária e sem Pix automático.
