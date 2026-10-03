@@ -12,7 +12,7 @@ public final class FinanceiroDtos {
     public record ContaRequest(@NotBlank @Size(max=120) String nome, @NotNull @Digits(integer=12,fraction=2) BigDecimal saldoInicial,
                                @NotNull LocalDate dataSaldoInicial, boolean ativo, ContaFinanceira.TipoConta tipoConta,
                                @Size(max=120) String banco, @Size(max=20) String agencia, @Size(max=30) String numeroConta, @Size(max=120) String titular,
-                               LocalDate dataAbertura, LocalDate dataEncerramento, @Size(max=10) List<@Valid ChavePixDto> chavesPix) {
+                               LocalDate dataAbertura, LocalDate dataEncerramento, @Size(max=10) List<@Valid @NotNull ChavePixDto> chavesPix) {
         public ContaRequest(String nome, BigDecimal saldoInicial, LocalDate dataSaldoInicial, boolean ativo) {
             this(nome, saldoInicial, dataSaldoInicial, ativo, null, null, null, null, null, null, null, null);
         }
@@ -27,6 +27,11 @@ public final class FinanceiroDtos {
     public record VersaoRequest(@NotNull @Min(0) Long versao) { }
     public record ContaResponse(UUID id, String nome, BigDecimal saldoInicial, LocalDate dataSaldoInicial, boolean ativo, ContaFinanceira.TipoConta tipoConta,
                                 String banco, String agencia, String numeroConta, String titular, LocalDate dataAbertura, LocalDate dataEncerramento, List<ChavePixDto> chavesPix) {
+        /** Para quem só lê o financeiro: sem agência, número da conta, titular e chaves PIX (dados bancários só com permissão de configurar). */
+        public static ContaResponse resumida(ContaFinanceira c) {
+            return new ContaResponse(c.getId(),c.getNome(),c.getSaldoInicial(),c.getDataSaldoInicial(),c.isAtivo(),c.getTipoConta(),
+                c.getBanco(),null,null,null,c.getDataAbertura(),c.getDataEncerramento(),List.of());
+        }
         public static ContaResponse de(ContaFinanceira c) {
             return new ContaResponse(c.getId(),c.getNome(),c.getSaldoInicial(),c.getDataSaldoInicial(),c.isAtivo(),c.getTipoConta(),
                 c.getBanco(),c.getAgencia(),c.getNumeroConta(),c.getTitular(),c.getDataAbertura(),c.getDataEncerramento(),c.getChavesPix());

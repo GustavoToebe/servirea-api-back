@@ -11,7 +11,9 @@ UPDATE financeiro_categoria c
 WITH base AS (SELECT DISTINCT tenant_id, tipo FROM financeiro_categoria),
 novos AS (
   INSERT INTO financeiro_categoria (tenant_id, nome, ativo, tipo)
-  SELECT tenant_id, CASE tipo WHEN 'DESPESA' THEN 'Saídas (migradas)' ELSE 'Entradas (migradas)' END, true, tipo FROM base
+  SELECT b.tenant_id, n.nome || CASE WHEN EXISTS (SELECT 1 FROM financeiro_categoria x WHERE x.tenant_id = b.tenant_id AND lower(x.nome) = lower(n.nome))
+                                     THEN ' – plano de contas' ELSE '' END, true, b.tipo
+    FROM base b CROSS JOIN LATERAL (SELECT CASE b.tipo WHEN 'DESPESA' THEN 'Saídas (migradas)' ELSE 'Entradas (migradas)' END AS nome) n
   RETURNING id, tenant_id, tipo)
 UPDATE financeiro_categoria c SET grupo_id = n.id FROM novos n WHERE c.tenant_id = n.tenant_id AND c.tipo = n.tipo AND c.id <> n.id;
 

@@ -12,7 +12,10 @@ public class FinanceiroController {
     private final FinanceiroService servico;
     public FinanceiroController(FinanceiroService servico) { this.servico=servico; }
     @GetMapping("/contas") @PreAuthorize("hasAuthority('PERM_FINANCEIRO')")
-    public List<ContaResponse> contas() { return servico.contas(); }
+    public List<ContaResponse> contas(org.springframework.security.core.Authentication autenticacao) {
+        boolean completo = autenticacao.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("PERM_FINANCEIRO_CONFIGURAR"));
+        return servico.contas(completo);
+    }
     @PostMapping("/contas") @PreAuthorize("hasAuthority('PERM_FINANCEIRO_CONFIGURAR')")
     public ContaResponse criarConta(@Valid @RequestBody ContaRequest req) { return servico.salvarConta(null,req); }
     @PutMapping("/contas/{id}") @PreAuthorize("hasAuthority('PERM_FINANCEIRO_CONFIGURAR')")

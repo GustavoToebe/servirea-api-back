@@ -143,6 +143,31 @@ class FinanceiroIntegrationTest extends AbstractIntegrationTest {
         mvc.perform(post("/financeiro/contas").with(authentication(usuario("PERM_FINANCEIRO"))).with(csrf()).contentType(MediaType.APPLICATION_JSON)
             .content("{\"nome\":\"Conta\",\"saldoInicial\":0,\"dataSaldoInicial\":\""+hoje+"\",\"ativo\":true}")).andExpect(status().isForbidden());
     }
+    @Test void quemSoLeNaoRecebeAgenciaNumeroTitularNemChavesPix() throws Exception {
+        financeiro.salvarConta(null,new ContaRequest("Banco sigiloso",BigDecimal.ZERO,hoje,true,br.com.servire.api.financeiro.ContaFinanceira.TipoConta.CORRENTE,"Banco do Brasil","1234","98765-0","Paróquia Teste",null,null,
+            List.of(new ChavePixDto(ChavePixDto.TipoChavePix.CPF,"12345678909",true))));
+        mvc.perform(get("/financeiro/contas").with(authentication(usuario("PERM_FINANCEIRO")))).andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.nome=='Banco sigiloso')].banco").value("Banco do Brasil"))
+            .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("98765-0"))))
+            .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("12345678909"))))
+            .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Paróquia Teste"))));
+        mvc.perform(get("/financeiro/contas").with(authentication(usuario("PERM_FINANCEIRO","PERM_FINANCEIRO_CONFIGURAR")))).andExpect(status().isOk())
+            .andExpect(jsonPath("$[?(@.nome=='Banco sigiloso')].numeroConta").value("98765-0"))
+            .andExpect(jsonPath("$[?(@.nome=='Banco sigiloso')].chavesPix[0].chave").value("12345678909"));
+    }
+    @Test void atualizacaoSemOsCamposNovosPreservaOsDadosBancarios() throws Exception {
+        var c=financeiro.salvarConta(null,new ContaRequest("Conta com dados",BigDecimal.ZERO,hoje,true,br.com.servire.api.financeiro.ContaFinanceira.TipoConta.CORRENTE,"Banco do Brasil","1234","98765-0","Paróquia Teste",null,null,
+            List.of(new ChavePixDto(ChavePixDto.TipoChavePix.EMAIL,"a@b.co",true))));
+        // Pedido de cliente antigo: só nome, saldo, data e situação (os campos novos chegam nulos).
+        financeiro.salvarConta(c.id(),new ContaRequest("Conta renomeada",BigDecimal.ZERO,hoje,true));
+        var depois=financeiro.contas().stream().filter(x -> x.id().equals(c.id())).findFirst().orElseThrow();
+        assertThat(depois.nome()).isEqualTo("Conta renomeada"); assertThat(depois.banco()).isEqualTo("Banco do Brasil");
+        assertThat(depois.numeroConta()).isEqualTo("98765-0"); assertThat(depois.chavesPix()).hasSize(1);
+    }
+    @Test void itemNuloNaListaDeChavesPixEhRecusadoSemErroInterno() throws Exception {
+        mvc.perform(post("/financeiro/contas").with(authentication(usuario("PERM_FINANCEIRO_CONFIGURAR"))).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"nome\":\"Com nulo\",\"saldoInicial\":0,\"dataSaldoInicial\":\""+hoje+"\",\"ativo\":true,\"tipoConta\":\"CAIXA\",\"chavesPix\":[null]}")).andExpect(status().isBadRequest());
+    }
     @Test void valorNegativoOuFracionadoDemaisRejeitadoPelaApi() throws Exception {
         for (String valor : List.of("-1","0","1.001")) {
             TenantContext.set(tenant);
