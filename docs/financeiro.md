@@ -6,8 +6,8 @@ O módulo `/financeiro` pertence ao Servirea. Organiza dinheiro da paróquia; as
 
 1. Em **Perfis**, habilite **Financeiro paroquial** para quem pode consultar. Conceda separadamente criar lançamentos, editar/cancelar, baixar/estornar e gerenciar contas/categorias. Perfis com permissões específicas precisam de liberação explícita. Perfis de acesso total já incluem o catálogo completo, inclusive o financeiro.
 2. Em **Contas / bancos**, cadastre Caixa, Banco etc. e o saldo existente antes das primeiras baixas. Uma conta pode começar com saldo negativo. Depois do primeiro lançamento, saldo e data inicial ficam protegidos.
-3. Cadastre categorias, como doações, dízimo, manutenção e contas de consumo.
-4. Crie entradas ou saídas pendentes com descrição, valor, vencimento, conta e categoria. Ao confirmar que o dinheiro foi recebido ou pago, use **Dar baixa** e informe a data real.
+3. Monte o **Plano de contas** (V083, antes "Categorias"): crie **grupos** de saídas (ex.: Despesas fixas) e de entradas (ex.: Doações) e, dentro de cada grupo, as **contas contábeis** (Energia elétrica, Dízimo). Só a conta contábil recebe lançamento; o grupo serve para organizar e define o tipo (entrada/saída), que a conta herda. Nomes não se repetem entre os grupos de um tipo nem entre as contas de um grupo.
+4. Crie entradas ou saídas pendentes com descrição, valor, vencimento, conta/banco e **conta contábil** do mesmo tipo do lançamento. Ao confirmar que o dinheiro foi recebido ou pago, use **Dar baixa** e informe a data real.
 5. Para corrigir baixa, use **Estornar**. O lançamento volta a pendente; então pode ser editado ou cancelado. Não há exclusão do histórico. Contas e categorias usadas podem ser inativadas.
 
 ## Cálculos
@@ -16,6 +16,10 @@ O módulo `/financeiro` pertence ao Servirea. Organiza dinheiro da paróquia; as
 - Resumo do período: somente lançamentos pagos/recebidos cuja **data da baixa** está no período. Resultado = receitas − despesas.
 - Saldo por conta até a data final = saldo inicial + receitas recebidas acumuladas − despesas pagas acumuladas. Não usa apenas os lançamentos visíveis na página e não inclui pendentes/cancelados. Conta inativa continua no histórico e no saldo.
 - Datas usam o calendário de São Paulo; baixa futura ou anterior ao saldo inicial é recusada. Valores positivos com até duas casas decimais; tipo define entrada ou saída.
+
+## Plano de contas
+
+`financeiro_categoria` guarda os dois níveis: sem `grupo_id` é grupo, com `grupo_id` é conta contábil (só dois níveis; chave estrangeira composta com a paróquia). Regras da API: a conta contábil precisa do mesmo tipo do grupo; o grupo não vira conta (nem a conta vira grupo com lançamentos); o tipo não muda enquanto houver contas ou lançamentos; lançamento recusa grupo, tipo diferente e conta ou grupo inativos; criar conta em grupo inativo é recusado. A V083 converteu as categorias antigas em contas contábeis dentro de "Saídas (migradas)" ou "Entradas (migradas)", com o tipo vindo dos lançamentos (saída quando misto ou nunca usada). A tela abre direto em `/financeiro?aba=plano-de-contas`. Não há rateio, centro de custo nem contabilidade fiscal.
 
 ## Proteções
 
