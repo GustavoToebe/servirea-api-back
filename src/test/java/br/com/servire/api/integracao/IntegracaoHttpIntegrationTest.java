@@ -1,5 +1,7 @@
 package br.com.servire.api.integracao;
 
+import br.com.servirea.comum.seguranca.HmacAssinatura;
+
 import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.acesso.PerfilRepository;
 import br.com.servire.api.auth.Usuario;

@@ -87,3 +87,5 @@
 
 - [Papéis do banco](papeis-banco.md): T16, migrador separado da API, com roteiro e teste.
 - [Contrato da API](contrato-api.md): T17, contrato versionado gerado dos controllers e conferência do front.
+
+- [Biblioteca Java comum](biblioteca-comum.md): versões fixas, consumo local, CI e BuildKit.

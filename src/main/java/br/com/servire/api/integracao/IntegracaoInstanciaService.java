@@ -1,5 +1,7 @@
 package br.com.servire.api.integracao;
 
+import br.com.servirea.comum.seguranca.HmacAssinatura;
+
 import br.com.servire.api.escala.LayoutsDeFabrica;
 import br.com.servire.api.acesso.Perfil;
 import br.com.servire.api.acesso.PerfilService;

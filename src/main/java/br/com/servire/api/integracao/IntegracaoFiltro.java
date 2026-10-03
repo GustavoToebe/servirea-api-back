@@ -1,5 +1,7 @@
 package br.com.servire.api.integracao;
 
+import br.com.servirea.comum.seguranca.HmacAssinatura;
+
 import br.com.servire.api.web.ApiError;
 import br.com.servire.api.web.RequestIdFilter;
 import jakarta.servlet.FilterChain;

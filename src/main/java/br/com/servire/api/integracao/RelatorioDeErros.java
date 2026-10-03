@@ -1,5 +1,7 @@
 package br.com.servire.api.integracao;
 
+import br.com.servirea.comum.seguranca.HmacAssinatura;
+
 import br.com.servire.api.security.AuthenticatedUser;
 import br.com.servire.api.tenant.TenantContext;
 import br.com.servire.api.web.RequestIdFilter;

@@ -1,5 +1,7 @@
 package br.com.servire.api.auth;
 
+import br.com.servirea.comum.seguranca.Totp;
+
 import br.com.servire.api.security.OpaqueTokenGenerator;
 import br.com.servire.api.web.ResourceNotFoundException;
 import br.com.servire.api.web.UnauthorizedException;

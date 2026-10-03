@@ -1,5 +1,7 @@
 package br.com.servire.api.integracao;
 
+import br.com.servirea.comum.seguranca.HmacAssinatura;
+
 import br.com.servire.api.auth.EmailSender;
 import br.com.servire.api.integracao.dto.DireitosInstancia;
 import br.com.servire.api.tenant.Tenant;

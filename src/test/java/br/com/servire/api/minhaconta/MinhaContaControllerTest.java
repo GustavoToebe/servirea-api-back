@@ -1,8 +1,9 @@
 package br.com.servire.api.minhaconta;
 
+import br.com.servirea.comum.seguranca.HmacAssinatura;
+
 import br.com.servire.api.AbstractIntegrationTest;
 import br.com.servire.api.auth.UsuarioTenant;
-import br.com.servire.api.integracao.HmacAssinatura;
 import br.com.servire.api.integracao.IntegracaoProperties;
 import br.com.servire.api.security.AuthenticatedUser;
 import br.com.servire.api.tenant.TenantContext;
