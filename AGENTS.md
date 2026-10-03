@@ -78,55 +78,35 @@ Docker precisa estar ativo nos testes. Dev local usa `application-dev-local.yml`
 
 ## Regras por funcionalidade
 
-- [Integração](docs/integracao-limites.md): HMAC antes de ler payload, 1 MiB, nonce e autorização; /integracao não é permitAll.
-- [Financeiro](docs/financeiro.md): contas, categorias, baixa/estorno, permissões próprias e isolamento.
-- [Cuidados e credenciais](docs/seguranca-cuidados-credenciais.md): DTO deAutorizada nos endpoints, permissões específicas, AES-GCM e rotação; nunca devolver token.
-- [Fila](docs/fila-comunicados.md): HTTP fora da transação, posse/expiração e lock janela → comunicado → destinatário. Resend recebe chave estável; limites de idempotência documentados.
+Cada módulo tem um documento com contrato, limites e homologação em `docs/`. Aqui fica só a regra que não pode ser quebrada; ao mexer no módulo, leia o documento.
+
+| Módulo | Documento | Regra que não pode ser quebrada |
+|---|---|---|
+| Integração com a Central | [integracao-limites](docs/integracao-limites.md) | HMAC antes de ler o corpo, 1 MiB, nonce; `/integracao` nunca é `permitAll` |
+| Financeiro paroquial | [financeiro](docs/financeiro.md) | Permissões próprias, baixa/estorno com versão, isolamento por paróquia |
+| Cuidados e credenciais | [seguranca-cuidados-credenciais](docs/seguranca-cuidados-credenciais.md) | DTO de resposta autorizada, AES-GCM com rotação, nunca devolver token |
+| Fila de comunicados | [fila-comunicados](docs/fila-comunicados.md) | HTTP fora da transação; ordem de lock janela → comunicado → destinatário |
+| Cotas e plano | [cotas-plano](docs/cotas-plano.md), [armazenamento-cotas](docs/armazenamento-cotas.md), [cotas-envios-importacao](docs/cotas-envios-importacao.md), [funcionalidades-plano](docs/funcionalidades-plano.md) | Reservar a paróquia antes do domínio e validar após flush; NULL em tamanho de arquivo é inventário pendente |
+| Importação de pessoas | [importacao-pessoas](docs/importacao-pessoas.md) | Atômica, sem mesclar fichas, hash inclui arquivo/aba/mapeamento |
+| Mural e tarefas | [mural-tarefas](docs/mural-tarefas.md), [mural-publico-leituras](docs/mural-publico-leituras.md) | Público não concede permissão; leitura vale para a versão exata |
+| Portal, calendário, pastorais | [portal-calendario-pastorais](docs/portal-calendario-pastorais.md) | `UsuarioTenant.pessoaId` explícito, nunca inferido; token de calendário só como hash e nunca em log |
+| Resposta, candidatura e troca | [respostas-escala](docs/respostas-escala.md), [candidaturas-vagas](docs/candidaturas-vagas.md), [trocas-escala](docs/trocas-escala.md) | Só a pessoa própria; locks paróquia → escala → vaga; reabrir invalida pendentes |
+| Tarefas, relatórios, disponibilidade | [tarefas-relatorios-disponibilidade](docs/tarefas-relatorios-disponibilidade.md) | CSV até 5.000 linhas com AUDITORIA + RELATORIO_EXPORTAR; PUT mensal exige `versao` |
+| Primeiros passos | [onboarding](docs/onboarding.md) | GET sem escrita; requisitos conferidos pelo servidor; nada automático |
+| Aniversários, site público | [aniversarios](docs/aniversarios.md), [site-publico](docs/site-publico.md) | Opt-in por pessoa e canal; agendador desligado; página pública só por snapshot explícito |
+| Liturgia, indicadores, estoque, seletores | [liturgia](docs/liturgia.md), [indicadores-participacao](docs/indicadores-participacao.md), [estoque-patrimonio](docs/estoque-patrimonio.md), [seletores-escala](docs/seletores-escala.md) | Sem geração de conteúdo; estoque só muda por movimento com chave/versão; `/voluntarios/painel` conta no banco |
+| Distribuição por regras | [distribuicao-escala](docs/distribuicao-escala.md) | Prévia sem efeito; aplicar trava a escala, confere versão e recalcula (`VAGA_DISTRIBUIR` + `VAGA_ALOCAR`) |
+| Notificações e entregas | [notificacoes-entregas](docs/notificacoes-entregas.md) | Só enfileira por `EnvioAvulso`; uma entrega por origem+versão+canal; WhatsApp só com autorização; gatilhos nascem desligados |
+| Privacidade | [privacidade](docs/privacidade.md) | Exportação sem corpo de mensagem nem destino; cuidados só com `PESSOA_CUIDADOS_LER`; retenção manual e irreversível |
+| Check-in | [checkin-encontro](docs/checkin-encontro.md) | Token só como hash, 404 genérico, um registro por vaga, `FALTOU` não é sobrescrito |
+| Arquivos | [arquivos-ciclo-vida](docs/arquivos-ciclo-vida.md) | UPLOAD/REMOCAO duráveis; nunca apagar caminho ainda referenciado; pendência em transação própria só fora de transação que trava a paróquia |
+| Métricas | [monitoramento](docs/monitoramento.md) | Credencial exclusiva, sem dado de negócio nem rótulo livre; não ativar operação externa |
+| MFA | [mfa-usuarios](docs/mfa-usuarios.md) | TOTP e recuperação globais; nunca contornar por redefinição por e-mail |
+| Login | [login-limites](docs/login-limites.md) | Contador no banco (`login_tentativa`, V082), por IP e por conta; ver o compromisso no doc |
+| Acessos pessoais | [acessos-responsaveis-coordenacao](docs/acessos-responsaveis-coordenacao.md) | Dependente só com autorização explícita; parentesco não concede acesso; coordenação própria revalida a cada operação |
+| Papéis do banco | [papeis-banco](docs/papeis-banco.md) | `MIGRATION_DB_*` separa o Flyway; app só dados; ensaiar em staging |
+| Contrato da API | [contrato-api](docs/contrato-api.md) | Mudou rota, permissão ou DTO: regenerar `docs/contrato-api.json`; rota nova exige `@PreAuthorize` |
 
 ## Documentação
 
-Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar o que foi alterado, comandos realmente executados, resultado e pendência concreta; não marcar teste planejado como aprovado nem implementação local como publicada. Validar links e estado com `python scripts/verificar-docs.py`; PRs e mudanças documentais rodam essa checagem na CI.
-
-- Cotas locais: docs/cotas-plano.md. Reservar paróquia antes do domínio e validar após flush em toda criação/promoção de pessoa, aprovação e ativação de vínculo. Armazenamento de arquivos vinculados: docs/armazenamento-cotas.md (V057); NULL é inventário pendente, HEAD fora da transação. Envios mensais e CSV de pessoas: docs/cotas-envios-importacao.md (V058–V059). Reserva da fila trava paróquia antes de janela/comunicado/destinatário; competência nunca é apagada em reenvio. Importação atômica, chave por tenant, sem guardar o arquivo. CSV/XLSX com abas e mapeamento: docs/importacao-pessoas.md. Hash inclui arquivo/aba/mapeamento; sem mesclagem. Documentos gerais pendentes.
-
-- Nova rodada de produto: docs/funcionalidades-plano.md e docs/mural-tarefas.md. Recursos explícitos, leitura preservada, mutações protegidas; tabelas V060, histórico versionado, sem HTML/notificações.
-
-- Portal/calendário/pastorais: docs/portal-calendario-pastorais.md (V061). UsuarioTenant.pessoaId explícito, nunca inferido; calendario_assinatura global resolve tenant por hash secreto antes de TransactionTemplate. Portal consulta/responde somente pela pessoa própria; feed revalida vínculo/plano/perfil. Não registrar token/URL. Pastorais @TenantId, sem escopo de permissão por equipe.
-
-- V062: docs/respostas-escala.md. PORTAL_RESPONDER só para pessoa própria; prazo no início da celebração, servidor Brasília→UTC. Recusa não desaloca/presença. Reabrir/trocar pessoa invalida decisão. @Version vaga; lock paróquia→escala para resposta, escala para edição/alocação. Histórico mantém UUIDs após exclusão. VAGA_RESPOSTA_LER para consulta da coordenação.
-
-- V063: docs/candidaturas-vagas.md, portal/Candidatura*. PORTAL_CANDIDATAR para própria pessoa; VAGA_CANDIDATURA_LER/DECIDIR para coordenação. Criar exige PORTAL_VOLUNTARIO; decidir também ESCALAS. Locks paróquia→escala→vaga. Reabrir/cancelar expira pendentes e reabertura avança versão da vaga. Aprovação não confirma presença/intenção; histórico sem cascata.
-
-- V064: docs/trocas-escala.md. PORTAL_TROCAR para pedidos próprios/aceite; VAGA_TROCA_LER/DECIDIR para coordenação. Original permanece até aprovação. Locks paróquia→escala, versão/ciclo/prazo/vínculos/elegibilidade revalidados. Substituição de uma vaga; sem permuta bilateral/notificações. Diretório mínimo limitado a contas vinculadas, sem contatos.
-
-- [Fontes e retomada](docs/desenvolvimento/fontes-e-retomada.md): precedência, histórico e registro de evidências.
-
-- V065: docs/tarefas-relatorios-disponibilidade.md. Responsável é usuario_id com FK composta do vínculo; diretório mínimo de 30. Relatórios projetam vagas ocupadas finalizadas; CSV limitado a 5.000, AUDITORIA + RELATORIO_EXPORTAR. Portal próprio PORTAL_DISPONIBILIDADE; versão mensal sob lock da paróquia compartilhada com a coordenação. PUT mensal exige versao.
-
-- F07/V066: [Primeiros passos](docs/onboarding.md). ONBOARDING + ONBOARDING_GERENCIAR e leitura do módulo; progresso compartilhado por paróquia, versão manual sob lock da paróquia, GET sem escrita. Requisitos mínimos são conferidos pelo servidor; nenhuma configuração/envio automático. ESCALAS respeita plano; etapas sem acesso/recurso ficam fora do percentual.
-
-- Rodada 6–10: mural com público/leitura versionada, arraste com teclado, aniversário com opt-in específico e agendador desligado por padrão, página pública por snapshot explícito. Contratos em docs/mural-publico-leituras.md, docs/arraste-escala.md, docs/aniversarios.md e docs/site-publico.md. Histórico de consumo sob demanda: docs/historico-consumo.md; não gerar zeros para consultas ausentes nem gravar dados pessoais.
-
-- Rodada 11–17: docs/liturgia.md, docs/indicadores-participacao.md, docs/estoque-patrimonio.md e docs/seletores-escala.md. Nenhuma geração de conteúdo; estoque só muda por movimento com chave/versão.
-- Métricas: docs/monitoramento.md; credencial exclusiva e opcional, sem dados pessoais ou acesso de negócio. Endpoint bloqueado no proxy público; não ativar operação externa como efeito da implementação.
-
-- [MFA da conta](docs/mfa-usuarios.md): TOTP e recuperação globais, rotas próprias sem permissão de domínio, suporte recusado, versão de credenciais nos tokens. Nunca contornar por redefinição por e-mail.
-
-## Acessos pessoais
-Dependentes exigem autorização explícita e conta ligada à pessoa; parentesco não concede acesso. Coordenação própria revalida membro ativo COORDENADOR a cada operação e não autoriza nomear coordenadores. Contratos em docs/acessos-responsaveis-coordenacao.md.
-
-- F04: docs/distribuicao-escala.md. Motor determinístico, prévia sem efeito; a aplicação trava a escala, confere versão, recalcula e só grava escolhas que o motor ainda produz. VAGA_DISTRIBUIR (+ VAGA_ALOCAR para aplicar). Sem IA, sem migration.
-
-- F05/F13/V077: docs/notificacoes-entregas.md. notificacao/NotificacaoService só enfileira via EnvioAvulso; chave única origem+referência+versão+canal; WhatsApp só com autorização; mural só para contas com pessoa vinculada; gatilhos nascem desligados. NOTIFICACAO, NOTIFICACAO_ENVIAR, NOTIFICACAO_CONFIGURAR.
-
-- F09/V078: docs/privacidade.md. privacidade/ConsentimentoService registra só mudanças; exportação nunca traz corpo de mensagem nem destino e exige PESSOA_CUIDADOS_LER para cuidados; retenção é manual e irreversível (anonimiza comunicados concluídos). PRIVACIDADE, PRIVACIDADE_EXPORTAR, PRIVACIDADE_RETENCAO.
-
-- F15/V079: docs/checkin-encontro.md. Token aleatório só como hash, 404 genérico para qualquer código inválido, um registro por vaga, FALTOU não é sobrescrito, pessoa vem do vínculo. CHECKIN, CHECKIN_GERENCIAR.
-
-- T14 fila: docs/monitoramento.md. Contadores fila.envios por canal/resultado e reservas em curso, sem dado de negócio; rótulos validados no MetricasController.
-
-- T13/V080: docs/arquivos-ciclo-vida.md. Upload de foto em três passos curtos, UPLOAD/REMOCAO duráveis em arquivo_pendencia, nunca apagar caminho ainda referenciado; registrar pendência em transação própria só fora de transação que trave a paróquia.
-- T05: docs/seletores-escala.md. /voluntarios/painel conta no banco; grade mensal usa a projeção leve paginada.
-
-- T16: docs/papeis-banco.md. MIGRATION_DB_* separa as credenciais do Flyway; app só dados com BYPASSRLS; scripts/roles-banco.sql e adotar-papeis-banco.sql, ensaiar em staging.
-- T17: docs/contrato-api.md. Mudou rota, permissão ou DTO: atualizar docs/contrato-api.json com `mvn test -Dtest=ContratoApiTest -Dcontrato.atualizar=true`; rota nova exige @PreAuthorize.
+Não copiar blocos históricos para instruções vigentes. Ao retomar, registrar o que foi alterado, comandos realmente executados, resultado e pendência concreta; não marcar teste planejado como aprovado nem implementação local como publicada. Validar links e estado com `python scripts/verificar-docs.py`; PRs e mudanças documentais rodam essa checagem na CI. Precedência e histórico: [fontes e retomada](docs/desenvolvimento/fontes-e-retomada.md).

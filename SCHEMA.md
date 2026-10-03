@@ -2,7 +2,7 @@
 
 Postgres da paróquia. A Central tem o banco dela (clientes, contratações, cobrança). Este arquivo diz o que o código do Servire usa de verdade. Atualizar quando entrar migration nova.
 
-Flyway: `src/main/resources/db/migration`, V001–V081. Migration já aplicada não se edita.
+Flyway: `src/main/resources/db/migration`, V001–V082. Migration já aplicada não se edita.
 
 ## O que entrou na V066
 

@@ -1,4 +1,4 @@
--- Esquema do banco, gerado das migrations (V001-V081). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V082). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
@@ -1159,6 +1159,18 @@ CREATE TABLE public.liturgia_roteiro (
     passos text NOT NULL,
     ativo boolean DEFAULT true NOT NULL,
     CONSTRAINT liturgia_roteiro_passos_check CHECK ((length(passos) <= 120000))
+);
+
+
+--
+-- Name: login_tentativa; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.login_tentativa (
+    chave character varying(100) NOT NULL,
+    janela_ate timestamp with time zone NOT NULL,
+    tentativas integer NOT NULL,
+    CONSTRAINT login_tentativa_tentativas_check CHECK ((tentativas >= 1))
 );
 
 
@@ -2473,6 +2485,14 @@ ALTER TABLE ONLY public.liturgia_roteiro
 
 
 --
+-- Name: login_tentativa login_tentativa_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_tentativa
+    ADD CONSTRAINT login_tentativa_pkey PRIMARY KEY (chave);
+
+
+--
 -- Name: mural_aviso mural_aviso_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3508,6 +3528,13 @@ CREATE INDEX liturgia_referencia_lista ON public.liturgia_referencia USING btree
 --
 
 CREATE INDEX liturgia_roteiro_lista ON public.liturgia_roteiro USING btree (tenant_id, lower((titulo)::text), id);
+
+
+--
+-- Name: login_tentativa_janela_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX login_tentativa_janela_idx ON public.login_tentativa USING btree (janela_ate);
 
 
 --
@@ -5142,6 +5169,12 @@ ALTER TABLE public.liturgia_referencia ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.liturgia_roteiro ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: login_tentativa; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.login_tentativa ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: mural_aviso; Type: ROW SECURITY; Schema: public; Owner: -
