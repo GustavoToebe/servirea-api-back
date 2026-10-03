@@ -78,7 +78,7 @@ class ArquivoCicloIntegrationTest extends AbstractIntegrationTest {
             throw new IllegalStateException("negócio falhou");
         })).isInstanceOf(IllegalStateException.class);
         assertThat(pendencias()).isEmpty();
-        verify(storage, never()).excluirConfirmando(anyString());
+        verify(storage, never()).excluirConfirmando("a/foto-velha.png");
     }
 
     @Test
@@ -108,10 +108,10 @@ class ArquivoCicloIntegrationTest extends AbstractIntegrationTest {
         assertThat(p.proximaTentativa).isAfter(Instant.now().plusSeconds(60));
         assertThat(p.reservadoPor).isNull();
         assertThat(p.erro).isNotBlank();
-        // Ainda dentro da espera: o job não tenta de novo.
+        // Ainda dentro da espera: o job não tenta de novo. (Só este caminho: o job também varre pendências de outros testes no mesmo banco.)
         clearInvocations(storage);
         rodar();
-        verify(storage, never()).excluirConfirmando(anyString());
+        verify(storage, never()).excluirConfirmando("a/foto-velha.png");
     }
 
     @Test
@@ -121,7 +121,7 @@ class ArquivoCicloIntegrationTest extends AbstractIntegrationTest {
         // Dentro da carência a operação de negócio pode estar em andamento: nada é apagado.
         tx.executeWithoutResult(s -> em.createQuery("update ArquivoPendencia p set p.proximaTentativa=:t").setParameter("t", Instant.now().minusSeconds(5)).executeUpdate());
         rodar();
-        verify(storage, never()).excluirConfirmando(anyString());
+        verify(storage, never()).excluirConfirmando("c/orfa.png");
         assertThat(pendencias().getFirst().proximaTentativa).isAfter(Instant.now().plus(Duration.ofHours(1)));
         // Passada a carência e sem referência, o arquivo sai do bucket.
         vencer();
