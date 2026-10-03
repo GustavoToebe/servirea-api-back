@@ -249,6 +249,18 @@ class PortalCalendarioHttpIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void contaSemPessoaVinculadaRecebe403NaCoordenacaoEnaoErro500() throws Exception {
+    mvc.perform(
+            put("/usuarios/" + usuario + "/pessoa")
+                .header("Authorization", "Bearer " + token)
+                .contentType("application/json")
+                .content("{\"pessoaId\":null}"))
+        .andExpect(status().isOk());
+    mvc.perform(get("/pastorais/minhas-equipes").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
   void expiracaoETokenInvalidoNaoLiberamCalendario() throws Exception {
     String segredo = assinatura();
     var c = calendarios.findByTenantIdAndUsuarioId(tenant, usuario).orElseThrow();

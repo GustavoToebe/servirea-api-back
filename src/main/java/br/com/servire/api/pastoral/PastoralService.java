@@ -143,7 +143,7 @@ public class PastoralService {
     var v =
         em.createQuery(
                 "select v.pessoaId from UsuarioTenant v where v.usuario.id=:u and v.tenant.id=:t"
-                    + " and v.status=:s",
+                    + " and v.status=:s and v.pessoaId is not null",
                 UUID.class)
             .setParameter("u", u.usuarioId())
             .setParameter("t", u.tenantId())
