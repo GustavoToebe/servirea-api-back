@@ -13,8 +13,8 @@
     "python scripts/verificar-docs.py"
   ],
   "migrations": {
-    "ultima": "V082__login_tentativa.sql",
-    "quantidade": 82
+    "ultima": "V083__plano_de_contas.sql",
+    "quantidade": 83
   },
   "importacao_pessoas": {
     "manual": "docs/importacao-pessoas.md",

@@ -58,7 +58,7 @@ class FuncionalidadesPlanoHttpIntegrationTest extends AbstractIntegrationTest {
     @Test void planoNaoSubstituiPermissaoDoPerfil() throws Exception {
         plano("FINANCEIRO");
         mvc.perform(post("/financeiro/categorias").with(csrf()).with(user("leitor").authorities(new SimpleGrantedAuthority("PERM_FINANCEIRO")))
-            .contentType("application/json").content("{\"nome\":\"Infra\",\"ativo\":true}"))
+            .contentType("application/json").content("{\"nome\":\"Infra\",\"ativo\":true,\"tipo\":\"DESPESA\"}"))
             .andExpect(status().isForbidden());
     }
     @Test void todosOsModulosBloqueiamMutacoesAntesDoDominio() throws Exception {

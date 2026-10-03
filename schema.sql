@@ -1,11 +1,11 @@
--- Esquema do banco, gerado das migrations (V001-V082). NÃO editar à mão.
+-- Esquema do banco, gerado das migrations (V001-V083). NÃO editar à mão.
 -- Para regerar: scripts/gerar-schema.ps1 (precisa do Postgres local com a API em dev já ter subido).
 -- Só o schema public, sem dono e sem permissões. O banco de produção é criado pelo Flyway a partir destas migrations.
 
 --
 --
 
-\restrict SaVpdh8N4d3mj3ivIj53c7VtQshjUFbgyGlYDsA6lfXXTtqCasbO4fcVr3XLvSr
+\restrict pLONP0LiPmFmvm2FOsIMRfEAeTHchOPqiKqR10lTv3Sa0I7Iik2n4mt2dciKAws
 
 
 
@@ -821,7 +821,11 @@ CREATE TABLE public.financeiro_categoria (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     tenant_id uuid NOT NULL,
     nome character varying(120) NOT NULL,
-    ativo boolean DEFAULT true NOT NULL
+    ativo boolean DEFAULT true NOT NULL,
+    tipo character varying(20) NOT NULL,
+    grupo_id uuid,
+    CONSTRAINT ck_financeiro_categoria_grupo CHECK (((grupo_id IS NULL) OR (grupo_id <> id))),
+    CONSTRAINT ck_financeiro_categoria_tipo CHECK (((tipo)::text = ANY ((ARRAY['RECEITA'::character varying, 'DESPESA'::character varying])::text[])))
 );
 
 
@@ -3384,6 +3388,13 @@ CREATE INDEX ix_destinatario_pronto ON public.comunicado_destinatario USING btre
 
 
 --
+-- Name: ix_financeiro_categoria_grupo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_financeiro_categoria_grupo ON public.financeiro_categoria USING btree (tenant_id, grupo_id);
+
+
+--
 -- Name: ix_financeiro_movimento_baixa; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3671,10 +3682,10 @@ CREATE UNIQUE INDEX ux_disponibilidade_recorrente ON public.disponibilidade_volu
 
 
 --
--- Name: ux_financeiro_categoria_nome; Type: INDEX; Schema: public; Owner: -
+-- Name: ux_financeiro_conta_contabil_nome; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX ux_financeiro_categoria_nome ON public.financeiro_categoria USING btree (tenant_id, lower((nome)::text));
+CREATE UNIQUE INDEX ux_financeiro_conta_contabil_nome ON public.financeiro_categoria USING btree (tenant_id, grupo_id, lower((nome)::text)) WHERE (grupo_id IS NOT NULL);
 
 
 --
@@ -3682,6 +3693,13 @@ CREATE UNIQUE INDEX ux_financeiro_categoria_nome ON public.financeiro_categoria 
 --
 
 CREATE UNIQUE INDEX ux_financeiro_conta_nome ON public.financeiro_conta USING btree (tenant_id, lower((nome)::text));
+
+
+--
+-- Name: ux_financeiro_grupo_nome; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_financeiro_grupo_nome ON public.financeiro_categoria USING btree (tenant_id, tipo, lower((nome)::text)) WHERE (grupo_id IS NULL);
 
 
 --
@@ -4340,6 +4358,14 @@ ALTER TABLE ONLY public.evento
 
 ALTER TABLE ONLY public.evento
     ADD CONSTRAINT fk_evento_whatsapp_lembrete FOREIGN KEY (tenant_id, whatsapp_layout_lembrete_id) REFERENCES public.layout_envio(tenant_id, id) ON DELETE SET NULL (whatsapp_layout_lembrete_id);
+
+
+--
+-- Name: financeiro_categoria fk_financeiro_categoria_grupo; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.financeiro_categoria
+    ADD CONSTRAINT fk_financeiro_categoria_grupo FOREIGN KEY (tenant_id, grupo_id) REFERENCES public.financeiro_categoria(tenant_id, id);
 
 
 --
@@ -5365,5 +5391,5 @@ ALTER TABLE public.voluntarios ENABLE ROW LEVEL SECURITY;
 --
 --
 
-\unrestrict SaVpdh8N4d3mj3ivIj53c7VtQshjUFbgyGlYDsA6lfXXTtqCasbO4fcVr3XLvSr
+\unrestrict pLONP0LiPmFmvm2FOsIMRfEAeTHchOPqiKqR10lTv3Sa0I7Iik2n4mt2dciKAws
 

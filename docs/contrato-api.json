@@ -2304,12 +2304,17 @@
     },
     "financeiro.FinanceiroDtos.CategoriaRequest" : {
       "ativo" : "boolean",
-      "nome" : "string?"
+      "grupoId" : "string?",
+      "nome" : "string?",
+      "tipo" : "financeiro.MovimentoFinanceiro.Tipo?"
     },
     "financeiro.FinanceiroDtos.CategoriaResponse" : {
       "ativo" : "boolean",
+      "ehGrupo" : "boolean",
+      "grupoId" : "string?",
       "id" : "string?",
-      "nome" : "string?"
+      "nome" : "string?",
+      "tipo" : "financeiro.MovimentoFinanceiro.Tipo?"
     },
     "financeiro.FinanceiroDtos.ContaRequest" : {
       "ativo" : "boolean",
